@@ -1,0 +1,80 @@
+---
+title: 'OIDC & OAuth2 Flows'
+description: 'An overview of OAuth2 and OIDC — the protocols Keycloak implements for delegated access and authentication.'
+sidebar:
+  order: 1
+---
+
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## What this module covers
+
+OAuth2 is about authorization (delegated access) — it lets a client act on behalf of a user without seeing the user's password. The core artifact is the access token.
+
+OIDC (OpenID Connect) is an identity layer on top of OAuth2 — it adds authentication. The extra artifact is the ID token, which proves who the user is.
+
+Keycloak acts as the authorization server for both: it issues access tokens (OAuth2) and ID tokens (OIDC).
+
+The actors: resource owner (the user), client (your app), authorization server (Keycloak), resource server (your API).
+
+## The actors
+
+**Resource owner** — the user who owns the data and grants access. When a user logs in and approves a permission prompt, they are acting as the resource owner.
+
+**Client** — the application requesting access on the user's behalf (or its own, for machine-to-machine scenarios). A client can be a SPA, a mobile app, a backend service, or a CLI tool.
+
+**Authorization server** — Keycloak. It authenticates the user, checks permissions, and issues tokens. Every flow starts and ends here.
+
+**Resource server** — your API. It accepts access tokens to authorize requests and never sees the user's password — it only validates the token Keycloak issued.
+
+## Lessons in this module
+
+| Lesson | What you will learn |
+|---|---|
+| OIDC Discovery Document | How to locate and read the OIDC discovery document every Keycloak realm publishes |
+| Authorization Code Flow + PKCE | Step-by-step walkthrough of the recommended flow for SPAs and mobile apps |
+| Client Credentials Grant | How to perform machine-to-machine calls where no user is involved |
+| Token Endpoint Hands-on | How to get and decode a token from Keycloak using curl |
+
+<Callout title="OAuth2 vs OIDC">
+OAuth2 is about access (the access token); OIDC adds identity (the ID token). Keycloak is the authorization server for both.
+</Callout>
+
+export const quizIndex = [
+  {
+    q: 'What does OAuth2 provide?',
+    options: [
+      'Authentication (who you are)',
+      'Delegated authorization (access tokens)',
+      'An ID token proving identity',
+      'A session cookie',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What does OIDC add on top of OAuth2?',
+    options: [
+      'A refresh token',
+      'An ID token that proves who the user is',
+      'A client secret',
+      'A JWT signature algorithm',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'In OAuth2 terminology, what is Keycloak?',
+    options: [
+      'The resource server',
+      'The resource owner',
+      'The authorization server',
+      'The client',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="oidc-oauth2-flows/index" questions={quizIndex} />
+
+<ProgressTracker client:visible id="oidc-oauth2-flows/index" />

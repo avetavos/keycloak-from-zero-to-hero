@@ -1,0 +1,192 @@
+---
+title: Roles
+description: 'Realm roles vs client roles, composite roles, assigning roles to users, and how roles appear in JWT tokens.'
+sidebar:
+  order: 5
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## What is a role?
+
+A **role** is a named permission tag that you attach to users (or groups). When a user authenticates, Keycloak embeds their roles in the token. Your application reads those roles from the token and decides what the user is allowed to do — no extra database call needed.
+
+Keycloak has two flavours of roles:
+
+- **Realm roles** — defined at the realm level. Available to any client in the realm.
+- **Client roles** — defined on a specific client. Scoped to that client.
+
+## Realm roles
+
+Realm roles apply across the entire realm. They are a good fit for coarse-grained, application-wide permissions like `admin`, `support-agent`, or `billing-viewer` that may be relevant to more than one application.
+
+### Creating a realm role
+
+1. In the admin console, make sure you are in the correct realm.
+2. Click **Realm roles** in the left sidebar.
+3. Click **Create role** (top-right of the list).
+4. Enter a **Role name** (e.g., `app-admin`).
+5. Optionally add a **Description**.
+6. Click **Save**.
+
+The role is now available to assign to users, groups, or composite roles.
+
+## Client roles
+
+Client roles are defined on a specific client and are only meaningful to that client. They are a good fit for fine-grained, application-specific permissions like `orders:read`, `orders:write`, or `reports:export`.
+
+### Creating a client role
+
+1. In the admin console, click **Clients** in the left sidebar and open the client you want to add roles to.
+2. Click the **Roles** tab on the client.
+3. Click **Create role**.
+4. Enter a **Role name** (e.g., `orders:read`).
+5. Optionally add a **Description**.
+6. Click **Save**.
+
+## Composite roles
+
+A **composite role** is a role that automatically grants all the roles it contains. Instead of assigning five individual roles to every new employee, you create one composite role (`employee`) that bundles them all, and assign only that.
+
+### Creating a composite role
+
+1. Create the child roles first (realm or client roles).
+2. Create a new realm role (e.g., `employee`).
+3. On the role's detail page, click **Action → Add associated roles** (or look for the **Associated roles** tab).
+4. Search for and select the child roles you want to bundle.
+5. Click **Assign**.
+
+Now assigning `employee` to a user automatically grants all the bundled roles.
+
+## Assigning roles to a user
+
+1. In the admin console, click **Users** in the left sidebar.
+2. Find the user and click their username to open their profile.
+3. Click the **Role mapping** tab.
+4. Click **Assign role**.
+5. In the filter, choose **Filter by realm roles** to see realm roles, or **Filter by clients** and select your client to see client roles.
+6. Check the box next to each role you want to assign.
+7. Click **Assign**.
+
+The roles take effect immediately for new login sessions. Existing sessions are not retroactively updated until the user re-authenticates or their token is refreshed.
+
+## How roles appear in a token
+
+After a user authenticates, their access token (a JWT) contains their roles in two standard claims:
+
+- `realm_access.roles` — an array of all realm-level roles assigned to the user.
+- `resource_access.{client-id}.roles` — an array of client roles for that specific client.
+
+Here is a decoded JWT payload showing both:
+
+export const decodedTokenCode = `{
+  "sub": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "preferred_username": "alice",
+  "email": "alice@example.com",
+  "realm_access": {
+    "roles": [
+      "app-admin",
+      "offline_access",
+      "uma_authorization"
+    ]
+  },
+  "resource_access": {
+    "my-app-backend": {
+      "roles": [
+        "orders:read",
+        "orders:write"
+      ]
+    },
+    "account": {
+      "roles": [
+        "manage-account",
+        "view-profile"
+      ]
+    }
+  }
+}`;
+
+<CopyCode client:visible code={decodedTokenCode} label="Copy decoded token" />
+
+### Reading roles in your application
+
+Your application should verify the JWT signature using the realm's JWKS endpoint, then read roles from the claims shown above. Most OIDC libraries (Keycloak adapters, Spring Security, Passport.js, etc.) do this automatically once configured. You should never trust the token without verifying the signature.
+
+Example: in a Node.js application using the raw JWT payload after verification:
+
+```javascript
+// After jwt.verify() succeeds:
+const realmRoles = token.realm_access?.roles ?? [];
+const clientRoles = token.resource_access?.['my-app-backend']?.roles ?? [];
+
+if (realmRoles.includes('app-admin')) {
+  // grant admin access
+}
+```
+
+## Keycloak's built-in roles
+
+Every realm and every client ships with some built-in roles you will see in tokens:
+
+| Role | Location | Purpose |
+|---|---|---|
+| `offline_access` | Realm | Allows requesting offline tokens (long-lived refresh tokens) |
+| `uma_authorization` | Realm | Grants access to the UMA authorisation API |
+| `manage-account` | `account` client | Lets the user manage their own account |
+| `view-profile` | `account` client | Lets the user view their profile |
+
+You do not need to assign `uma_authorization` or `offline_access` to users manually; they are granted by default via the `default-roles-{realm}` composite role.
+
+<Callout title="Use composite roles to bundle permissions">
+Instead of assigning many individual roles to each user, create a composite role that bundles the permissions for a persona (e.g., `editor`, `viewer`, `admin`). Assigning one composite role is easier to manage and audit than assigning ten individual roles per user.
+</Callout>
+
+export const quizRoles = [
+  {
+    q: 'What is the difference between a realm role and a client role?',
+    options: [
+      'Realm roles appear in tokens; client roles do not',
+      'Realm roles are defined at realm level and available to any client; client roles are scoped to a specific client',
+      'Client roles can only be assigned to service accounts',
+      'There is no functional difference',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'In a decoded JWT, which claim contains the user\'s realm-level roles?',
+    options: [
+      'resource_access.roles',
+      'roles',
+      'realm_access.roles',
+      'scope',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'What is a composite role?',
+    options: [
+      'A role that can only be assigned to admin users',
+      'A role defined in both the realm and a client at the same time',
+      'A role that automatically grants all the roles it contains',
+      'A role created by merging two realms',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'If you assign a new role to a user, when does it take effect for an existing session?',
+    options: [
+      'Immediately — existing tokens are updated in real time',
+      'After the user re-authenticates or their token is refreshed',
+      'After the Keycloak server is restarted',
+      'Never — you must revoke and reissue the session manually',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="realms-clients-roles/roles" questions={quizRoles} />
+
+<ProgressTracker client:visible id="realms-clients-roles/roles" />

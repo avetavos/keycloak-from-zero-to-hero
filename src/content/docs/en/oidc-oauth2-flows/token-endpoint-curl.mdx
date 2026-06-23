@@ -1,0 +1,125 @@
+---
+title: 'Token Endpoint Hands-on'
+description: 'Get a token from Keycloak using the Direct Access Grant (password grant) — useful for testing and scripting.'
+sidebar:
+  order: 5
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## The Direct Access Grant (password grant)
+
+The Direct Access Grant — also called the **password grant** — lets you exchange a username and password directly for tokens at the token endpoint, bypassing the browser redirect flow entirely.
+
+This makes it convenient for:
+
+- Testing your Keycloak configuration from a terminal
+- CLI tools and shell scripts that need a token to call an API
+- Development workflows where you want to quickly inspect a token
+
+It should **not** be used in real user-facing applications. When you hand a user's password directly to your app, the app sees the credentials — which defeats the purpose of delegating authentication to Keycloak. For browser and mobile apps, always use Authorization Code + PKCE.
+
+To use this grant, the client must have **Direct access grants** enabled on the Capability config tab.
+
+## Getting a token
+
+Replace the placeholders with your values before running.
+
+export const passwordGrantCode = `curl -X POST https://\${KC_URL}/realms/\${REALM}/protocol/openid-connect/token \\
+  -d "grant_type=password" \\
+  -d "client_id=\${CLIENT_ID}" \\
+  -d "username=\${USERNAME}" \\
+  -d "password=\${PASSWORD}"`;
+
+<CopyCode client:visible code={passwordGrantCode} label="Copy curl" />
+
+For a confidential client, also add `-d "client_secret=<your-secret>"` to the command.
+
+## The token response
+
+A successful request returns a JSON object like this:
+
+```json
+{
+  "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expires_in": 300,
+  "refresh_expires_in": 1800,
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "Bearer",
+  "id_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "session_state": "abc123",
+  "scope": "openid profile email"
+}
+```
+
+Key fields:
+
+- `access_token` — a JWT you send to your API as `Authorization: Bearer <token>`.
+- `expires_in` — the access token lifetime in **seconds** (300 = 5 minutes by default).
+- `refresh_token` — use this to get a new access token without re-authenticating.
+- `id_token` — a JWT that proves who the user is (OIDC only).
+- `token_type` — always `Bearer` for Keycloak.
+
+## Decoding the JWT
+
+The access token is a Base64url-encoded JWT. You can decode the payload to inspect its claims.
+
+export const jwtDecodeCode = `echo \${ACCESS_TOKEN} | cut -d. -f2 | base64 -d | jq .`;
+
+<CopyCode client:visible code={jwtDecodeCode} label="Copy decode command" />
+
+On some systems use `base64 --decode` instead of `base64 -d`. Set the `ACCESS_TOKEN` environment variable to your token value first, or replace it inline.
+
+<Callout title="Password grant is for testing only">
+The Direct Access Grant (password grant) is handy for testing scripts and CLI tools — but avoid it in real user-facing apps. It exposes the user's credentials to the client application. Use Authorization Code + PKCE for browser and mobile apps.
+</Callout>
+
+export const quizTokenEndpoint = [
+  {
+    q: 'What is the Direct Access Grant (password grant) primarily used for?',
+    options: [
+      'Production user-facing apps',
+      'SPAs with PKCE',
+      'Testing, scripting, and CLI tools',
+      'Machine-to-machine calls',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'What header do you use to send an access token to an API?',
+    options: [
+      'X-API-Key',
+      'Authorization: Bearer <token>',
+      'Cookie: token=<value>',
+      'X-Auth-Token',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What does expires_in represent in the token response?',
+    options: [
+      'The time the token was issued',
+      'The number of days the token is valid',
+      'The lifetime of the access token in seconds',
+      'The refresh token expiry',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Why should the password grant be avoided in real apps?',
+    options: [
+      'It does not return an access token',
+      'It bypasses Keycloak entirely',
+      'It exposes the user credentials to the client application',
+      'It requires PKCE',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="oidc-oauth2-flows/token-endpoint-curl" questions={quizTokenEndpoint} />
+
+<ProgressTracker client:visible id="oidc-oauth2-flows/token-endpoint-curl" />

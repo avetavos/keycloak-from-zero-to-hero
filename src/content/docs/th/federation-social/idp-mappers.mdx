@@ -1,0 +1,134 @@
+---
+title: IdP Mappers
+description: 'ใช้ identity provider mappers เพื่อคัดลอก claims และ attributes จาก external IdP ลงบนผู้ใช้ Keycloak ตอน login'
+sidebar:
+  order: 5
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## ทำไมถึงต้องใช้ mappers?
+
+เมื่อผู้ใช้ login ผ่าน brokered identity provider external IdP จะส่ง token (สำหรับ OIDC) หรือ assertion (สำหรับ SAML) ที่มี **claims** — ข้อมูลเกี่ยวกับผู้ใช้ เช่น email address, display name, group memberships หรือ department Keycloak ไม่ได้ map ทั้งหมดนี้ลงบน local user record อัตโนมัติ
+
+**IdP mappers** คือ rules ที่คุณตั้งค่าบน identity provider ที่บอก Keycloak ว่า: "เมื่อผู้ใช้นี้ login ผ่าน IdP นี้ ให้นำ claim `X` จาก external token มาตั้งเป็น Keycloak attribute `Y`" (หรือกำหนด role `Z` หรือตั้ง username template ที่เฉพาะ)
+
+หากไม่มี mappers brokered users มักมี profiles ที่ไม่สมบูรณ์และไม่มี realm roles — เพราะ Keycloak คัดลอกเฉพาะ standard attributes ขั้นต่ำ (email, ชื่อ, นามสกุล) จาก external token โดยค่าเริ่มต้น
+
+## ประเภทของ IdP mappers
+
+| ประเภท mapper | สิ่งที่ทำ |
+|---|---|
+| **Attribute importer** | คัดลอก claim ที่ระบุชื่อจาก external token เข้า Keycloak user attribute (เช่น `department` claim → `department` attribute) |
+| **Hardcoded attribute** | ตั้ง Keycloak user attribute ที่เฉพาะเป็นค่าคงที่สำหรับผู้ใช้ทุกคนจาก IdP นี้ (เช่น ตั้ง `org` เป็น `acme-corp` สำหรับทุกคนจาก Acme IdP) |
+| **Hardcoded role** | กำหนด Keycloak realm role หรือ client role ให้ทุกคนที่ login ผ่าน IdP นี้ |
+| **Role importer** | Map ค่า claim เฉพาะจาก external token เป็น Keycloak role (เช่น ถ้า external token มี `groups: ["admin"]` ให้กำหนด Keycloak `admin` realm role) |
+| **Username template importer** | สร้าง Keycloak username จาก template โดยใช้ claim values (เช่น `\${CLAIM.email}` เพื่อตั้ง username เป็น external email) |
+| **Hardcoded user session note** | แนบค่าคงที่กับ session ของผู้ใช้ (ใช้สำหรับ auditing) |
+
+## ขั้นตอนที่ 1 — ไปที่ mapper list ของ IdP
+
+1. ใน admin console คลิก **Identity providers** ใน left sidebar
+2. คลิก alias ของ identity provider ที่ต้องการตั้งค่า
+3. คลิก tab **Mappers**
+4. คลิก **Add mapper**
+
+## ขั้นตอนที่ 2 — ตั้งค่า attribute importer
+
+เพื่อคัดลอก external `department` claim ลงบน Keycloak user:
+
+1. ตั้ง **Mapper type** เป็น **Attribute importer**
+2. ตั้ง **Name** ให้สื่อความหมาย เช่น `Import department`
+3. ตั้ง **Claim** (สำหรับ OIDC) หรือ **Attribute** (สำหรับ SAML) เป็น `department` — key ที่ตรงกับที่ปรากฏใน external token
+4. ตั้ง **User attribute name** เป็น `department` — ชื่อ Keycloak user attribute ที่ต้องการกรอก
+5. คลิก **Save**
+
+ครั้งหน้าที่ผู้ใช้ login ผ่าน IdP นี้ Keycloak จะคัดลอกค่า `department` จาก external token เข้า Keycloak profile ของพวกเขา
+
+## ขั้นตอนที่ 3 — ตั้งค่า hardcoded role mapper
+
+เพื่อกำหนด Keycloak realm role `employee` ให้ทุกคนที่ login ผ่าน IdP นี้:
+
+1. คลิก **Add mapper**
+2. ตั้ง **Mapper type** เป็น **Hardcoded role**
+3. ตั้ง **Name** เป็น `Assign employee role`
+4. ใน **Role** พิมพ์ `employee` และเลือก realm role จาก dropdown
+5. คลิก **Save**
+
+## Sync mode ต่อ mapper
+
+แต่ละ mapper มีการตั้งค่า **Sync mode** (override IdP-level sync mode):
+
+```text
+INHERIT  — ใช้ IdP-level sync mode setting
+LEGACY   — apply mapper นี้เฉพาะ login แรก
+FORCE    — re-apply mapper นี้ทุกครั้งที่ login (มีประโยชน์สำหรับ roles และ attributes ที่อาจเปลี่ยนแปลงใน external IdP)
+```
+
+export const syncModeNote = `# Use FORCE for attributes/roles that change frequently in the external IdP
+Mapper sync mode: FORCE`;
+
+<CopyCode client:visible code={syncModeNote} label="Copy recommendation" />
+
+## ตรวจสอบผลลัพธ์
+
+หลัง save mappers และ login เป็น brokered user คุณสามารถตรวจสอบผลลัพธ์ได้:
+
+1. ไปที่ **Users** ใน left sidebar และหา brokered user
+2. คลิก username ของผู้ใช้
+3. บน tab **Details** ตรวจสอบส่วน **Attributes** สำหรับ attributes ที่ import มา
+4. บน tab **Role mappings** ตรวจสอบ hardcoded role
+
+<Callout title="ใช้ IdP mappers เพื่อคัดลอก external claims ลงบนผู้ใช้ Keycloak">
+หากไม่มี IdP mappers brokered users จะมาพร้อมแค่ standard claims ขั้นต่ำ (email, ชื่อ, นามสกุล) ใช้ mappers เพื่อคัดลอก claims ของ external provider — groups, department, custom attributes — ลงบน Keycloak user ตอน login ใช้ FORCE sync mode สำหรับ mapper ที่ค่าอาจเปลี่ยนระหว่าง logins
+</Callout>
+
+export const quizIdpMappers = [
+  {
+    q: 'Attribute importer mapper ทำอะไร?',
+    options: [
+      'กำหนด Keycloak role คงที่ให้ผู้ใช้ทุกคนจาก IdP',
+      'คัดลอก claim ที่ระบุชื่อจาก external token เข้า Keycloak user attribute',
+      'สร้าง identity provider ใหม่จาก user attribute ที่มีอยู่',
+      'ตั้ง username คงที่สำหรับ brokered users ทุกคน',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'ควรใช้ mapper sync mode FORCE เมื่อไหร่?',
+    options: [
+      'เฉพาะ login แรก เพื่อหลีกเลี่ยงการ overwrite การเปลี่ยนแปลงด้วยตนเอง',
+      'ไม่ควรใช้เลย — FORCE ปิดการทำงานของ attribute mappers',
+      'เมื่อ attribute หรือ role อาจเปลี่ยนแปลงใน external IdP ระหว่าง logins',
+      'เมื่อ external IdP ใช้ SAML แทน OIDC',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'ประเภท mapper อะไรที่กำหนด Keycloak role เดียวกันให้ผู้ใช้ทุกคนจาก IdP ที่กำหนด?',
+    options: [
+      'Attribute importer',
+      'Role importer',
+      'Hardcoded role',
+      'Username template importer',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'ใน admin console คุณเพิ่ม mapper สำหรับ brokered IdP ที่ไหน?',
+    options: [
+      'Authentication → Flows → First broker login',
+      'Identity providers → <alias> → Mappers tab',
+      'Clients → <client> → Mappers tab',
+      'User federation → <provider> → Mappers tab',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="federation-social/idp-mappers" questions={quizIdpMappers} />
+
+<ProgressTracker client:visible id="federation-social/idp-mappers" />

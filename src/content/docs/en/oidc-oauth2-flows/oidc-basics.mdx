@@ -1,0 +1,92 @@
+---
+title: 'OIDC Discovery Document'
+description: 'How to locate and read the OIDC discovery document that every Keycloak realm publishes.'
+sidebar:
+  order: 2
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## The discovery document
+
+Every Keycloak realm publishes an OpenID Connect discovery document at `/.well-known/openid-configuration` under `/realms/<realm>`.
+
+Full URL:
+
+```
+https://<keycloak-host>/realms/<realm>/.well-known/openid-configuration
+```
+
+This is the single source of truth for every endpoint your app needs. Fetch it once at startup and you have everything — authorization endpoint, token endpoint, JWKS URI, and more.
+
+## Key endpoints in the discovery document
+
+| Endpoint name | JSON key | Purpose |
+|---|---|---|
+| Authorization endpoint | `authorization_endpoint` | Redirects users to the login page |
+| Token endpoint | `token_endpoint` | Exchanges codes for tokens |
+| UserInfo endpoint | `userinfo_endpoint` | Returns claims about the authenticated user |
+| JWKS URI | `jwks_uri` | Public keys for verifying JWT signatures |
+| End session endpoint | `end_session_endpoint` | Logs the user out |
+
+## Fetching the discovery document
+
+Replace `KC_URL` and `REALM` with your values. The response is a JSON object with all the endpoint URLs listed above.
+
+export const discoveryCode = `curl https://\${KC_URL}/realms/\${REALM}/.well-known/openid-configuration | jq .`;
+
+<CopyCode client:visible code={discoveryCode} label="Copy curl" />
+
+<Callout title="Start from the discovery document">
+Never hardcode endpoint URLs. Every endpoint your app needs is in the discovery document. When Keycloak upgrades or moves, your app picks up the new URLs automatically if it fetches the discovery doc at startup.
+</Callout>
+
+export const quizOidcBasics = [
+  {
+    q: 'Where does Keycloak publish the OIDC discovery document?',
+    options: [
+      '/.well-known/openid-configuration under /realms/<realm>',
+      '/admin/master/console',
+      '/auth/admin/realms',
+      '/.well-known/jwks.json',
+    ],
+    answer: 0,
+  },
+  {
+    q: 'Which JSON key in the discovery document gives you the token endpoint?',
+    options: [
+      'authorization_endpoint',
+      'token_endpoint',
+      'userinfo_endpoint',
+      'jwks_uri',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What is the JWKS URI used for?',
+    options: [
+      'Logging users out',
+      'Storing user profiles',
+      'Providing public keys to verify JWT signatures',
+      'Issuing refresh tokens',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Why should apps fetch the discovery document instead of hardcoding endpoints?',
+    options: [
+      'It is faster than hardcoding',
+      'Keycloak might move endpoints across versions; discovery keeps apps up to date automatically',
+      'Hardcoded URLs are blocked by CORS',
+      'The token endpoint changes with every login',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="oidc-oauth2-flows/oidc-basics" questions={quizOidcBasics} />
+
+<ProgressTracker client:visible id="oidc-oauth2-flows/oidc-basics" />

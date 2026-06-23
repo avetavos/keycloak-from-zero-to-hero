@@ -1,0 +1,138 @@
+---
+title: SPA Frontend
+description: 'Secure a single-page application using keycloak-js: install the adapter, initialise it with PKCE, read the access token, and attach it to API calls.'
+sidebar:
+  order: 2
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Installing keycloak-js
+
+`keycloak-js` is the official browser-side adapter for Keycloak. It handles the Authorization Code + PKCE flow, token storage, silent refresh, and logout — all without you managing redirect URLs or token exchanges by hand.
+
+Install it from npm:
+
+```bash
+npm install keycloak-js
+```
+
+The package ships its own TypeScript types, so no separate `@types` package is needed.
+
+## Creating the Keycloak instance
+
+Pass your realm's URL, your realm name, and your client ID. These three values are the minimum required to identify your application to Keycloak:
+
+export const kcInitCode = `import Keycloak from 'keycloak-js';
+
+const keycloak = new Keycloak({
+  url: 'http://localhost:8080',
+  realm: 'my-app',
+  clientId: 'my-app-frontend',
+});
+
+keycloak
+  .init({ onLoad: 'login-required', pkceMethod: 'S256' })
+  .then((authenticated) => {
+    if (authenticated) {
+      console.log('Logged in as', keycloak.tokenParsed?.preferred_username);
+      startApp();
+    }
+  });
+
+function startApp() {
+  // Your app bootstrap goes here.
+  // keycloak.token is available from this point on.
+}`;
+
+<CopyCode client:visible code={kcInitCode} label="Copy init snippet" />
+
+Key points:
+
+- `onLoad: 'login-required'` redirects the user to Keycloak immediately if they are not yet authenticated. Use `'check-sso'` if you want the page to be accessible without login and only show a login button.
+- `pkceMethod: 'S256'` enables PKCE (Proof Key for Code Exchange). This is mandatory for public clients (SPAs) because they cannot store a client secret securely. PKCE replaces the secret with a per-request code challenge.
+
+## Calling a protected API
+
+After `init` resolves with `authenticated: true`, `keycloak.token` holds the raw JWT string. Attach it as a Bearer token in every API request:
+
+export const apiFetchCode = `async function fetchProfile() {
+  await keycloak.updateToken(30); // refresh if expiring in < 30 seconds
+
+  const response = await fetch('https://api.example.com/profile', {
+    headers: {
+      Authorization: \`Bearer \${keycloak.token}\`,
+    },
+  });
+
+  return response.json();
+}`;
+
+<CopyCode client:visible code={apiFetchCode} label="Copy fetch snippet" />
+
+`updateToken(minValidity)` checks whether the current token will expire within `minValidity` seconds and, if so, uses the refresh token to silently obtain a new one. Always call it before attaching `keycloak.token` to a request so you never send an expired JWT.
+
+## Reading token claims
+
+The decoded payload is available in `keycloak.tokenParsed`. Common claims you will use:
+
+```ts
+keycloak.tokenParsed?.preferred_username  // username
+keycloak.tokenParsed?.email               // email address
+keycloak.tokenParsed?.realm_access?.roles // array of realm roles
+keycloak.tokenParsed?.resource_access?.['my-app-frontend']?.roles // client roles
+```
+
+<Callout title="Configure the client as Public with PKCE">
+In the Keycloak admin console, the client must have Client authentication set to Off (public client) and, if you are on Keycloak 21+, PKCE is enforced by the keycloak-js adapter automatically when you pass pkceMethod: 'S256'. keycloak-js stores tokens in memory — not in localStorage — and handles silent refresh for you. Do not store tokens in localStorage or sessionStorage yourself.
+</Callout>
+
+export const quizSpaFrontend = [
+  {
+    q: 'What does the pkceMethod: "S256" option do when passed to keycloak.init()?',
+    options: [
+      'It enables client-secret authentication',
+      'It enables PKCE, replacing the client secret with a per-request code challenge',
+      'It sets the token signing algorithm to SHA-256',
+      'It disables token refresh',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Why should you call keycloak.updateToken(30) before attaching the token to an API request?',
+    options: [
+      'To force a new login if the user is idle',
+      'To decode the JWT payload into keycloak.tokenParsed',
+      'To silently refresh the token if it is about to expire, so you never send an expired JWT',
+      'To log the request to the Keycloak audit log',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Where does keycloak-js store the access token by default?',
+    options: [
+      'In localStorage under the key "kc_token"',
+      'In sessionStorage',
+      'In a browser cookie',
+      'In memory (a JavaScript variable)',
+    ],
+    answer: 3,
+  },
+  {
+    q: 'Which onLoad value redirects the user to Keycloak immediately if they are not authenticated?',
+    options: [
+      'check-sso',
+      'login-required',
+      'silent-sso',
+      'auto-redirect',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="securing-apps/spa-frontend" questions={quizSpaFrontend} />
+
+<ProgressTracker client:visible id="securing-apps/spa-frontend" />

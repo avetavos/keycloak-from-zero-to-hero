@@ -1,0 +1,154 @@
+---
+title: Production Checklist
+description: 'Harden Keycloak สำหรับ production: รัน start ด้วย optimised build, เชื่อมต่อ external database, ตั้งค่า hostname ที่กำหนด, terminate HTTPS ให้ถูกต้อง และใช้ realm export/import สำหรับ config-as-code'
+sidebar:
+  order: 5
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## จาก start-dev สู่ production
+
+โหมด `start-dev` มีไว้สำหรับการพัฒนาในเครื่องเท่านั้น มันปิดใช้งาน optimised build ใช้ embedded H2 database สร้าง self-signed certificate และผ่อนปรนการตรวจสอบ hostname ค่าเริ่มต้นเหล่านี้ไม่ปลอดภัยใน production เมื่อพร้อม go live มีสี่สิ่งที่คุณต้องจัดการ
+
+## สี่สิ่งที่ต้องมีสำหรับ production
+
+### 1. External database
+
+โดยค่าเริ่มต้น `start-dev` ใช้ embedded H2 database ที่อยู่ภายใน container รีสตาร์ท container แล้วข้อมูลทั้งหมดหาย ใน production ให้ชี้ Keycloak ไปยัง external database — PostgreSQL คือตัวเลือกที่แนะนำ
+
+ตั้งค่า environment variable เหล่านี้:
+
+```
+KC_DB=postgres
+KC_DB_URL=jdbc:postgresql://db-host:5432/keycloak
+KC_DB_USERNAME=keycloak
+KC_DB_PASSWORD=<secret>
+```
+
+### 2. Fixed hostname
+
+Keycloak ฝัง hostname ของตัวเองใน token issuer, OIDC discovery document และการตรวจสอบ redirect หาก hostname ไม่ถูกต้อง token จะถูกปฏิเสธโดย client ตั้งค่าอย่างชัดเจน:
+
+```
+KC_HOSTNAME=auth.example.com
+```
+
+สำหรับการทดสอบในเครื่องหลัง reverse proxy คุณอาจต้องใช้ `KC_HOSTNAME_STRICT=false` ด้วย แต่อย่าใช้ flag นี้ใน production
+
+### 3. HTTPS และ reverse proxy
+
+Keycloak ต้องให้บริการผ่าน HTTPS มีสองตัวเลือกทั่วไป:
+
+- **Edge termination (แนะนำ):** reverse proxy (Nginx, Traefik, AWS ALB) จัดการ TLS และส่งต่อ plain HTTP ไปยัง Keycloak บอก Keycloak ให้เชื่อถือ proxy header:
+
+  ```
+  KC_PROXY_HEADERS=xforwarded
+  ```
+
+- **Passthrough:** Keycloak จัดการ TLS เอง ให้ certificate และ private key ผ่าน `KC_HTTPS_CERTIFICATE_FILE` และ `KC_HTTPS_CERTIFICATE_KEY_FILE`
+
+### 4. Optimised build
+
+ใน production ให้รัน `kc.sh build` ก่อน `kc.sh start` ขั้นตอน build คอมไพล์ provider configuration, augment Quarkus app และ cache classpath scanning — ลดเวลา startup จาก ~30 วินาที เป็น ~3 วินาที การ deploy ด้วย Docker ส่วนใหญ่ทำในรูปแบบ multi-stage Dockerfile:
+
+```bash
+# Build stage
+kc.sh build --db=postgres
+
+# Runtime stage
+kc.sh start --optimized
+```
+
+## Production docker run
+
+นี่คือ `docker run` ขั้นต่ำที่รวมสี่สิ่งที่ต้องมีทั้งหมด:
+
+export const prodRunCode = `docker run -d --name keycloak \\
+  -p 8080:8080 \\
+  -e KC_DB=postgres \\
+  -e KC_DB_URL=jdbc:postgresql://db:5432/keycloak \\
+  -e KC_DB_USERNAME=keycloak \\
+  -e KC_DB_PASSWORD=\${DB_PASSWORD} \\
+  -e KC_HOSTNAME=auth.example.com \\
+  -e KC_PROXY_HEADERS=xforwarded \\
+  -e KEYCLOAK_ADMIN=admin \\
+  -e KEYCLOAK_ADMIN_PASSWORD=\${ADMIN_PASSWORD} \\
+  quay.io/keycloak/keycloak:latest \\
+  start --optimized`;
+
+<CopyCode client:visible code={prodRunCode} label="Copy docker run" />
+
+ส่ง `DB_PASSWORD` และ `ADMIN_PASSWORD` จาก secrets manager ของคุณ — อย่า hardcode ใน command
+
+## Config-as-code ด้วย realm export/import
+
+การคลิกใน admin console ด้วยมือไม่สามารถทำซ้ำได้ Export configuration ของ realm เป็น JSON และ commit ไปยัง version control:
+
+```bash
+# Export a realm
+/opt/keycloak/bin/kc.sh export --realm my-app --file /tmp/my-app-realm.json
+
+# Import on startup
+/opt/keycloak/bin/kc.sh start --import-realm
+```
+
+วาง `my-app-realm.json` ไว้ใน `/opt/keycloak/data/import/` แล้ว Keycloak จะ import อัตโนมัติตอน start ครั้งแรก ทำให้ realm configuration สามารถทำซ้ำได้ทุก environment
+
+## กลยุทธ์การ backup
+
+state ของ Keycloak อยู่ใน external database ทั้งหมด Backup database โดยใช้กลไก backup มาตรฐานของ database provider ของคุณ container เองไม่มี state และไม่จำเป็นต้อง backup — เพียงตรวจสอบว่า realm export JSON อยู่ใน version control เป็น baseline ของ configuration
+
+<Callout title="สี่สิ่งที่ต้องมีสำหรับ production">
+External database, fixed hostname, HTTPS และ optimised build — `start-dev` ไม่มีสิ่งใดเลย การเปลี่ยนจาก `start-dev` ไปยัง `start --optimized` โดยไม่มีสี่สิ่งนี้จะทำให้ deployment พังทลาย
+</Callout>
+
+export const quizProduction = [
+  {
+    q: 'What database does start-dev use by default?',
+    options: [
+      'PostgreSQL',
+      'MySQL',
+      'Embedded H2',
+      'SQLite',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'What does KC_PROXY_HEADERS=xforwarded tell Keycloak?',
+    options: [
+      'To disable HTTPS entirely',
+      'To trust X-Forwarded-* headers from a reverse proxy for hostname and protocol detection',
+      'To forward all requests to an external proxy',
+      'To require client certificates',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Why should you run kc.sh build before kc.sh start in production?',
+    options: [
+      'To create the external database schema',
+      'To compile provider configuration and reduce startup time',
+      'To generate a self-signed TLS certificate',
+      'To export the default realm configuration',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'How do you make Keycloak automatically import a realm on first startup?',
+    options: [
+      'Set KC_REALM_IMPORT=true',
+      'Place the realm JSON in /opt/keycloak/data/import/ and run start --import-realm',
+      'Call the Admin REST API before Keycloak starts',
+      'Enable the auto-import event listener',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="admin-theming-production/production-checklist" questions={quizProduction} />
+
+<ProgressTracker client:visible id="admin-theming-production/production-checklist" />

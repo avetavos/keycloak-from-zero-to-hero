@@ -1,0 +1,134 @@
+---
+title: 'Protocol Mappers'
+description: 'Learn how protocol mappers add and transform claims in Keycloak tokens.'
+sidebar:
+  order: 4
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## What is a protocol mapper?
+
+A **protocol mapper** transforms a piece of information — a user attribute, a group name, a hardcoded value — into a claim in the access token, ID token, or userinfo response. Without mappers, tokens only contain the basic OIDC claims Keycloak adds by default. Mappers are how you put custom, application-specific data into your tokens.
+
+Mappers live inside client scopes (or directly on a client). When a scope is included in a token, all of its mappers run and their claims are added to the token.
+
+## Mapper types
+
+### User Attribute mapper
+
+Maps a custom user attribute (stored in the user's profile under **Attributes**) to a claim. For example, if users have a `department` attribute set to `"engineering"`, this mapper adds `"department": "engineering"` to the token.
+
+### Group Membership mapper
+
+Adds a list of the user's group memberships as a claim. Useful for coarse-grained authorisation based on groups rather than roles.
+
+### Hardcoded Claim mapper
+
+Adds a fixed, static value to all tokens regardless of who the user is. For example, `"api-version": "v2"`. Useful for versioning or flagging tokens for a specific environment.
+
+### Audience mapper
+
+Adds a value to the `aud` claim so your API can verify it is the intended recipient. Without this, tokens may be accepted by unintended services. Every API that validates tokens should have an audience mapper so it can reject tokens not intended for it.
+
+### User Property mapper
+
+Maps built-in user properties — `email`, `username`, `firstName`, `lastName` — to token claims. These are properties stored directly on the Keycloak user object (not custom attributes).
+
+### Role mapper (built-in via roles scope)
+
+The built-in `roles` scope ships with mappers that add `realm_access` and `resource_access` to the token. These contain the user's realm-level and client-level roles respectively.
+
+## Adding a mapper to a client scope
+
+1. In the admin console, click **Client scopes** in the left sidebar.
+2. Click the name of the scope you want to add a mapper to.
+3. Click the **Mappers** tab.
+4. Click **Add mapper** → **By configuration**.
+5. Select the mapper type (e.g., **User Attribute**).
+6. Fill in:
+   - **Name** — a label for the mapper (e.g., `department-claim`).
+   - **User Attribute** — the attribute name on the user object (e.g., `department`).
+   - **Token Claim Name** — the key that will appear in the token (e.g., `department`).
+   - **Claim JSON Type** — the value type: String, boolean, int, long, JSON.
+   - **Add to ID token** / **Add to access token** / **Add to userinfo** — toggle which tokens include this claim.
+7. Click **Save**.
+
+## Adding an Audience mapper
+
+The Audience mapper is especially important for APIs. It ensures your API can verify the token was intended for it.
+
+1. In **Client scopes**, open your scope and click **Mappers** → **Add mapper** → **By configuration**.
+2. Select **Audience**.
+3. Enter the **Name** (e.g., `orders-api-audience`).
+4. In **Included Client Audience**, select the client that represents your API (e.g., `orders-api`).
+5. Enable **Add to access token**.
+6. Click **Save**.
+7. Now tokens issued for this scope will include `"aud": ["account", "orders-api"]` (or similar).
+
+## Token fragment after audience mapper
+
+After adding an Audience mapper and a User Attribute mapper for `department`, the access token payload will contain:
+
+export const audMapperCode = `{
+  "aud": ["account", "orders-api"],
+  "azp": "my-app-frontend",
+  "scope": "openid profile email",
+  "department": "engineering"
+}`;
+
+<CopyCode client:visible code={audMapperCode} label="Copy token fragment" />
+
+<Callout title="Always add an audience mapper for your API">
+Add an audience mapper so your API can verify the token's `aud` claim contains its own client ID. Without it, any valid Keycloak token — even one issued to a different application — could be accepted by your API.
+</Callout>
+
+export const quizProtocolMappers = [
+  {
+    q: 'What does a protocol mapper do?',
+    options: [
+      'Creates a new user in Keycloak',
+      'Adds or transforms a claim in a token',
+      'Defines a redirect URI',
+      'Sets the token lifespan',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Why should you add an Audience mapper to your API client scope?',
+    options: [
+      'To increase the token lifespan',
+      'So the API can verify the token was intended for it via the `aud` claim',
+      "To add the user's email to the token",
+      'To enable refresh tokens',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which mapper type adds a fixed value to every token?',
+    options: [
+      'User Attribute mapper',
+      'Group Membership mapper',
+      'Hardcoded Claim mapper',
+      'User Property mapper',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Where do you add a mapper in the admin console?',
+    options: [
+      'Realm settings → Tokens tab',
+      'Client scopes → Mappers tab',
+      'Clients → Credentials tab',
+      'Users → Attributes tab',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="tokens-scopes-mappers/protocol-mappers" questions={quizProtocolMappers} />
+
+<ProgressTracker client:visible id="tokens-scopes-mappers/protocol-mappers" />

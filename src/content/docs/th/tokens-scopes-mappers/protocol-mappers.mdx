@@ -1,0 +1,106 @@
+---
+title: Protocol Mappers
+description: 'เรียนรู้วิธีที่ protocol mapper เพิ่มและแปลง claim ใน Keycloak token'
+sidebar:
+  order: 4
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Protocol Mappers คืออะไร
+
+Protocol mapper แปลงข้อมูลหนึ่ง — user attribute, ชื่อ group, หรือค่าที่กำหนดไว้ตายตัว — ให้กลายเป็น claim ใน access token, ID token หรือ userinfo response โดยไม่มี mapper token จะมีเพียง OIDC claim พื้นฐานที่ Keycloak เพิ่มให้เป็นค่าเริ่มต้น
+
+## ประเภทของ Mapper
+
+| ประเภท Mapper | หน้าที่ |
+|---|---|
+| User Attribute mapper | แมป custom user attribute ลงใน claim |
+| Group Membership mapper | เพิ่มรายชื่อ group ของผู้ใช้ลงใน token |
+| Hardcoded Claim mapper | เพิ่มค่าคงที่ลงใน token ทุกใบ |
+| Audience mapper | เพิ่มค่าใน claim `aud` |
+| User Property mapper | แมป built-in user property ลงใน claim |
+| Role mapper | จัดการ realm/client roles ใน token |
+
+## วิธีเพิ่ม Mapper ใน Admin Console
+
+1. ไปที่ **Client scopes** → เลือก scope ที่ต้องการ
+2. คลิก tab **Mappers**
+3. คลิก **Add mapper** → **By configuration**
+4. เลือกประเภท mapper ที่ต้องการ
+5. ตั้งค่า **Name**, **Token Claim Name** และตัวเลือกอื่นๆ
+6. คลิก **Save**
+
+## วิธีเพิ่ม Audience Mapper
+
+1. ไปที่ **Client scopes** → เลือก scope สำหรับ API ของคุณ
+2. คลิก tab **Mappers** → **Add mapper** → **By configuration**
+3. เลือก **Audience**
+4. ตั้ง **Name**: `audience-mapper`
+5. ตั้ง **Included Client Audience**: ใส่ client ID ของ API
+6. เปิดใช้งาน **Add to access token**
+7. คลิก **Save**
+
+## ตัวอย่าง Token Payload หลังเพิ่ม Audience Mapper
+
+export const audMapperCode = `{
+  "aud": ["account", "orders-api"],
+  "azp": "my-app-frontend",
+  "scope": "openid profile email",
+  "department": "engineering"
+}`;
+
+<CopyCode client:visible code={audMapperCode} label="Copy curl" />
+
+<Callout title="เพิ่ม Audience mapper ให้ API ของคุณเสมอ">
+เพิ่ม audience mapper เพื่อให้ API ตรวจสอบได้ว่า claim `aud` ใน token ตรงกับ client ID ของตัวเอง หากไม่มี token ที่ถูกต้องจาก Keycloak ที่ออกให้แอปอื่น ก็อาจถูก API ของคุณยอมรับได้
+</Callout>
+
+export const quizProtocolMappers = [
+  {
+    q: 'Protocol mapper ทำหน้าที่อะไร?',
+    options: [
+      'สร้าง user ใหม่ใน Keycloak',
+      'เพิ่มหรือแปลง claim ใน token',
+      'กำหนด redirect URI',
+      'ตั้งค่า lifespan ของ token',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'เหตุใดจึงควรเพิ่ม Audience mapper ให้ API client scope?',
+    options: [
+      'เพื่อเพิ่ม lifespan ของ token',
+      'เพื่อให้ API ตรวจสอบได้ว่า token ถูกออกมาสำหรับตัวเองผ่าน claim `aud`',
+      'เพื่อเพิ่ม email ของผู้ใช้ลงใน token',
+      'เพื่อเปิดใช้งาน refresh token',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Mapper ประเภทใดเพิ่มค่าคงที่ลงใน token ทุกใบ?',
+    options: [
+      'User Attribute mapper',
+      'Group Membership mapper',
+      'Hardcoded Claim mapper',
+      'User Property mapper',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'จะเพิ่ม mapper ใน admin console ได้ที่ไหน?',
+    options: [
+      'Realm settings → Tokens tab',
+      'Client scopes → Mappers tab',
+      'Clients → Credentials tab',
+      'Users → Attributes tab',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="tokens-scopes-mappers/protocol-mappers" questions={quizProtocolMappers} />
+<ProgressTracker client:visible id="tokens-scopes-mappers/protocol-mappers" />

@@ -1,0 +1,80 @@
+---
+title: การรักษาความปลอดภัยของแอป
+description: 'ภาพรวมของสองส่วนหลักในการรักษาความปลอดภัยด้วย Keycloak: frontend ทำการ login และรับ token; backend ตรวจสอบ token ทุกครั้งที่มี request เข้ามา'
+sidebar:
+  order: 1
+---
+
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## สองส่วน หนึ่งโมเดลความปลอดภัย
+
+การผสาน Keycloak เข้ากับแอปพลิเคชันไม่ใช่งานชิ้นเดียว — มันคือหน้าที่ที่แตกต่างกันสองส่วนที่ต้องทำถูกต้องทั้งคู่
+
+**Frontend** (SPA บนเบราว์เซอร์, แอปมือถือ, หรือ public client ใดก็ตาม) รับผิดชอบประสบการณ์การ login โดย redirect ผู้ใช้ไปยัง Keycloak รับ authorization code กลับมา แลก token มาเก็บไว้ในหน่วยความจำ และนำ access token ต่อท้าย API call ทุกครั้ง
+
+**Backend** (REST API หรือ resource server) ไม่ได้คุยกับ Keycloak แทนผู้ใช้ระหว่างการรับ request แต่รับ access token จาก header `Authorization` ดึง public key จาก JWKS endpoint ของ Keycloak และตรวจสอบ signature, issuer, audience และ expiry ของ token เมื่อผ่านการตรวจสอบทั้งหมด backend จึงเชื่อ identity claims ที่อยู่ใน token
+
+## สิ่งที่โมดูลนี้ครอบคลุม
+
+| บทเรียน | สิ่งที่จะได้เรียนรู้ |
+|---|---|
+| SPA Frontend | ติดตั้ง keycloak-js เริ่มต้นด้วย PKCE ต่อ token เข้า API call |
+| Backend API | ดึง JWKS ตรวจสอบ JWT ใน Node/Express ปฏิเสธ token ที่ไม่ถูกต้อง |
+| Refresh และ Logout | updateToken(), session lifetimes และ end-session endpoint |
+| Framework Adapters | Spring Boot, Node และ pattern ทั่วไปของ OIDC resource server |
+
+แต่ละบทเรียนสามารถอ่านได้อิสระ — เลือกอ่านบทที่ตรงกับ stack ที่ใช้งานได้เลย
+
+<Callout title="อย่าไว้ใจ frontend สำหรับการ authorisation">
+Frontend ถือ token ไว้ แต่ backend ต้องทำการตรวจสอบ token เอง ห้ามข้ามการตรวจสอบ JWT บน server โดยอาศัยคำบอกของ client ว่า "ผู้ใช้ล็อกอินแล้ว" backend เท่านั้นที่เป็นสถานที่ที่น่าเชื่อถือสำหรับการตัดสินใจด้าน authorisation
+</Callout>
+
+export const quizSecuringAppsIndex = [
+  {
+    q: 'หน้าที่ของ FRONTEND ในแอปพลิเคชันที่รักษาความปลอดภัยด้วย Keycloak คืออะไร?',
+    options: [
+      'ตรวจสอบ signature ของ JWT ในทุก request',
+      'ทำการ login ผู้ใช้ รับ token แล้วแนบ token นั้นไปกับ API call',
+      'ดึงข้อมูลจาก JWKS endpoint เพื่อตรวจสอบ token',
+      'จัดเก็บ role ของผู้ใช้ไว้ในฐานข้อมูล',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'หน้าที่ของ BACKEND (resource server) ในแอปพลิเคชันที่รักษาความปลอดภัยด้วย Keycloak คืออะไร?',
+    options: [
+      'redirect ผู้ใช้ไปยัง Keycloak เพื่อ login',
+      'จัดเก็บ access token ไว้ใน cookie',
+      'ตรวจสอบ signature, issuer, audience และ expiry ของ JWT ในทุก request',
+      'สร้าง authorization code',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'backend ใช้ endpoint ใดในการดึง public key ของ Keycloak เพื่อตรวจสอบ JWT?',
+    options: [
+      'token endpoint',
+      'userinfo endpoint',
+      'JWKS endpoint',
+      'authorization endpoint',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'เหตุใด backend จึงต้องตรวจสอบ JWT ในทุก request แทนที่จะเชื่อ frontend?',
+    options: [
+      'เพราะ frontend ไม่สามารถจัดเก็บ token ได้',
+      'เพราะมีแต่ backend เท่านั้นที่ถอดรหัส Base64 ได้',
+      'เพราะ frontend เป็น public client และ claims ของมันไม่สามารถเชื่อถือได้หากไม่มีหลักฐานเชิง cryptographic',
+      'เพราะ Keycloak กำหนดให้ต้องเรียก backend ในทุกครั้งที่ login',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="securing-apps/index" questions={quizSecuringAppsIndex} />
+
+<ProgressTracker client:visible id="securing-apps/index" />

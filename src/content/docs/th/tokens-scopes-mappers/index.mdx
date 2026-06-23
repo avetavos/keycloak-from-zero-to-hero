@@ -1,0 +1,70 @@
+---
+title: Tokens, Scopes & Mappers
+description: 'ภาพรวมการทำงานของ token ในการพิสูจน์ตัวตนและสิทธิ์ รวมถึง scope และ mapper'
+sidebar:
+  order: 1
+---
+
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## ภาพรวมโมดูล
+
+ใน Keycloak ทุก request ที่ผ่าน API จะถูกตรวจสอบด้วย access token โมดูลนี้จะสอนว่า token ทำงานอย่างไร scope กำหนดว่า claim ใดจะถูกใส่เข้าไปใน token และ mapper เป็นเครื่องมือที่เพิ่มหรือแปลง claim เหล่านั้น
+
+## สิ่งที่คุณจะเรียนรู้
+
+- เข้าใจความแตกต่างระหว่าง access token, ID token และ refresh token
+- กำหนด default และ optional client scope
+- เพิ่ม protocol mapper เพื่อใส่ claim ลงใน token
+- ตั้งค่า lifespan ของ token ให้เหมาะสม
+
+## บทเรียนในโมดูลนี้
+
+| บทเรียน | สิ่งที่คุณจะเรียนรู้ |
+|---|---|
+| [ประเภทของ Token](./token-types) | ความแตกต่างของ access, ID และ refresh token |
+| [Client Scopes](./client-scopes) | Default vs optional scopes และการกำหนดให้ client |
+| [Protocol Mappers](./protocol-mappers) | การเพิ่ม claim ลงใน token ด้วย mapper |
+| [Token Lifespans](./token-lifespans) | การตั้งค่าอายุของ token และ session |
+
+<Callout title="Access token คือสิ่งที่ API ของคุณตรวจสอบ">
+Access token คือ token ที่ API ตรวจสอบในทุก request — ออกแบบ claim ที่อยู่ใน token อย่างตั้งใจ ทุก claim ที่ปรากฏอยู่ใน token มาจาก scope หรือ mapper
+</Callout>
+
+export const quizIndex = [
+  {
+    q: 'Protocol mapper ทำหน้าที่อะไร?',
+    options: [
+      'กำหนด lifespan ของ token',
+      'เพิ่มหรือแปลง claim ใน token',
+      'กำหนดว่าผู้ใช้รายใดสามารถ login ได้',
+      'สร้าง client scope',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'อะไรเป็นตัวกำหนดว่า claim ใดจะปรากฏใน access token?',
+    options: [
+      'ชื่อ realm',
+      'ความซับซ้อนของรหัสผ่านผู้ใช้',
+      'Scope ที่กำหนดให้ client และ mapper ที่แนบกับ scope เหล่านั้น',
+      'Redirect URI',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'REST API ของคุณตรวจสอบ token ใดในทุก request?',
+    options: [
+      'ID token',
+      'Refresh token',
+      'Access token',
+      'Session token',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="tokens-scopes-mappers/index" questions={quizIndex} />
+<ProgressTracker client:visible id="tokens-scopes-mappers/index" />

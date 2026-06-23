@@ -1,0 +1,101 @@
+---
+title: 'Admin Console Tour'
+description: 'A guided tour of the Keycloak admin console: signing in, the realm selector, the left navigation, and creating your first realm.'
+sidebar:
+  order: 4
+---
+
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+The admin console is your control centre for Keycloak. Every realm, client, user, role, and identity provider is created and managed here. Before you create anything, it is worth spending a few minutes understanding the layout so you do not get lost.
+
+## Signing in
+
+1. Make sure Keycloak is running (see the previous lesson if you have not started it yet).
+2. Open `http://localhost:8080` in your browser.
+3. Click "Administration Console".
+4. Enter `admin` as the username and `admin` as the password.
+5. Click "Sign in". You land on the master realm's home page.
+
+## The realm selector
+
+The top-left of the admin console shows the current realm name — by default "Keycloak" (the master realm). Click it to open a drop-down that lists all your realms and lets you create a new one. Always check which realm you are in before making changes — it is easy to accidentally create a client in the wrong realm.
+
+## The left navigation
+
+The sidebar gives you access to every resource in the current realm:
+
+| Nav item | What you manage here |
+|---|---|
+| Realm settings | Token lifespans, security defences, email settings, themes |
+| Clients | Applications registered to use this realm for auth |
+| Client scopes | Shared protocol mappers and scope definitions |
+| Realm roles | Roles available to all clients in this realm |
+| Users | User accounts, credentials, and role assignments |
+| Groups | User groups and group-level role assignments |
+| Identity providers | External IdPs (Google, GitHub, SAML, OIDC) |
+| User federation | LDAP and Active Directory connections |
+| Sessions | Active user sessions across all clients |
+| Events | Audit log of login events and admin events |
+
+## Creating your first realm (warm-up)
+
+1. Click the realm selector (top-left).
+2. Click "Create realm".
+3. In the "Realm name" field, enter `my-app` (lowercase, no spaces).
+4. Leave "Enabled" toggled on.
+5. Click "Create".
+6. You are now inside the `my-app` realm. The top-left selector now shows "my-app".
+
+<Callout title="Always check your realm">
+Always switch to YOUR realm (top-left selector) before creating clients, users, or roles — it is easy to accidentally work in master. Objects created in master are not visible in your application's realm.
+</Callout>
+
+export const quizConsole = [
+  {
+    q: 'Where do you find the realm selector in the admin console?',
+    options: [
+      'Bottom-right corner',
+      'Top-left corner',
+      'The Settings menu',
+      'The Users tab',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which nav section lets you manage applications that integrate with Keycloak?',
+    options: [
+      'Realm settings',
+      'Users',
+      'Clients',
+      'Sessions',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'What is a safe realm name format?',
+    options: [
+      'MY APP',
+      'my_app!',
+      'my-app',
+      'My App 2024',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Why should you avoid working in the master realm for your application?',
+    options: [
+      'The master realm has no clients tab',
+      'Objects in master are invisible to application realms; master is for administering Keycloak itself',
+      'The master realm cannot be deleted',
+      'Users cannot log in via the master realm',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="intro-setup/admin-console" questions={quizConsole} />
+
+<ProgressTracker client:visible id="intro-setup/admin-console" />

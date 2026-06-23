@@ -1,5 +1,109 @@
 ---
-title: Realms, Clients & Roles
-description: Realms, clients, and roles — the core of Keycloak.
+title: 'Realms, Clients & Roles'
+description: 'ภาพรวมของสามแนวคิดพื้นฐานใน Keycloak ได้แก่ realm, client และ role และวิธีที่ทั้งหมดทำงานร่วมกัน'
+sidebar:
+  order: 1
 ---
-Coming soon.
+
+import RunKeycloak from '../../../../components/RunKeycloak.astro';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+<RunKeycloak />
+
+## โมดูลนี้ครอบคลุมอะไรบ้าง
+
+โมดูลนี้จะสอนองค์ประกอบหลักสามอย่างที่ทุกการ deploy Keycloak ประกอบขึ้นมา ได้แก่ **realm**, **client** และ **role** ก่อนที่คุณจะสามารถรักษาความปลอดภัยให้แอปพลิเคชันสักตัวด้วย Keycloak ได้ คุณจำเป็นต้องเข้าใจว่าแนวคิดเหล่านี้คืออะไร เกี่ยวข้องกันอย่างไร และจะสร้างกับตั้งค่ามันใน admin console ได้อย่างไร
+
+เมื่อจบโมดูลนี้ คุณจะสามารถ:
+
+- สร้างและตั้งค่า realm เฉพาะสำหรับแอปพลิเคชันของคุณได้
+- ลงทะเบียนแอปพลิเคชัน (client) เข้ากับ Keycloak ได้
+- เข้าใจความแตกต่างระหว่าง public client กับ confidential client และเลือกใช้ตัวที่เหมาะสมได้
+- สร้าง realm role และ client role แล้วกำหนดให้กับ user ได้
+- อ่าน JWT ที่ถอดรหัสแล้วและค้นหา role ภายในมันได้
+
+## องค์ประกอบหลักสามอย่าง
+
+### Realm
+
+**realm** คือขอบเขตการแยกระดับบนสุด (top-level isolation boundary) ของ Keycloak ลองนึกถึงมันเหมือน tenant หนึ่ง ๆ ที่มีชุดของ user, client, role, identity provider และการตั้งค่า token เป็นของตัวเอง ไม่มีอะไรรั่วไหลข้ามระหว่าง realm — session ใน realm A ไม่สามารถยืนยันตัวตน user เข้าสู่ realm B ได้
+
+Keycloak มาพร้อม realm ที่สร้างไว้ล่วงหน้าหนึ่งตัวคือ **master** realm master คือ realm สำหรับงานบริหารจัดการ — คุณใช้มันเพื่อ log in เข้า admin console และจัดการ realm อื่น ๆ คุณไม่ควร deploy แอปพลิเคชันของตัวเองไว้ภายใน master realm เด็ดขาด
+
+### Client
+
+**client** คือแอปพลิเคชันใด ๆ ที่มอบหมายงานการยืนยันตัวตน (authentication) ให้ Keycloak จัดการ client อาจเป็น single-page app (SPA), mobile app, แอปพลิเคชันเว็บฝั่ง server หรือ service แบบ machine-to-machine ก็ได้ client แต่ละตัวจะลงทะเบียนตัวเองไว้ใน realm หนึ่ง ประกาศ redirect URI ของมัน และรับ token จาก Keycloak หลังจาก user ยืนยันตัวตนแล้ว
+
+### Role
+
+**role** คือสิทธิ์ (permission) ที่มีชื่อ ซึ่งสามารถผูกเข้ากับ user หรือ group ได้ มีอยู่สองแบบ:
+
+- **Realm role** — กำหนดที่ระดับ realm และใช้ได้กับทุก client ใน realm นั้น
+- **Client role** — กำหนดบน client เฉพาะตัวและจำกัดขอบเขตอยู่ที่ client นั้น
+
+role จะปรากฏอยู่ใน token เพื่อให้แอปพลิเคชันของคุณตัดสินใจเรื่องการให้สิทธิ์ (authorisation) ได้โดยไม่ต้องเรียก Keycloak อีกครั้ง
+
+### ทั้งหมดทำงานร่วมกันอย่างไร
+
+```
+Realm
+  ├── Users
+  ├── Roles (realm-level)
+  └── Clients
+        ├── Client roles
+        └── Valid redirect URIs / settings
+```
+
+user ใน realm หนึ่งสามารถถูกกำหนดทั้ง realm role และ client role ได้ เมื่อ user ยืนยันตัวตนผ่าน client ตัวหนึ่ง token ที่ได้จะมี role เหล่านั้นอยู่ภายในเพื่อให้ client บังคับใช้การควบคุมการเข้าถึง (access control) ได้
+
+## บทเรียนในโมดูลนี้
+
+| บทเรียน | สิ่งที่คุณจะได้เรียนรู้ |
+|---|---|
+| [Realms](./realms) | สร้างและตั้งค่า realm |
+| [Clients](./clients) | ลงทะเบียนแอปพลิเคชันเป็น client |
+| [Client Types](./client-types) | public กับ confidential client และ PKCE |
+| [Roles](./roles) | realm role, client role และ composite role |
+
+<Callout title="ประเด็นสำคัญ">
+realm คือพื้นที่ที่แยกออกจากกันอย่างสมบูรณ์ของ user, client และ role แอปพลิเคชันที่อยู่คนละ realm จะไม่มีวันแชร์ session หรือบัญชีกัน แม้ว่าจะรันอยู่บน Keycloak server เครื่องเดียวกันก็ตาม
+</Callout>
+
+export const quizIndex = [
+  {
+    q: 'Keycloak realm คืออะไร?',
+    options: [
+      'บัญชี user เพียงบัญชีเดียว',
+      'tenant ที่แยกออกจากกันอย่างสมบูรณ์ มี user, client และ role เป็นของตัวเอง',
+      'OAuth2 grant ประเภทหนึ่ง',
+      'ปลั๊กอินของ Keycloak',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'คุณควรใช้ realm ใดในการโฮสต์แอปพลิเคชันของตัวเอง?',
+    options: [
+      'master realm',
+      'realm ใดก็ได้ — ไม่สำคัญ',
+      'realm เฉพาะที่คุณสร้างขึ้นสำหรับแอปของคุณ',
+      'realm เริ่มต้น (default realm)',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'ความแตกต่างระหว่าง realm role กับ client role คืออะไร?',
+    options: [
+      'ไม่มีความแตกต่าง',
+      'realm role ใช้ได้ทั่วทั้ง realm; client role จำกัดขอบเขตอยู่ที่ client เฉพาะตัว',
+      'client role ปรากฏใน token แต่ realm role ไม่ปรากฏ',
+      'realm role กำหนดให้ได้เฉพาะกับ admin เท่านั้น',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="realms-clients-roles/index" questions={quizIndex} />
+
+<ProgressTracker client:visible id="realms-clients-roles/index" />

@@ -1,0 +1,145 @@
+---
+title: LDAP User Federation
+description: 'Connect Keycloak to LDAP or Active Directory so that your existing directory users can log in without creating new Keycloak accounts.'
+sidebar:
+  order: 4
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## What is user federation?
+
+**User federation** lets Keycloak read (and optionally write) user accounts from an external store instead of its own internal database. The most common store is **LDAP** (Lightweight Directory Access Protocol), which is the protocol used by:
+
+- **OpenLDAP** — the open-source LDAP server.
+- **Microsoft Active Directory (AD)** — the enterprise directory service found in most corporate networks.
+- **Apache Directory Server**, **389 Directory Server**, and others.
+
+When a user tries to log in, Keycloak looks them up in the LDAP directory and delegates the password check to the LDAP bind. From the user's perspective, they are just logging in with their normal directory credentials.
+
+## Step 1 — add an LDAP provider
+
+1. In the admin console, make sure you are in the correct realm.
+2. Click **User federation** in the left sidebar.
+3. Click **Add provider** and select **LDAP**.
+4. Keycloak displays the LDAP configuration form.
+
+## Step 2 — connection settings
+
+Fill in the connection details:
+
+| Field | What to enter |
+|---|---|
+| **Vendor** | Select **Active Directory** for AD, or **Other** for OpenLDAP. This pre-fills sensible defaults for DN structures and attributes. |
+| **Connection URL** | The LDAP server URI, e.g., `ldap://ldap.example.com:389` or `ldaps://ldap.example.com:636` (LDAPS for encrypted). |
+| **Enable StartTLS** | Preferred alternative to LDAPS for encrypting the connection on port 389. |
+| **Connection pooling** | Enable in production to reuse LDAP connections. |
+
+Click **Test connection** to verify Keycloak can reach the server before continuing.
+
+## Step 3 — bind settings
+
+Keycloak needs a service account to search the directory. This is called the **bind DN**.
+
+| Field | What to enter |
+|---|---|
+| **Bind type** | `simple` for username/password bind. |
+| **Bind DN** | The distinguished name of the service account, e.g., `cn=keycloak-svc,ou=service-accounts,dc=example,dc=com`. |
+| **Bind credentials** | The service account password. Store this in a Keycloak vault or environment variable — never hardcode it. |
+
+Click **Test authentication** to verify the bind credentials work.
+
+## Step 4 — LDAP searching and user DN
+
+| Field | What to enter |
+|---|---|
+| **Users DN** | The base DN to search for users, e.g., `ou=users,dc=example,dc=com`. |
+| **Username LDAP attribute** | The LDAP attribute that maps to the Keycloak username. For AD use `sAMAccountName`; for OpenLDAP use `uid`. |
+| **RDN LDAP attribute** | Usually `cn` or the same as the username attribute. |
+| **UUID LDAP attribute** | For AD: `objectGUID`. For OpenLDAP: `entryUUID`. This is used as Keycloak's internal user ID. |
+| **User object classes** | For AD: `person, organizationalPerson, user`. For OpenLDAP: `inetOrgPerson, organizationalPerson`. |
+
+## Step 5 — edit mode and import
+
+These two settings define how Keycloak synchronises users and whether it writes back to LDAP.
+
+### Edit mode
+
+```text
+READ_ONLY   — Keycloak cannot modify any LDAP attributes. Password changes are rejected. Use for corporate AD where Keycloak should not touch the directory.
+WRITABLE    — Keycloak can update LDAP attributes and sync password changes back to LDAP. Use only if Keycloak is authorised to write to the directory.
+UNSYNCED    — Keycloak stores attribute changes locally (in its own DB) without writing to LDAP.
+```
+
+export const editModeNote = `# Recommended default for most deployments
+Edit mode: READ_ONLY`;
+
+<CopyCode client:visible code={editModeNote} label="Copy recommendation" />
+
+### Import users
+
+- **On** (default) — Keycloak imports user records into its local database on first login and after each sync. Queries are fast because they hit the local DB.
+- **Off** — Keycloak queries LDAP on every login. Less data stored locally, but every authentication hits the LDAP server.
+
+## Step 6 — sync and save
+
+1. Click **Save**.
+2. Back on the **User federation** page, open your LDAP provider.
+3. Scroll down to the **Synchronization** section.
+4. Click **Synchronize all users** to do an immediate full sync, or configure **Changed users sync** to run periodically.
+
+After the sync, go to **Users** in the left sidebar. You should see your LDAP users listed with a "federated" badge.
+
+<Callout title="Choose READ_ONLY unless you intend to write back to LDAP">
+The edit mode `READ_ONLY` prevents Keycloak from modifying your LDAP directory. This is the safe default for corporate Active Directory deployments where the HR system or IT team owns the directory. Only switch to `WRITABLE` if your organisation has explicitly approved Keycloak as a write-capable client of the directory.
+</Callout>
+
+export const quizLdap = [
+  {
+    q: 'What LDAP attribute should you use as the username for Active Directory?',
+    options: [
+      'uid',
+      'cn',
+      'sAMAccountName',
+      'objectGUID',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'What does LDAP edit mode READ_ONLY mean?',
+    options: [
+      'Keycloak can read users but stores all attribute changes locally',
+      'Keycloak cannot modify any LDAP attributes — password changes are rejected',
+      'Keycloak reads LDAP only during the initial sync',
+      'Users can only read their own profile — they cannot change it',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What is the purpose of the bind DN in LDAP federation?',
+    options: [
+      'It is the base path Keycloak searches for users',
+      'It identifies the UUID attribute in the directory',
+      'It is the service account Keycloak uses to query the LDAP directory',
+      'It defines the edit mode for the federation provider',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'When "Import users" is turned off, what happens on every login?',
+    options: [
+      'Keycloak creates a local copy of the user on first login only',
+      'Keycloak queries the LDAP server on every authentication',
+      'Keycloak falls back to its internal user database',
+      'Keycloak disables password authentication for LDAP users',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="federation-social/ldap-federation" questions={quizLdap} />
+
+<ProgressTracker client:visible id="federation-social/ldap-federation" />

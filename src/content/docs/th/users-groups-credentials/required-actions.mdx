@@ -1,0 +1,131 @@
+---
+title: Required Actions
+description: 'เรียนรู้ว่า required action คืออะไร, วิธีกำหนดให้กับ user, วิธีเปิดใช้งาน self-registration, และวิธีที่ Account Console ช่วยให้ user จัดการ credential ของตนเอง'
+sidebar:
+  order: 5
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Required action คืออะไร?
+
+**required action** คือขั้นตอนที่ Keycloak บังคับให้ user ทำให้เสร็จก่อนที่พวกเขาจะล็อกอินเสร็จสมบูรณ์ได้ เมื่อ user มี required action หนึ่งรายการหรือมากกว่าบนบัญชีของพวกเขา Keycloak จะสกัด login flow หลังจากการตรวจสอบ credential และนำเสนอแต่ละ action ตามลำดับ Keycloak จะออก token และเปลี่ยนเส้นทาง user ไปยังแอปพลิเคชันก็ต่อเมื่อทุก action ได้รับการทำให้สำเร็จแล้วเท่านั้น
+
+required action คือวิธีที่ Keycloak บังคับขั้นตอน onboarding — การยืนยันที่อยู่อีเมล, การหมุนเวียน password ชั่วคราว, หรือการลงทะเบียน second factor — โดยไม่ต้องเขียนโค้ดแบบกำหนดเองในแอปพลิเคชันของคุณ
+
+## Required action ในตัว
+
+Keycloak มาพร้อมชุดของ required action ในตัวที่คุณสามารถใช้ได้ทันที:
+
+- **Verify Email** — user ต้องคลิกลิงก์ที่ส่งไปยังที่อยู่อีเมลที่ลงทะเบียนไว้ สิ่งนี้ยืนยันว่าที่อยู่นั้นถูกต้องและเป็นของ user
+- **Update Password** — user ต้องเลือก password ใหม่ก่อนดำเนินการต่อ มีประโยชน์หลังจาก admin สร้างบัญชีด้วย password ชั่วคราว หรือหลังจากต้องสงสัยว่ามีการถูกบุกรุก
+- **Configure OTP** — user ต้องสแกน QR code และลงทะเบียนแอป authenticator (เช่น Google Authenticator หรือ Authy) เมื่อเสร็จสิ้นแล้ว การล็อกอินครั้งต่อ ๆ ไปจะต้องใช้ one-time code
+- **Update Profile** — user ต้องตรวจสอบและกรอกฟิลด์โปรไฟล์ของตน (ชื่อ, นามสกุล, อีเมล) ก่อนดำเนินการต่อ มีประโยชน์เมื่อนำเข้า user ที่มีข้อมูลไม่ครบถ้วน
+- **Terms and Conditions** — user ต้องอ่านและยอมรับเงื่อนไขการให้บริการของคุณ คุณสามารถปรับแต่งข้อความเงื่อนไขผ่าน theme หรือ admin API
+
+## การกำหนด required action ให้กับ user
+
+คุณสามารถกำหนด required action หนึ่งรายการหรือมากกว่าให้กับ user แต่ละรายได้โดยตรงจาก admin console:
+
+1. ใน admin console ไปที่ **Users** ในแถบด้านซ้าย
+2. คลิก user ที่คุณต้องการอัปเดต
+3. เปิดแท็บ **Details** (แท็บเริ่มต้นเมื่อคุณเปิด user)
+4. หาฟิลด์ **Required user actions** — มันรับหลายค่าจาก dropdown
+5. คลิกภายในฟิลด์และเลือก action หนึ่งรายการหรือมากกว่าจากรายการ (ตัวอย่างเช่น **Verify Email** และ **Update Password**)
+6. คลิก **Save**
+
+ครั้งถัดไปที่ user รายนี้พยายามล็อกอิน พวกเขาจะถูกเปลี่ยนเส้นทางผ่านแต่ละ action ที่เลือกไว้ก่อนได้รับ token ของพวกเขา
+
+## Self-registration
+
+Self-registration ให้ user ใหม่สร้างบัญชีของตัวเองจากหน้าล็อกอิน โดยไม่ต้องให้ admin สร้างให้ก่อน วิธีเปิดใช้งาน:
+
+1. ไปที่ **Realm settings** ในแถบด้านซ้าย
+2. เปิดแท็บ **Login**
+3. สลับ **User registration** ไปที่ **On**
+4. คลิก **Save**
+
+เมื่อเปิดใช้งานแล้ว ลิงก์ **Register** จะปรากฏบนหน้าล็อกอิน การคลิกมันจะเปิดฟอร์มลงทะเบียนที่ user กรอกชื่อ, อีเมล, และ password
+
+คุณสามารถผสาน self-registration เข้ากับ **default groups** และ **required actions** เพื่อทำให้ onboarding เป็นอัตโนมัติได้ ตัวอย่างเช่น กำหนด user ใหม่ทุกคนให้กับ group `app-users` และบังคับให้พวกเขายืนยันอีเมล ซึ่งหมายความว่า user ที่ลงทะเบียนด้วยตนเองทุกคนจะถูกจัดวางใน group ที่ถูกต้องโดยอัตโนมัติ และไม่สามารถใช้แอปพลิเคชันได้จนกว่าจะยืนยันที่อยู่ของตน — ทั้งหมดนี้โดยไม่ต้องเขียนตรรกะแบบกำหนดเองใด ๆ
+
+## Account Console
+
+ทุก realm เปิดให้บริการ Account Console แบบ self-service ที่:
+
+```
+http://localhost:8080/realms/{realm-name}/account
+```
+
+แทนที่ `{realm-name}` ด้วยชื่อ realm จริงของคุณ (ตัวอย่างเช่น `my-app`) user ที่ผ่านการพิสูจน์ตัวตนแล้วสามารถเข้าชม URL นี้เพื่อจัดการสิ่งต่อไปนี้ของตัวเองได้:
+
+- **Profile** — อัปเดตชื่อ, นามสกุล, และที่อยู่อีเมล
+- **Password** — เปลี่ยน password ปัจจุบันของพวกเขา
+- **Authenticator** — ลงทะเบียน, อัปเดต, หรือลบอุปกรณ์ OTP
+- **Sessions** — ดู session ที่ใช้งานอยู่ทั้งหมดและออกจากระบบในอุปกรณ์แต่ละเครื่อง
+
+คุณสามารถลิงก์ user ไปยัง Account Console จากหน้าการตั้งค่าหรือหน้าช่วยเหลือของแอปพลิเคชันของคุณ admin ยังสามารถใช้มันเป็น self-service portal เพื่อให้ user จัดการการดูแล credential ประจำวันด้วยตนเอง ลดการร้องขอการสนับสนุน
+
+export const requiredActionsCode = `curl -s -X PUT \\
+  -H "Authorization: Bearer \${TOKEN}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"requiredActions":["VERIFY_EMAIL","UPDATE_PASSWORD"]}' \\
+  http://localhost:8080/admin/realms/my-app/users/\${USER_ID}`;
+
+<CopyCode client:visible code={requiredActionsCode} label="Copy curl" />
+
+แทนที่ `my-app` ด้วยชื่อ realm ของคุณ, `TOKEN` ด้วย admin access token ที่ถูกต้อง, และ `USER_ID` ด้วย UUID ของ user เป้าหมาย body รับชื่อ action ในตัวรวมกันได้ทุกแบบ (`VERIFY_EMAIL`, `UPDATE_PASSWORD`, `CONFIGURE_TOTP`, `UPDATE_PROFILE`, `TERMS_AND_CONDITIONS`)
+
+<Callout title="Required action บังคับขั้นตอน onboarding">
+Required action ให้คุณบังคับขั้นตอน — ยืนยันอีเมล, ตั้งค่า 2FA — ก่อนที่ user จะล็อกอินเสร็จสมบูรณ์ได้ ใช้มันเพื่อเสริมความแข็งแกร่งด้านความปลอดภัยโดยไม่ต้องเขียนโค้ดแบบกำหนดเอง
+</Callout>
+
+export const quizRequiredActions = [
+  {
+    q: 'required action ใน Keycloak คืออะไร?',
+    options: [
+      'role ที่ต้องถูกกำหนดก่อนที่จะสร้าง client ได้',
+      'ขั้นตอนที่ Keycloak บังคับให้ user ทำให้เสร็จก่อนล็อกอินเสร็จสมบูรณ์',
+      'ฟิลด์ที่จำเป็นในฟอร์มลงทะเบียน client',
+      'policy ระดับ realm ที่จำกัดอายุของ token',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'ใน admin console คุณกำหนด required action ให้กับ user รายใดรายหนึ่งได้ที่ไหน?',
+    options: [
+      'Realm settings → แท็บ Login',
+      'Clients → client นั้น → แท็บ Settings',
+      'Users → user นั้น → แท็บ Details → ฟิลด์ Required user actions',
+      'Authentication → Required actions → Assign',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'การตั้งค่าใดที่เปิดใช้งาน self-registration เพื่อให้ user สร้างบัญชีของตัวเองได้?',
+    options: [
+      'Clients → Create client → Allow self-registration',
+      'Realm settings → แท็บ Login → สวิตช์ User registration',
+      'Users → Permissions → Allow registration',
+      'Authentication → Flows → Registration → Enable',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'user เข้าชม URL ใดเพื่อจัดการโปรไฟล์, password, และอุปกรณ์ OTP ของตัวเอง?',
+    options: [
+      'http://localhost:8080/admin/realms/{realm-name}/console',
+      'http://localhost:8080/realms/{realm-name}/account',
+      'http://localhost:8080/realms/{realm-name}/self-service',
+      'http://localhost:8080/auth/account',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="users-groups-credentials/required-actions" questions={quizRequiredActions} />
+
+<ProgressTracker client:visible id="users-groups-credentials/required-actions" />

@@ -1,0 +1,150 @@
+---
+title: Framework Adapters
+description: 'Integrate Keycloak with common frameworks: Spring Boot (Spring Security OAuth2 Resource Server), Node/Express (express-oauth2-jwt-bearer), and the general OIDC pattern. Prefer standard OIDC libraries over legacy Keycloak adapters.'
+sidebar:
+  order: 5
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## The general pattern
+
+Every framework integration follows the same two-role model:
+
+- **Frontend / OIDC client**: any library that implements the Authorization Code + PKCE flow (keycloak-js for browsers, AppAuth for mobile, MSAL for Microsoft stacks, etc.).
+- **Backend / resource server**: any library that validates Bearer JWTs against the realm's JWKS endpoint.
+
+The key insight is that the backend does not need a Keycloak-specific library. It only needs a library that can validate a JWT against a JWKS URL — which is a standard feature of every mature OAuth2/OIDC ecosystem.
+
+## Spring Boot (Spring Security OAuth2 Resource Server)
+
+Add the Spring Security OAuth2 Resource Server dependency to your `pom.xml`:
+
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+</dependency>
+```
+
+Then point Spring at your realm's issuer URI. Spring automatically fetches the JWKS, verifies incoming JWTs, and populates `SecurityContextHolder` with the decoded claims:
+
+export const springYamlCode = `spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/my-app`;
+
+<CopyCode client:visible code={springYamlCode} label="Copy application.yml" />
+
+Spring Security derives the JWKS URL automatically from the issuer URI by appending `/protocol/openid-connect/certs` (via the OIDC discovery document). No Keycloak-specific code is needed.
+
+A minimal security configuration to protect all endpoints:
+
+```java
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/public/**").permitAll()
+                .anyRequest().authenticated()
+            )
+            .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+        return http.build();
+    }
+}
+```
+
+## Node with express-oauth2-jwt-bearer
+
+`express-oauth2-jwt-bearer` is Auth0's MIT-licensed middleware that wraps `jose` for Express. Install it:
+
+```bash
+npm install express-oauth2-jwt-bearer
+```
+
+```ts
+import { auth } from 'express-oauth2-jwt-bearer';
+import express from 'express';
+
+const checkJwt = auth({
+  audience: 'my-app-backend',
+  issuerBaseURL: 'http://localhost:8080/realms/my-app',
+});
+
+const app = express();
+
+app.get('/profile', checkJwt, (req, res) => {
+  res.json({ sub: req.auth?.payload.sub });
+});
+```
+
+## The deprecated Keycloak adapters
+
+Keycloak used to ship per-framework adapters: `keycloak-connect` for Node, a Keycloak Spring Boot adapter, and others. These adapters are **deprecated** as of Keycloak 19 and will eventually be removed. New projects should use:
+
+| Framework | Recommended library |
+|---|---|
+| Browser SPA | `keycloak-js` (official, still maintained) |
+| Spring Boot backend | Spring Security OAuth2 Resource Server |
+| Node/Express backend | `jose` or `express-oauth2-jwt-bearer` |
+| Any other backend | Any JWT library that supports JWKS |
+
+<Callout title="Prefer standard OIDC/OAuth2 support over legacy adapters">
+The old per-framework Keycloak adapters (keycloak-connect, the Keycloak Spring adapter) are deprecated. They will not receive new features and may be dropped. Your backend only needs to validate a JWT — any library that can verify a JWKS-signed token works. Using the standard OAuth2 resource server support in your framework keeps your code portable across identity providers.
+</Callout>
+
+export const quizFrameworkAdapters = [
+  {
+    q: 'What does the Spring Security issuer-uri property tell Spring Boot?',
+    options: [
+      'The URL of the Keycloak admin console',
+      'The URL of the realm whose JWTs this service should accept and validate',
+      'The client secret for confidential clients',
+      'The URL to redirect users to for login',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'How does Spring Security discover the JWKS URL from the issuer-uri?',
+    options: [
+      'It is hardcoded in the Spring Security source code for Keycloak',
+      'You must configure it manually in application.yml',
+      'Spring fetches the OIDC discovery document at issuer-uri/.well-known/openid-configuration and reads the jwks_uri field',
+      'Spring calls the Keycloak admin API to retrieve the keys',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Why are the old per-framework Keycloak adapters (keycloak-connect, etc.) not recommended?',
+    options: [
+      'They are only available as commercial add-ons',
+      'They are deprecated, receive no new features, and tie your code to Keycloak-specific APIs',
+      'They do not support PKCE',
+      'They require Java 17 or higher',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which keycloak-js feature is still the recommended choice for browser SPAs?',
+    options: [
+      'The deprecated keycloak-js v2 adapter',
+      'keycloak-js (official, still actively maintained)',
+      'The Keycloak JavaScript policy engine',
+      'The Keycloak REST client library',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="securing-apps/framework-adapters" questions={quizFrameworkAdapters} />
+
+<ProgressTracker client:visible id="securing-apps/framework-adapters" />

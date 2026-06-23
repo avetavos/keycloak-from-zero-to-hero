@@ -1,0 +1,127 @@
+---
+title: Realms
+description: 'Understand the realm as an isolation boundary, the role of the master realm, and how to create and configure your own realm.'
+sidebar:
+  order: 2
+---
+
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## What is a realm?
+
+A **realm** is the top-level container in Keycloak. Every object in Keycloak — users, clients, roles, identity providers, token policies — belongs to exactly one realm. Realms are completely isolated from each other: a user in realm `shop` cannot log in to an application registered in realm `blog`, and their sessions are never shared.
+
+You can think of a realm as a tenant in a multi-tenant SaaS system, except that each realm is managed entirely within one Keycloak server.
+
+## The master realm
+
+Keycloak is installed with one realm already in place: **master**. The master realm has a special purpose: it is the administrative realm. When you open the Keycloak admin console and log in, you are authenticating against master.
+
+The master realm can create and manage other realms, but it should never be used to register your own applications or store your application's users. Mixing your app users with the administrative super-users of master is a serious security risk.
+
+## Creating a realm
+
+1. Open the Keycloak admin console at `http://localhost:8080` and sign in with your admin credentials.
+2. In the top-left corner, click the realm name drop-down (it initially shows **Keycloak** or **master**).
+3. Click **Create realm**.
+4. In the **Realm name** field, enter a short, lowercase, hyphen-separated name for your realm (e.g., `my-app`).
+5. Make sure **Enabled** is toggled on.
+6. Click **Create**.
+
+Keycloak creates the realm and switches your console context into it. All subsequent configuration (clients, roles, users) will belong to this new realm.
+
+## A tour of realm settings
+
+After creating a realm, click **Realm settings** in the left sidebar. The settings are organised into tabs:
+
+### General
+
+- **Display name** — a human-readable name shown on the login page.
+- **Frontend URL** — override the URL Keycloak uses to build redirect links (useful behind a reverse proxy).
+- **HTML display name** — supports HTML for branded login pages.
+
+### Login
+
+- **User registration** — allow self-service sign-up.
+- **Forgot password** — enable the password reset flow (requires email configured).
+- **Remember me** — let users stay logged in across browser restarts.
+- **Verify email** — require users to confirm their email address after registration.
+- **Login with email** — allow users to enter their email address instead of a username.
+
+### Email
+
+Configure the SMTP server Keycloak uses to send verification and password-reset emails. Required if you enable any email-triggered flows.
+
+### Tokens
+
+Key settings that control token lifetimes and behaviour:
+
+| Setting | Default | What it controls |
+|---|---|---|
+| Access token lifespan | 5 min | How long an access token is valid |
+| SSO session idle | 30 min | Session expires if idle for this long |
+| SSO session max | 10 hours | Hard limit on session length |
+| Refresh token lifespan | Matches SSO session | How long a refresh token can be used |
+
+Shorter access-token lifespans reduce the window of exposure if a token is stolen, at the cost of more frequent refreshes.
+
+### Keys
+
+Keycloak automatically generates cryptographic keys for signing tokens. The **Keys** tab shows the active key providers. For production, you should rotate keys periodically. The `RS256` provider is the default and produces JWTs signed with an RSA private key; clients verify signatures using the public key available at the realm's JWKS endpoint:
+
+```
+http://localhost:8080/realms/{realm-name}/protocol/openid-connect/certs
+```
+
+<Callout title="Never build apps in master">
+Never register your applications or store application users in the master realm. The master realm is reserved for Keycloak administration. Create a dedicated realm for every project or product.
+</Callout>
+
+export const quizRealms = [
+  {
+    q: 'What is the purpose of the master realm in Keycloak?',
+    options: [
+      'It stores the users for your main application',
+      'It is a reserved administrative realm used to manage Keycloak itself',
+      'It is the only realm that supports OIDC',
+      'It is the default realm for all new clients',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which token setting should you shorten to reduce the exposure window if an access token is stolen?',
+    options: [
+      'SSO session max',
+      'Refresh token lifespan',
+      'Access token lifespan',
+      'SSO session idle',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Where in the admin console do you start the process of creating a new realm?',
+    options: [
+      'Clients → Create client',
+      'The realm name drop-down in the top-left corner → Create realm',
+      'Realm settings → General → New',
+      'Users → Add realm',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What URL path exposes a realm\'s public signing keys for token verification?',
+    options: [
+      '/realms/{realm}/protocol/openid-connect/token',
+      '/realms/{realm}/protocol/openid-connect/certs',
+      '/realms/{realm}/keys/active',
+      '/admin/realms/{realm}/keys',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="realms-clients-roles/realms" questions={quizRealms} />
+
+<ProgressTracker client:visible id="realms-clients-roles/realms" />

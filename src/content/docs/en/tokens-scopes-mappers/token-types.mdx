@@ -1,0 +1,184 @@
+---
+title: 'Token Types'
+description: "Learn the difference between access tokens, ID tokens, and refresh tokens — and when to use each."
+sidebar:
+  order: 2
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Three tokens, three purposes
+
+Keycloak issues three kinds of tokens during an OIDC flow. Each has a distinct audience and a distinct purpose. Mixing them up is one of the most common security mistakes in OAuth2 integrations.
+
+## Access token
+
+The access token authorises API calls. It is a short-lived JWT that your backend APIs validate on every request. When a client makes an API call, it attaches the access token as a Bearer token in the `Authorization` header:
+
+```
+Authorization: Bearer <access_token>
+```
+
+Key characteristics:
+
+- Short-lived by default (5 minutes in Keycloak).
+- Contains claims about the user and their granted permissions (roles, scopes).
+- Intended for your APIs — not for the client application itself.
+- Should be validated on every request using the realm's public key (via JWKS).
+
+## ID token
+
+The ID token tells the client application who the user is. It is consumed by the client — the frontend or application — to display user information (name, email, profile picture). It is an OIDC-specific token and is only issued when the `openid` scope is requested.
+
+Key characteristics:
+
+- Contains identity claims: `sub`, `name`, `email`, `preferred_username`, etc.
+- Intended for the client application only — **do NOT send it to your API**.
+- Should not be used for authorisation decisions.
+
+## Refresh token
+
+The refresh token is longer-lived. Its sole purpose is to let the client obtain new access tokens silently — without asking the user to log in again — as long as the user's session is still active.
+
+Key characteristics:
+
+- Sent only to the Keycloak token endpoint (`/protocol/openid-connect/token`).
+- Never sent to your API.
+- Invalidated when the user logs out or when the SSO session expires.
+- If the `offline_access` scope is requested, Keycloak issues an offline refresh token that persists beyond the normal session.
+
+## Decoded access token example
+
+Here is what a typical Keycloak access token looks like after decoding:
+
+```json
+{
+  "header": {
+    "alg": "RS256",
+    "typ": "JWT",
+    "kid": "abc123"
+  },
+  "payload": {
+    "exp": 1719878400,
+    "iat": 1719874800,
+    "jti": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "iss": "https://auth.example.com/realms/my-app",
+    "aud": "account",
+    "sub": "user-uuid-here",
+    "typ": "Bearer",
+    "azp": "my-app-frontend",
+    "scope": "openid profile email roles",
+    "realm_access": {
+      "roles": ["offline_access", "uma_authorization", "user"]
+    },
+    "resource_access": {
+      "my-app-frontend": {
+        "roles": ["app-user"]
+      }
+    },
+    "email_verified": true,
+    "name": "Alice Example",
+    "preferred_username": "alice",
+    "email": "alice@example.com"
+  }
+}
+```
+
+export const decodedAccessTokenCode = `{
+  "header": {
+    "alg": "RS256",
+    "typ": "JWT",
+    "kid": "abc123"
+  },
+  "payload": {
+    "exp": 1719878400,
+    "iat": 1719874800,
+    "jti": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "iss": "https://auth.example.com/realms/my-app",
+    "aud": "account",
+    "sub": "user-uuid-here",
+    "typ": "Bearer",
+    "azp": "my-app-frontend",
+    "scope": "openid profile email roles",
+    "realm_access": {
+      "roles": ["offline_access", "uma_authorization", "user"]
+    },
+    "resource_access": {
+      "my-app-frontend": {
+        "roles": ["app-user"]
+      }
+    },
+    "email_verified": true,
+    "name": "Alice Example",
+    "preferred_username": "alice",
+    "email": "alice@example.com"
+  }
+}`;
+
+<CopyCode client:visible code={decodedAccessTokenCode} label="Copy decoded token" />
+
+## Key claims explained
+
+| Claim | Meaning |
+|---|---|
+| `sub` | Subject — the unique identifier of the user (a UUID). Never changes, even if the username or email changes. |
+| `iss` | Issuer — the URL of the Keycloak realm that issued the token. Your API must verify this matches the expected realm. |
+| `aud` | Audience — which party the token is intended for. Your API should verify its own client ID appears here. |
+| `exp` | Expiry — a Unix timestamp after which the token must be rejected. |
+| `azp` | Authorised party — the client ID of the application that requested the token. |
+| `scope` | Space-separated list of granted scopes. Reflects which client scopes were included. |
+| `realm_access` | An object containing a `roles` array of the user's realm-level roles. |
+
+<Callout title="Send the access token to APIs, not the ID token">
+Send the ACCESS token to your API as the Bearer token in the Authorization header. Use the ID token only in the client to display user info — never forward it to a backend service.
+</Callout>
+
+export const quizTokenTypes = [
+  {
+    q: 'Which token does your REST API validate?',
+    options: [
+      'ID token',
+      'Refresh token',
+      'Access token',
+      'Session cookie',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'What does the `sub` claim contain?',
+    options: [
+      "The user's email address",
+      'The client ID',
+      'The unique identifier of the user (subject)',
+      'The token expiry time',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'What is the refresh token used for?',
+    options: [
+      'Authorising API calls directly',
+      "Displaying the user's name in the UI",
+      'Obtaining new access tokens without re-authentication',
+      'Encrypting the access token',
+    ],
+    answer: 2,
+  },
+  {
+    q: "Which claim lists the user's realm-level roles?",
+    options: [
+      'scope',
+      'azp',
+      'realm_access',
+      'aud',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="tokens-scopes-mappers/token-types" questions={quizTokenTypes} />
+
+<ProgressTracker client:visible id="tokens-scopes-mappers/token-types" />

@@ -1,0 +1,124 @@
+---
+title: Identity Brokering
+description: 'Broker การ authenticate กับ OIDC หรือ SAML identity provider ใด ๆ และตั้งค่า first-login flow เพื่อควบคุมการเชื่อมโยงหรือสร้างผู้ใช้ที่ brokered'
+sidebar:
+  order: 3
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Identity brokering คืออะไร?
+
+**Identity brokering** เป็นรูปแบบทั่วไปที่ social login เป็นเพียงตัวอย่างหนึ่ง ทุกครั้งที่ Keycloak redirect ผู้ใช้ไปยัง external identity provider และยอมรับผล นั่นคือการ broker External provider อาจเป็น:
+
+- **Social provider** (Google, GitHub, Apple — กล่าวถึงในบทก่อนหน้า)
+- **Keycloak** อีกตัว (org-to-org หรือ environment-to-environment SSO)
+- **OIDC-compliant** provider ใด ๆ (Azure AD, Okta, Auth0, Ping Identity ฯลฯ)
+- **SAML 2.0** service (legacy enterprise IdPs, ADFS ฯลฯ)
+
+จากมุมมองของแอปพลิเคชัน ไม่มีอะไรเปลี่ยนแปลง — มันยังได้รับ token ที่ออกโดย Keycloak เหมือนเดิม มีแค่ Keycloak เท่านั้นที่รู้ว่า authentication ถูกมอบหมายไป
+
+## การเพิ่ม OIDC identity provider
+
+1. ใน admin console ไปที่ **Identity providers** ใน left sidebar
+2. คลิก **Add provider** และเลือก **OpenID Connect v1.0**
+3. ตั้ง **Alias** — identifier สั้น ๆ ที่ใช้ใน broker endpoint URI (เช่น `corporate-idp`)
+4. ตั้ง **Display name** — แสดงบนปุ่มใน login page (เช่น "Log in with Corporate SSO")
+5. ใน **Discovery endpoint** วาง URL ของ `/.well-known/openid-configuration` ของ remote IdP Keycloak จะ auto-populate token, authorisation และ JWKS endpoints
+6. วาง **Client ID** และ **Client secret** ที่ออกโดย remote IdP (คุณลงทะเบียน broker endpoint ของ Keycloak กับ IdP นั้นเหมือนกับ social login)
+7. คลิก **Save**
+
+Broker endpoint ที่ต้องลงทะเบียนกับ remote IdP คือ:
+
+export const oidcBrokerEndpointCode = `https://<keycloak-host>/realms/<realm>/broker/<alias>/endpoint`;
+
+<CopyCode client:visible code={oidcBrokerEndpointCode} label="Copy broker endpoint" />
+
+## การเพิ่ม SAML 2.0 identity provider
+
+1. คลิก **Add provider** และเลือก **SAML v2.0**
+2. ตั้ง **Alias** และ **Display name**
+3. วาง **Service provider entity ID** (SAML entity ID ที่ Keycloak จะใช้เมื่อส่ง AuthnRequests — Keycloak กรอกค่าเริ่มต้นไว้ให้แล้ว)
+4. วาง URL ของ entity descriptor XML ของ remote IdP ใน **Import from URL** แล้วคลิก **Import** Keycloak จะ auto-populate SSO URL, SLO URL และ signing certificate
+5. คลิก **Save**
+
+## First broker login flow
+
+ครั้งแรกที่ผู้ใช้ authenticate ผ่าน brokered IdP Keycloak ต้องตัดสินใจว่าจะทำอะไรกับ external identity นั้น ควร:
+
+- **สร้างผู้ใช้ใหม่** ในรีล์ม? (ง่าย แต่สร้างรายการซ้ำถ้าผู้ใช้มีบัญชีในเครื่องอยู่แล้ว)
+- **เชื่อมกับบัญชีที่มีอยู่** โดย match บน email? (ใช้งานได้จริงกว่า แต่ต้องเชื่อถือ email claim ของ external provider)
+
+การตัดสินใจนี้ทำโดย **First broker login** authentication flow คุณตั้งค่าได้ที่ **Authentication → Flows → First broker login** flow เริ่มต้นมีขั้นตอนที่ถามผู้ใช้ให้ review profile และอาจเชื่อมกับบัญชีที่มีอยู่
+
+### ขั้นตอนหลักใน first-login flow เริ่มต้น
+
+| ขั้นตอน | สิ่งที่ทำ |
+|---|---|
+| Review profile | แสดงฟอร์มให้ผู้ใช้กรอกล่วงหน้าด้วย claims จาก external IdP ผู้ใช้ยืนยันหรือแก้ไขชื่อและ email ได้ |
+| User exists | ตรวจสอบว่ามีผู้ใช้ที่มี email เดียวกันในรีล์มอยู่หรือไม่ |
+| Handle existing account | ถ้าพบรายการที่ตรงกัน ถามผู้ใช้ให้ยืนยันการเชื่อม (ผ่านรหัสผ่านหรือ OTP) |
+| Create user if unique | ถ้าไม่พบรายการที่ตรงกัน สร้างผู้ใช้ใหม่อัตโนมัติจาก brokered claims |
+
+### การเชื่อถือ issuer และตั้งค่า sync mode
+
+ใน identity provider settings คุณสามารถตั้ง:
+
+- **Trust email** — ถ้าเปิดใช้ Keycloak จะทำเครื่องหมาย email ของผู้ใช้ว่า verified เมื่อ external IdP ให้มา เปิดใช้เฉพาะเมื่อเชื่อใจว่า external provider ตรวจสอบ email แล้ว
+- **Sync mode** — ควบคุมว่า Keycloak อัปเดต attributes ของผู้ใช้ในเครื่องจาก IdP token เมื่อไหร่:
+  - `LEGACY` (ค่าเริ่มต้น) — อัปเดตเฉพาะ login แรก
+  - `FORCE` — อัปเดตทุกครั้งที่ login ใช้เมื่อ IdP เป็น source of truth ของข้อมูล profile
+
+<Callout title="First broker login flow ควบคุมการเชื่อมบัญชี">
+First broker login flow ตัดสินใจว่า brokered user จะถูกเชื่อมกับบัญชีที่มีอยู่หรือสร้างบัญชีใหม่ — ปรับแต่งอย่างระมัดระวัง การเชื่อมอัตโนมัติบน email match เป็นเรื่องสะดวก แต่ต้องเชื่อถือการตรวจสอบ email ของ external IdP การตั้งค่า flow ผิดอาจนำไปสู่การยึดบัญชีถ้าผู้โจมตีควบคุม IdP ที่คืน email ของเหยื่อ
+</Callout>
+
+export const quizBrokering = [
+  {
+    q: 'อะไรไม่ใช่แหล่ง identity brokering ที่ถูกต้องใน Keycloak?',
+    options: [
+      'Keycloak realm อีกตัว',
+      'OIDC-compliant provider เช่น Okta',
+      'SAML 2.0 IdP เช่น ADFS',
+      'MySQL database ของผู้ใช้',
+    ],
+    answer: 3,
+  },
+  {
+    q: '"First broker login" flow ควบคุมอะไร?',
+    options: [
+      'Design theme ที่แสดงบนหน้า login',
+      'ว่า IdP ใช้ OIDC หรือ SAML',
+      'วิธีที่ brokered user ใหม่ถูกเชื่อมกับบัญชีที่มีอยู่หรือสร้างใหม่',
+      'อายุ token สำหรับ brokered sessions',
+    ],
+    answer: 2,
+  },
+  {
+    q: '"Sync mode: FORCE" หมายความว่าอะไรสำหรับ brokered IdP?',
+    options: [
+      'IdP ถูกบังคับให้ใช้ PKCE',
+      'Keycloak อัปเดต attributes ของผู้ใช้ในเครื่องจาก IdP token ทุกครั้งที่ login',
+      'ผู้ใช้ถูกบังคับให้ re-authenticate ทุก session',
+      'Keycloak บังคับ IdP ให้ใช้การ sign แบบ RS256',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'ความเสี่ยงของการเปิด "Trust email" บน brokered IdP คืออะไร?',
+    options: [
+      'ระบบจะไม่ส่ง email ให้ผู้ใช้',
+      'เวลาหมดอายุของ token จะถูกละเว้น',
+      'ผู้โจมตีที่ควบคุม IdP สามารถใส่ email ของเหยื่อและยึดบัญชีได้',
+      'ขั้นตอน Review profile จะถูกข้ามถาวร',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="federation-social/identity-brokering" questions={quizBrokering} />
+
+<ProgressTracker client:visible id="federation-social/identity-brokering" />

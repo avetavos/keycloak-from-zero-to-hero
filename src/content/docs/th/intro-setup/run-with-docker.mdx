@@ -1,0 +1,107 @@
+---
+title: 'รัน Keycloak ด้วย Docker'
+description: 'เริ่มรัน Keycloak ใน dev mode ด้วย Docker, สำรวจ admin console และ account console และเข้าใจคำสั่ง start-dev'
+sidebar:
+  order: 3
+---
+
+import RunKeycloak from '../../../../components/RunKeycloak.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+วิธีที่เร็วที่สุดในการรัน Keycloak บนเครื่องคือผ่าน Docker image ทางการบน quay.io มีทุกอย่างที่คุณต้องการ ไม่ต้องติดตั้ง database แยกต่างหาก คำสั่งเดียว Keycloak ก็พร้อมที่ port 8080
+
+<RunKeycloak />
+
+## อธิบายคำสั่ง start-dev
+
+แต่ละส่วนของคำสั่ง `docker run` ทำงานดังนี้:
+
+1. `docker run --name keycloak` — ตั้งชื่อ container เพื่อให้อ้างอิงได้ในภายหลังด้วย `docker stop keycloak` หรือ `docker rm keycloak`
+2. `-p 8080:8080` — map port 8080 บน host ไปยัง port 8080 ใน container ทำให้ `http://localhost:8080` เชื่อมต่อถึง Keycloak ได้
+3. `-e KC_BOOTSTRAP_ADMIN_USERNAME=admin` — กำหนด admin username เริ่มต้น environment variable นี้ใช้เฉพาะตอน boot ครั้งแรกที่ยังไม่มี admin account
+4. `-e KC_BOOTSTRAP_ADMIN_PASSWORD=admin` — กำหนด admin password เริ่มต้น ควรเปลี่ยนในทุก environment จริง อย่าปล่อยเป็น `admin` นอกจาก local dev
+5. `quay.io/keycloak/keycloak:latest` — official Keycloak image จาก Red Hat Quay registry ควร pin version เฉพาะเจาะจง (เช่น `26.0`) ใน CI หรือ staging
+6. `start-dev` — เริ่ม Keycloak ใน development mode พร้อม embedded H2 in-memory database และเปิด HTTP โดยไม่ต้องใช้ TLS certificate
+
+export const dockerRunCode = `docker run --name keycloak -p 8080:8080 \\\n  -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \\\n  -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin \\\n  quay.io/keycloak/keycloak:latest start-dev`;
+
+<CopyCode client:visible code={dockerRunCode} label="Copy docker run" />
+
+## เปิด admin console
+
+1. รอจนกว่า log จะแสดงบรรทัด `Keycloak X.Y.Z on JVM (powered by Quarkus) started` — นั่นหมายความว่า Keycloak พร้อมใช้งานแล้ว
+2. เปิด `http://localhost:8080` ในเบราว์เซอร์
+3. คลิก "Administration Console"
+4. Sign in ด้วย username `admin` และ password `admin`
+5. ตอนนี้คุณอยู่ใน admin console ของ master realm แล้ว
+
+## admin console vs account console
+
+**admin console** (`http://localhost:8080`) คือ management UI สำหรับผู้ดูแลระบบ คุณสร้าง realm, client, user, role และ identity provider ที่นี่ เฉพาะสมาชิกในทีมที่ต้องการ configure Keycloak เท่านั้นที่ควรมีสิทธิ์เข้าถึง
+
+**account console** (`http://localhost:8080/realms/master/account`) คือ self-service portal สำหรับผู้ใช้ทั่วไป ผู้ใช้สามารถอัปเดต profile, เปลี่ยน password และจัดการ session ที่ active อยู่ได้ที่นี่ ผู้ใช้แอปพลิเคชันของคุณจะมาที่นี่ ไม่ใช่ admin console แต่ละ realm มี account console ของตัวเองที่ `/realms/{realm-name}/account`
+
+## หยุดและลบ container
+
+```bash
+# Stop the container
+docker stop keycloak
+# Remove the container (data is lost — this is dev mode)
+docker rm keycloak
+```
+
+เนื่องจาก `start-dev` ใช้ in-memory H2 database realm, client และ user ทั้งหมดที่คุณสร้างจะหายไปเมื่อลบ container ใน module ถัดไปคุณจะได้เรียนรู้วิธี persist ข้อมูลด้วย external database
+
+<Callout title="start-dev สำหรับการเรียนเท่านั้น">
+`start-dev` ปิดการตรวจสอบด้านความปลอดภัยที่สำคัญและใช้ in-memory database ข้อมูลทั้งหมดจะหายไปเมื่อ container หยุดทำงาน ห้ามใช้ `start-dev` ใน production — ใช้ `start` พร้อม external database แทน
+</Callout>
+
+export const quizDocker = [
+  {
+    q: 'flag -p 8080:8080 ในคำสั่ง docker run ทำอะไร?',
+    options: [
+      'ตั้ง admin password เป็น 8080',
+      'map port 8080 บน host ไปยัง port 8080 ใน container',
+      'จัดสรร memory 8080 MB',
+      'เปิด port 8080 เฉพาะกับ container อื่น',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'start-dev ใช้ database อะไร?',
+    options: [
+      'PostgreSQL',
+      'MySQL',
+      'embedded H2 in-memory database',
+      'SQLite',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'ความแตกต่างระหว่าง admin console กับ account console คืออะไร?',
+    options: [
+      'เหมือนกัน',
+      'admin console สำหรับผู้ดูแลระบบจัดการ Keycloak, account console สำหรับผู้ใช้ทั่วไปจัดการ profile',
+      'account console ต้องติดตั้งแยกต่างหาก',
+      'admin console ใช้ได้เฉพาะที่ port 9090',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'จะเกิดอะไรกับข้อมูลเมื่อคุณ docker rm Keycloak container ใน start-dev mode?',
+    options: [
+      'ข้อมูลถูก backup อัตโนมัติ',
+      'ข้อมูลยังอยู่เพราะเก็บในตัว image',
+      'ข้อมูลทั้งหมดหายไป เพราะ start-dev ใช้ in-memory database',
+      'ข้อมูลถูกบันทึกที่ /tmp บน host',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="intro-setup/run-with-docker" questions={quizDocker} />
+
+<ProgressTracker client:visible id="intro-setup/run-with-docker" />

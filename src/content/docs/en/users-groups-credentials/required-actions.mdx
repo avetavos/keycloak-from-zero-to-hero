@@ -1,0 +1,131 @@
+---
+title: Required Actions
+description: 'Learn what required actions are, how to assign them to users, how to enable self-registration, and how the Account Console lets users manage their own credentials.'
+sidebar:
+  order: 5
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## What is a required action?
+
+A **required action** is a step Keycloak forces a user to complete before they can finish logging in. When a user has one or more required actions on their account, Keycloak intercepts the login flow after credential validation and presents each action in sequence. Only once every action is satisfied does Keycloak issue tokens and redirect the user to the application.
+
+Required actions are how Keycloak enforces onboarding steps — verifying an email address, rotating a temporary password, or enrolling a second factor — without any custom code in your application.
+
+## Built-in required actions
+
+Keycloak ships with a set of built-in required actions you can use immediately:
+
+- **Verify Email** — the user must click a link sent to their registered email address. This confirms the address is valid and owned by the user.
+- **Update Password** — the user must choose a new password before continuing. Useful after an admin creates an account with a temporary password, or after a suspected compromise.
+- **Configure OTP** — the user must scan a QR code and register an authenticator app (such as Google Authenticator or Authy). Once completed, subsequent logins require a one-time code.
+- **Update Profile** — the user must review and fill in their profile fields (first name, last name, email) before proceeding. Helpful when importing users with incomplete data.
+- **Terms and Conditions** — the user must read and accept your terms of service. You can customise the terms text via the theme or the admin API.
+
+## Assigning a required action to a user
+
+You can assign one or more required actions to an individual user directly from the admin console:
+
+1. In the admin console, navigate to **Users** in the left sidebar.
+2. Click the user you want to update.
+3. Open the **Details** tab (the default tab when you open a user).
+4. Find the **Required user actions** field — it accepts multiple values from a dropdown.
+5. Click inside the field and select one or more actions from the list (for example, **Verify Email** and **Update Password**).
+6. Click **Save**.
+
+The next time this user attempts to log in they will be redirected through each selected action before receiving their tokens.
+
+## Self-registration
+
+Self-registration lets new users create their own accounts from the login page, without an admin creating them first. To enable it:
+
+1. Go to **Realm settings** in the left sidebar.
+2. Open the **Login** tab.
+3. Toggle **User registration** to **On**.
+4. Click **Save**.
+
+Once enabled, a **Register** link appears on the login page. Clicking it opens a registration form where users enter their name, email, and password.
+
+You can combine self-registration with **default groups** and **required actions** to automate onboarding. For example, assign all new users to an `app-users` group and require them to verify their email. This means every self-registered user is automatically placed in the right group and cannot use the application until they confirm their address — all without writing any custom logic.
+
+## The Account Console
+
+Every realm exposes a self-service Account Console at:
+
+```
+http://localhost:8080/realms/{realm-name}/account
+```
+
+Replace `{realm-name}` with your actual realm name (for example, `my-app`). Authenticated users can visit this URL to manage their own:
+
+- **Profile** — update first name, last name, and email address.
+- **Password** — change their current password.
+- **Authenticator** — register, update, or remove OTP devices.
+- **Sessions** — view all active sessions and sign out of individual devices.
+
+You can link users to the Account Console from your application's settings or help pages. Admins can also use it as a self-service portal so users handle routine credential management themselves, reducing support requests.
+
+export const requiredActionsCode = `curl -s -X PUT \\
+  -H "Authorization: Bearer \${TOKEN}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"requiredActions":["VERIFY_EMAIL","UPDATE_PASSWORD"]}' \\
+  http://localhost:8080/admin/realms/my-app/users/\${USER_ID}`;
+
+<CopyCode client:visible code={requiredActionsCode} label="Copy curl" />
+
+Replace `my-app` with your realm name, `TOKEN` with a valid admin access token, and `USER_ID` with the UUID of the target user. The body accepts any combination of built-in action names (`VERIFY_EMAIL`, `UPDATE_PASSWORD`, `CONFIGURE_TOTP`, `UPDATE_PROFILE`, `TERMS_AND_CONDITIONS`).
+
+<Callout title="Required actions enforce onboarding steps">
+Required actions let you enforce steps — verify email, set up 2FA — before a user can finish logging in. Use them to harden security without writing custom code.
+</Callout>
+
+export const quizRequiredActions = [
+  {
+    q: 'What is a required action in Keycloak?',
+    options: [
+      'A role that must be assigned before a client can be created',
+      'A step Keycloak forces a user to complete before finishing login',
+      'A mandatory field in the client registration form',
+      'A realm-level policy that restricts token lifespans',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Where in the admin console do you assign a required action to a specific user?',
+    options: [
+      'Realm settings → Login tab',
+      'Clients → the client → Settings tab',
+      'Users → the user → Details tab → Required user actions field',
+      'Authentication → Required actions → Assign',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Which setting enables self-registration so users can create their own accounts?',
+    options: [
+      'Clients → Create client → Allow self-registration',
+      'Realm settings → Login tab → User registration toggle',
+      'Users → Permissions → Allow registration',
+      'Authentication → Flows → Registration → Enable',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What URL does a user visit to manage their own profile, password, and OTP devices?',
+    options: [
+      'http://localhost:8080/admin/realms/{realm-name}/console',
+      'http://localhost:8080/realms/{realm-name}/account',
+      'http://localhost:8080/realms/{realm-name}/self-service',
+      'http://localhost:8080/auth/account',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="users-groups-credentials/required-actions" questions={quizRequiredActions} />
+
+<ProgressTracker client:visible id="users-groups-credentials/required-actions" />

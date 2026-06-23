@@ -1,5 +1,109 @@
 ---
-title: Realms, Clients & Roles
-description: Realms, clients, and roles — the core of Keycloak.
+title: 'Realms, Clients & Roles'
+description: 'An overview of the three foundational Keycloak concepts: realms, clients, and roles — and how they fit together.'
+sidebar:
+  order: 1
 ---
-Coming soon.
+
+import RunKeycloak from '../../../../components/RunKeycloak.astro';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+<RunKeycloak />
+
+## What this module covers
+
+This module teaches the three building blocks that every Keycloak deployment is made of: **realms**, **clients**, and **roles**. Before you can secure a single application with Keycloak, you need to understand what these concepts are, how they relate to each other, and how to create and configure them in the admin console.
+
+By the end of this module you will be able to:
+
+- Create and configure a dedicated realm for your application.
+- Register an application (client) with Keycloak.
+- Understand the difference between public and confidential clients and choose the right one.
+- Create realm roles and client roles and assign them to users.
+- Read a decoded JWT and find roles inside it.
+
+## The three building blocks
+
+### Realm
+
+A **realm** is Keycloak's top-level isolation boundary. Think of it as a tenant: it has its own set of users, clients, roles, identity providers, and token settings. Nothing leaks between realms — a session in realm A cannot authenticate a user into realm B.
+
+Keycloak ships with one realm pre-created: **master**. The master realm is the administrative realm — you use it to log in to the admin console and manage other realms. You should never deploy your own applications inside the master realm.
+
+### Client
+
+A **client** is any application that delegates authentication to Keycloak. A client could be a single-page app (SPA), a mobile app, a server-side web application, or a machine-to-machine service. Each client registers itself in a realm, declares its redirect URIs, and receives tokens from Keycloak after a user authenticates.
+
+### Role
+
+A **role** is a named permission that can be attached to users or groups. There are two flavours:
+
+- **Realm roles** — defined at the realm level and available to any client in that realm.
+- **Client roles** — defined on a specific client and scoped to that client.
+
+Roles show up in tokens so your application can make authorisation decisions without calling Keycloak again.
+
+### How they fit together
+
+```
+Realm
+  ├── Users
+  ├── Roles (realm-level)
+  └── Clients
+        ├── Client roles
+        └── Valid redirect URIs / settings
+```
+
+A user in a realm can be assigned realm roles and client roles. When the user authenticates through a client, the resulting token contains those roles so the client can enforce access control.
+
+## Lessons in this module
+
+| Lesson | What you will learn |
+|---|---|
+| [Realms](./realms) | Create and configure a realm |
+| [Clients](./clients) | Register an application as a client |
+| [Client Types](./client-types) | Public vs confidential clients and PKCE |
+| [Roles](./roles) | Realm roles, client roles, and composite roles |
+
+<Callout title="Key point">
+A realm is a fully isolated space of users, clients, and roles. Applications in different realms never share sessions or accounts — even if they run on the same Keycloak server.
+</Callout>
+
+export const quizIndex = [
+  {
+    q: 'What is a Keycloak realm?',
+    options: [
+      'A single user account',
+      'A fully isolated tenant with its own users, clients, and roles',
+      'A type of OAuth2 grant',
+      'A Keycloak plugin',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which realm should you use to host your own application?',
+    options: [
+      'The master realm',
+      'Any realm — it does not matter',
+      'A dedicated realm you create for your app',
+      'The default realm',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'What is the difference between a realm role and a client role?',
+    options: [
+      'There is no difference',
+      'Realm roles are global to the realm; client roles are scoped to a specific client',
+      'Client roles appear in tokens but realm roles do not',
+      'Realm roles can only be assigned to admins',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="realms-clients-roles/index" questions={quizIndex} />
+
+<ProgressTracker client:visible id="realms-clients-roles/index" />

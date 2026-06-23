@@ -1,0 +1,80 @@
+---
+title: 'OIDC & OAuth2 Flows'
+description: 'ภาพรวมของ OAuth2 และ OIDC — โปรโตคอลที่ Keycloak ใช้สำหรับ delegated access และ authentication'
+sidebar:
+  order: 1
+---
+
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## โมดูลนี้ครอบคลุมอะไร
+
+OAuth2 คือโปรโตคอลสำหรับ authorization (delegated access) — ช่วยให้ client ทำงานแทนผู้ใช้โดยไม่ต้องรู้รหัสผ่าน ผลลัพธ์หลักคือ access token
+
+OIDC (OpenID Connect) คือ identity layer ที่อยู่บน OAuth2 — เพิ่มความสามารถด้าน authentication โดยออก ID token ที่พิสูจน์ตัวตนของผู้ใช้
+
+Keycloak ทำหน้าที่เป็น authorization server สำหรับทั้งสองโปรโตคอล โดยออก access token (OAuth2) และ ID token (OIDC)
+
+ผู้เกี่ยวข้องในระบบ: resource owner (ผู้ใช้), client (แอปพลิเคชัน), authorization server (Keycloak), resource server (API)
+
+## ผู้เกี่ยวข้องในระบบ
+
+**Resource owner** — ผู้ใช้ที่เป็นเจ้าของข้อมูลและให้สิทธิ์การเข้าถึง เมื่อผู้ใช้ login และยืนยันการให้สิทธิ์ นั่นคือ resource owner กำลังทำงานอยู่
+
+**Client** — แอปพลิเคชันที่ร้องขอการเข้าถึงในนามของผู้ใช้ หรือในนามของตัวเองสำหรับ machine-to-machine client อาจเป็น SPA, แอปมือถือ, backend service, หรือ CLI tool
+
+**Authorization server** — คือ Keycloak ทำหน้าที่ยืนยันตัวตนผู้ใช้ ตรวจสอบสิทธิ์ และออก token ทุก flow เริ่มและจบที่นี่
+
+**Resource server** — คือ API ของคุณ รับ access token เพื่อ authorize request และไม่เคยเห็นรหัสผ่านของผู้ใช้ — ตรวจสอบแค่ token ที่ Keycloak ออกให้
+
+## บทเรียนในโมดูลนี้
+
+| บทเรียน | สิ่งที่จะได้เรียน |
+|---|---|
+| OIDC Discovery Document | วิธีค้นหาและอ่าน discovery document ที่ Keycloak realm ทุกตัวเผยแพร่ |
+| Authorization Code Flow + PKCE | ขั้นตอนของ flow ที่แนะนำสำหรับ SPA และแอปมือถือ |
+| Client Credentials Grant | วิธีเรียก machine-to-machine โดยไม่มีผู้ใช้ |
+| Token Endpoint Hands-on | วิธีรับและถอดรหัส token จาก Keycloak ด้วย curl |
+
+<Callout title="OAuth2 vs OIDC">
+OAuth2 ให้ access token สำหรับการเข้าถึง; OIDC เพิ่ม ID token สำหรับพิสูจน์ตัวตน Keycloak เป็น authorization server สำหรับทั้งสอง
+</Callout>
+
+export const quizIndex = [
+  {
+    q: 'OAuth2 ให้อะไร?',
+    options: [
+      'Authentication (บอกว่าคุณคือใคร)',
+      'Delegated authorization (access token)',
+      'ID token สำหรับพิสูจน์ตัวตน',
+      'Session cookie',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'OIDC เพิ่มอะไรบน OAuth2?',
+    options: [
+      'Refresh token',
+      'ID token ที่พิสูจน์ตัวตนของผู้ใช้',
+      'Client secret',
+      'JWT signature algorithm',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'ในบริบทของ OAuth2 Keycloak คืออะไร?',
+    options: [
+      'Resource server',
+      'Resource owner',
+      'Authorization server',
+      'Client',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="oidc-oauth2-flows/index" questions={quizIndex} />
+
+<ProgressTracker client:visible id="oidc-oauth2-flows/index" />

@@ -1,0 +1,138 @@
+---
+title: Clients
+description: 'Learn what a Keycloak client is, how to register one, and the key settings that control how your application interacts with Keycloak.'
+sidebar:
+  order: 3
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## What is a client?
+
+A **client** is any application that delegates authentication and authorisation to Keycloak. When a user wants to sign in to your app, your app redirects them to Keycloak. Keycloak authenticates the user, then redirects back to your app with a code or a token. This redirect-based dance is the OAuth2 / OIDC Authorization Code flow, and the "client" is the party your app registered itself as.
+
+Examples of clients:
+
+- A React SPA that calls a REST API on behalf of a logged-in user.
+- A Spring Boot web application that shows a dashboard after login.
+- A mobile app that lets users manage their account.
+- A backend microservice that calls another service using a machine-to-machine token.
+
+Every client lives inside exactly one realm. If you have two different applications, register two clients — even if they share users.
+
+## Creating a client
+
+1. In the admin console, make sure you are in the correct realm (check the top-left drop-down).
+2. Click **Clients** in the left sidebar.
+3. Click **Create client** (top-right of the clients list).
+4. On the **General Settings** step:
+   - **Client type** — leave as **OpenID Connect** (the modern standard; use SAML only if required by a legacy system).
+   - **Client ID** — enter a short, lowercase, hyphen-separated identifier (e.g., `my-app-frontend`). This is the `client_id` your application sends in token requests.
+   - **Name** — optional human-readable display name shown in the admin console.
+   - **Description** — optional free-text note.
+   - Click **Next**.
+5. On the **Capability config** step:
+   - **Client authentication** — leave **Off** for a public client (SPA, mobile); turn it **On** for a confidential client (server-side app). See the [Client Types](./client-types) lesson for details.
+   - **Authorization** — leave **Off** unless you need Keycloak's fine-grained authorisation policies.
+   - Click **Next**.
+6. On the **Login settings** step — this is where security-critical redirect settings live:
+   - **Root URL** — the base URL of your application (e.g., `http://localhost:3000`). Keycloak prepends this to relative URIs.
+   - **Valid redirect URIs** — the exact URIs Keycloak is allowed to redirect back to after login. Enter at least one (e.g., `http://localhost:3000/*`). Wildcards are permitted but should be as specific as possible in production.
+   - **Valid post logout redirect URIs** — URIs allowed after logout. Enter `+` to reuse the same list as valid redirect URIs, or specify explicitly.
+   - **Web origins** — origins allowed to make cross-origin requests (CORS). Enter `+` to derive from valid redirect URIs, or list explicitly (e.g., `http://localhost:3000`).
+   - Click **Save**.
+
+Your client is now registered. You will land on the client's **Settings** tab.
+
+## The clients list
+
+The **Clients** page (left sidebar) shows every client registered in your realm. The list includes:
+
+- **Client ID** — the identifier your app uses.
+- **Enabled** — whether the client is active.
+- **Type** — OpenID Connect or SAML.
+- **Description** — your optional note.
+
+Click any client ID to open its settings and tabs (Settings, Credentials, Roles, Client scopes, Advanced, etc.).
+
+## Key settings after creation
+
+### Valid redirect URIs
+
+After a user authenticates, Keycloak redirects them back to one of the URIs in this list. If the redirect URI in the request does not match any entry, Keycloak rejects the request with an error. This is an important security control: it prevents authorisation-code interception attacks where an attacker tricks Keycloak into redirecting the code to a site they control.
+
+Keep redirect URIs as specific as possible. In development, `http://localhost:3000/*` is acceptable. In production, list only the exact callback paths:
+
+```
+https://app.example.com/auth/callback
+```
+
+### Web origins
+
+The Web origins list controls which origins browsers allow to call the Keycloak token endpoint directly (for CORS preflight). If your SPA runs on `https://app.example.com` and calls `https://auth.example.com/realms/my-app/protocol/openid-connect/token`, that origin must be listed here.
+
+Setting Web origins to `+` is a convenient shortcut that tells Keycloak to allow all origins that appear in your Valid redirect URIs list.
+
+### A curl to inspect your client's OIDC discovery document
+
+Every realm exposes an OpenID Connect discovery document. You can use it to verify your client's issuer, token endpoint, and JWKS URI:
+
+export const discoveryCode = `curl https://localhost:8080/realms/my-app/.well-known/openid-configuration | jq .`;
+
+<CopyCode client:visible code={discoveryCode} label="Copy curl" />
+
+Replace `my-app` with your realm name. The `jq .` part pretty-prints the JSON response.
+
+<Callout title="Redirect URIs are a security control">
+Only URIs listed in Valid redirect URIs can receive tokens after login. A wildcard like `*` accepts any redirect — including an attacker's server. Keep redirect URIs as specific as possible, especially in production.
+</Callout>
+
+export const quizClients = [
+  {
+    q: 'What is a Keycloak client?',
+    options: [
+      'A user account in a realm',
+      'An application registered to use Keycloak for authentication',
+      'A Keycloak administrator',
+      'A realm-level role',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Why are Valid redirect URIs a security control?',
+    options: [
+      'They encrypt the authorization code',
+      'They limit which URIs Keycloak will redirect to after login, preventing code interception attacks',
+      'They define which users can log in to the client',
+      'They control the token lifespan',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What does setting Web origins to "+" mean?',
+    options: [
+      'Allow all origins globally',
+      'Allow only localhost origins',
+      'Derive allowed origins from the Valid redirect URIs list',
+      'Disable CORS entirely',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'When creating a client, which step lets you configure Valid redirect URIs?',
+    options: [
+      'General Settings',
+      'Capability config',
+      'Login settings',
+      'Advanced',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="realms-clients-roles/clients" questions={quizClients} />
+
+<ProgressTracker client:visible id="realms-clients-roles/clients" />

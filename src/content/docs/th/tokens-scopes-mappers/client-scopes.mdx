@@ -1,0 +1,102 @@
+---
+title: Client Scopes
+description: 'เรียนรู้ว่า client scope คืออะไร default และ optional scope ต่างกันอย่างไร และวิธีกำหนด scope ให้ client'
+sidebar:
+  order: 3
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Client Scopes คืออะไร
+
+Client scope คือชุดของ mapper ที่ตั้งชื่อและนำกลับมาใช้ซ้ำได้ ช่วยให้กำหนด claim ชุดหนึ่งครั้งแล้ว attach ให้ client หลายตัวได้ แทนที่จะกำหนด mapper ซ้ำในแต่ละ client
+
+## Default vs Optional Scope
+
+- **Default scope** จะรวมอยู่เสมอในทุก token request โดยไม่ต้องระบุเพิ่มเติม
+- **Optional scope** จะรวมเฉพาะเมื่อ authorization request ระบุอย่างชัดเจนผ่าน scope parameter
+
+## Built-in Scopes
+
+| Scope | สิ่งที่เพิ่มลงใน Token |
+|---|---|
+| `profile` | เพิ่ม name, given_name, family_name, preferred_username |
+| `email` | เพิ่ม email, email_verified |
+| `roles` | เพิ่ม realm_access, resource_access |
+| `openid` | จำเป็นสำหรับ OIDC |
+| `offline_access` | ให้ refresh token ที่อยู่ได้นาน |
+
+## วิธี Assign Optional Scope ให้ Client
+
+1. ไปที่ **Clients** → เลือก client ของคุณ
+2. คลิก tab **Client scopes**
+3. คลิก **Add client scope**
+4. เลือก scope ที่ต้องการแล้วตั้งเป็น **Optional**
+5. คลิก **Add**
+
+## วิธีสร้าง Custom Scope
+
+1. ไปที่ **Client scopes** → คลิก **Create client scope**
+2. ตั้งชื่อ scope เช่น `orders:read`
+3. เลือก **Protocol**: `openid-connect`
+4. คลิก **Save**
+5. ไปที่ tab **Mappers** เพื่อเพิ่ม mapper ลงใน scope นี้
+
+## ตัวอย่าง Authorization Request พร้อม Optional Scope
+
+export const authRequestCode = `https://auth.example.com/realms/my-app/protocol/openid-connect/auth?client_id=my-app-frontend&response_type=code&redirect_uri=https://app.example.com/callback&scope=openid%20profile%20email%20address`;
+
+<CopyCode client:visible code={authRequestCode} label="Copy curl" />
+
+<Callout title="Optional scope ช่วยให้ token มีขนาดเล็ก">
+Optional client scope ทำให้ access token มีขนาดเล็ก — Keycloak จะรวม claim เหล่านั้นเฉพาะเมื่อ client ร้องขออย่างชัดเจน ร้องขอเฉพาะ scope ที่แอปพลิเคชันต้องการจริงๆ เท่านั้น
+</Callout>
+
+export const quizClientScopes = [
+  {
+    q: 'Client scope คืออะไร?',
+    options: [
+      'Role ของผู้ใช้ที่ scoped ให้ client',
+      'ชุดของ mapper ที่ตั้งชื่อและแนบให้ client หลายตัวได้',
+      'ประเภทของ OIDC flow',
+      'ข้อจำกัดของ redirect URI',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'จะร้องขอ optional client scope ในขั้นตอน authorization ได้อย่างไร?',
+    options: [
+      'เพิ่มเข้าไปใน Valid redirect URIs',
+      'ระบุใน scope request parameter',
+      'เปิดใช้งานใน Realm settings',
+      'กำหนดเป็น required action บน user',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Built-in scope ใดเพิ่ม realm_access และ resource_access เข้าใน token?',
+    options: [
+      'profile',
+      'email',
+      'openid',
+      'roles',
+    ],
+    answer: 3,
+  },
+  {
+    q: 'ความแตกต่างระหว่าง Default scope และ Optional scope คืออะไร?',
+    options: [
+      'Default scope ใช้ทรัพยากรในการประมวลผลมากกว่า',
+      'Default scope รวมอยู่เสมอ; optional scope ต้องร้องขออย่างชัดเจน',
+      'Optional scope เป็นแบบถาวร; default scope ลบได้',
+      'ไม่มีความแตกต่างในเชิงการทำงาน',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="tokens-scopes-mappers/client-scopes" questions={quizClientScopes} />
+<ProgressTracker client:visible id="tokens-scopes-mappers/client-scopes" />

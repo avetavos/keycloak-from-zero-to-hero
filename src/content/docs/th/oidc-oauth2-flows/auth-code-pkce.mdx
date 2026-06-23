@@ -1,0 +1,94 @@
+---
+title: 'Authorization Code Flow + PKCE'
+description: 'ขั้นตอนของ Authorization Code flow ร่วมกับ PKCE — flow ที่แนะนำสำหรับ SPA และแอปมือถือ'
+sidebar:
+  order: 3
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## ทำไมต้องใช้ Authorization Code + PKCE?
+
+นี่คือ flow ที่แนะนำสำหรับ public client — SPA และแอปมือถือ — ที่ไม่สามารถเก็บ client secret ได้อย่างปลอดภัย Implicit flow ล้าสมัยแล้วและไม่ควรใช้ในโปรเจกต์ใหม่
+
+PKCE (Proof Key for Code Exchange) ป้องกันการโจมตีแบบดักจับ authorization code เนื่องจาก public client ไม่สามารถเก็บ secret ได้ PKCE จึงแทนที่ด้วยการที่แอปสร้าง secret ชั่วคราว (`code_verifier`) ในแต่ละ flow แล้วคำนวณ `code_challenge` จากมัน และพิสูจน์ในภายหลังว่าถือ verifier ดั้งเดิมไว้เมื่อแลก code เป็น token
+
+## ผู้เกี่ยวข้องและบทบาท
+
+**เบราว์เซอร์ของผู้ใช้** ทำ redirect ไปมา **SPA หรือแอปมือถือ** (client) เริ่ม flow และจัดการ redirect callback **Keycloak** (authorization server) ยืนยันตัวตนผู้ใช้และออก token **API** (resource server) รับ access token เพื่อ authorize การเรียก
+
+## ขั้นตอนของ flow
+
+1. แอปสร้าง `code_verifier` แบบสุ่ม แล้วคำนวณ `code_challenge` (SHA-256 hash เข้ารหัสแบบ base64url)
+2. แอป redirect เบราว์เซอร์ไปยัง authorization endpoint ของ Keycloak พร้อม: `response_type=code`, `client_id`, `redirect_uri`, `scope=openid`, `code_challenge`, `code_challenge_method=S256`, และ `state`
+3. Keycloak แสดงหน้า login ผู้ใช้กรอก credential และยืนยันตัวตน
+4. Keycloak redirect กลับมายัง `redirect_uri` ของแอปพร้อม authorization `code` (และค่า `state` สำหรับป้องกัน CSRF)
+5. แอปส่ง `code` และ `code_verifier` ไปยัง token endpoint ของ Keycloak (`POST /token`) เพื่อแลกเป็น token
+6. Keycloak ตรวจสอบว่า `SHA-256(code_verifier)` ตรงกับ `code_challenge` ที่ส่งมาก่อน ถ้าตรงจะส่งคืน `access_token`, `id_token`, และ `refresh_token`
+
+## การแลก token (ขั้นตอนที่ 5)
+
+curl ด้านล่างแสดงการแลก token ในขั้นตอนที่ 5 ใส่ค่าของคุณก่อนรัน
+
+export const authCodeCurlCode = `curl -X POST https://\${KC_URL}/realms/\${REALM}/protocol/openid-connect/token \\
+  -d "grant_type=authorization_code" \\
+  -d "client_id=\${CLIENT_ID}" \\
+  -d "code=\${AUTH_CODE}" \\
+  -d "redirect_uri=\${REDIRECT_URI}" \\
+  -d "code_verifier=\${CODE_VERIFIER}"`;
+
+<CopyCode client:visible code={authCodeCurlCode} label="Copy token exchange curl" />
+
+<Callout title="Public client ต้องใช้ PKCE">
+Public client (SPA และแอปมือถือ) ไม่สามารถเก็บ client secret ได้อย่างปลอดภัย Authorization Code + PKCE คือทางเลือกที่ปลอดภัย — code_verifier รู้เฉพาะแอปที่เริ่ม flow เท่านั้น ดังนั้นแม้ code จะถูกดักจับก็ไม่สามารถนำไปแลก token ได้ ห้ามใช้ Implicit flow เพราะล้าสมัยแล้ว
+</Callout>
+
+export const quizAuthCodePkce = [
+  {
+    q: 'เหตุใด PKCE จึงจำเป็นสำหรับ public client?',
+    options: [
+      'เข้ารหัส access token',
+      'ป้องกันการดักจับ authorization code เนื่องจาก public client เก็บ secret ไม่ได้',
+      'เปิดใช้งาน refresh token',
+      'ข้ามหน้า login',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'แอปส่งอะไรพร้อม authorization request เพื่อเปิดใช้ PKCE?',
+    options: [
+      'client_secret',
+      'code_verifier',
+      'code_challenge และ code_challenge_method=S256',
+      'id_token',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Keycloak ตรวจสอบอะไรเมื่อแลก code ที่ token endpoint?',
+    options: [
+      'ว่าผู้ใช้ยังล็อกอินอยู่',
+      'ว่า SHA-256(code_verifier) ตรงกับ code_challenge ที่ส่งมาก่อน',
+      'ว่า client มี client_secret ที่ถูกต้อง',
+      'ว่า redirect_uri ตรงกับ issuer',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Flow ใดที่เลิกใช้แล้วและไม่ควรใช้?',
+    options: [
+      'Authorization Code + PKCE',
+      'Client Credentials',
+      'Implicit flow',
+      'Device Authorization Grant',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="oidc-oauth2-flows/auth-code-pkce" questions={quizAuthCodePkce} />
+
+<ProgressTracker client:visible id="oidc-oauth2-flows/auth-code-pkce" />

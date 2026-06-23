@@ -1,0 +1,126 @@
+---
+title: Social Login
+description: 'เพิ่ม social identity provider (Google หรือ GitHub) ลงในรีล์ม Keycloak เพื่อให้ผู้ใช้ login ด้วยบัญชีที่มีอยู่แล้ว'
+sidebar:
+  order: 2
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Social login คืออะไร?
+
+**Social login** ช่วยให้ผู้ใช้ authenticate ด้วย provider ที่มีบัญชีอยู่แล้ว เช่น Google, GitHub, Facebook, Apple และอื่น ๆ แทนที่จะต้องสร้าง username และ password ใหม่ในรีล์ม ภายใต้การทำงาน Keycloak ทำหน้าที่เป็น identity broker: มัน redirect ผู้ใช้ไปยัง provider ที่เลือก provider authenticate ผู้ใช้ และ Keycloak ยอมรับ token ที่ได้รับ แอปพลิเคชันของคุณไม่ต้องติดต่อกับ external provider โดยตรง
+
+Keycloak มี connector ในตัวสำหรับ social provider ทั่วไป แต่ละ connector เรียกว่า **identity provider** (IdP) ใน admin console
+
+## ขั้นตอนที่ 1 — รับ credentials จาก provider
+
+ก่อนจะตั้งค่าใน Keycloak คุณต้องลงทะเบียน OAuth2 client ที่ provider ก่อน ขั้นตอนต่างกันตาม provider แต่รูปแบบเหมือนกัน
+
+**สำหรับ Google:**
+
+1. ไปที่ [console.cloud.google.com](https://console.cloud.google.com) และสร้างหรือเลือก project
+2. ไปที่ **APIs & Services → Credentials → Create Credentials → OAuth client ID**
+3. ตั้งประเภทแอปพลิเคชันเป็น **Web application**
+4. ในช่อง **Authorised redirect URIs** ใส่ broker endpoint ของ Keycloak สำหรับรีล์มของคุณ (ดูขั้นตอนที่ 2 ด้านล่าง)
+5. คลิก **Create** บันทึก **Client ID** และ **Client secret**
+
+**สำหรับ GitHub:**
+
+1. ไปที่ **GitHub → Settings → Developer settings → OAuth Apps → New OAuth App**
+2. ตั้ง **Authorization callback URL** เป็น broker endpoint ของ Keycloak (ดูขั้นตอนที่ 2 ด้านล่าง)
+3. คลิก **Register application** บันทึก **Client ID** และสร้าง **Client secret**
+
+## ขั้นตอนที่ 2 — หา redirect URI ที่ต้องลงทะเบียนกับ provider
+
+Keycloak เปิดเผย broker endpoint ที่แน่นอนสำหรับแต่ละ identity provider alias คุณต้องลงทะเบียน URI นี้กับ external provider — นี่คือที่ที่ provider ส่งผู้ใช้กลับมาหลัง authentication
+
+URI ตาม pattern นี้:
+
+export const redirectUriCode = `https://<keycloak-host>/realms/<realm>/broker/<alias>/endpoint`;
+
+<CopyCode client:visible code={redirectUriCode} label="Copy redirect URI pattern" />
+
+ตัวอย่าง ถ้า Keycloak รันที่ `https://auth.example.com` รีล์มชื่อ `my-app` และ alias คือ `google` redirect URI คือ:
+
+```text
+https://auth.example.com/realms/my-app/broker/google/endpoint
+```
+
+ลงทะเบียน URI นี้ตามที่แสดงใน developer console ของ provider ความไม่ตรงกัน — แม้แต่ trailing slash — จะทำให้ social login ล้มเหลวด้วย redirect URI mismatch error
+
+## ขั้นตอนที่ 3 — เพิ่ม identity provider ใน Keycloak
+
+1. เปิด **Keycloak admin console** และสลับไปยังรีล์มเป้าหมาย
+2. คลิก **Identity providers** ใน left sidebar
+3. คลิก **Add provider** และเลือก **Google** (หรือ **GitHub** หรือ provider อื่น ๆ ที่แสดง)
+4. Keycloak กรอก **Alias** ไว้ล่วงหน้า (เช่น `google`) ปล่อยไว้ถ้าไม่มีเหตุผลที่ต้องเปลี่ยน
+5. วาง **Client ID** จากขั้นตอนที่ 1 ลงในช่อง **Client ID**
+6. วาง **Client secret** จากขั้นตอนที่ 1 ลงในช่อง **Client secret**
+7. ปล่อยการตั้งค่าอื่น ๆ ไว้เป็นค่าเริ่มต้นก่อน
+8. คลิก **Save**
+
+## ขั้นตอนที่ 4 — ทดสอบ social login
+
+1. เปิดหน้า login ของรีล์ม: `https://<keycloak-host>/realms/<realm>/account`
+2. คุณควรเห็นปุ่มใหม่ — "Log in with Google" หรือ "Sign in with GitHub" — ด้านล่างฟอร์ม username/password
+3. คลิกปุ่ม คุณจะถูก redirect ไปยังหน้า login ของ external provider
+4. Authenticate กับ external provider คุณจะถูก redirect กลับมาที่ Keycloak และ Keycloak จะสร้าง federated user ในรีล์ม (หรือเชื่อมกับบัญชีที่มีอยู่ผ่าน first-login flow)
+
+## Provider alias กับปุ่ม login
+
+**Alias** ที่ตั้งในขั้นตอนที่ 3 ปรากฏใน broker endpoint URI และควบคุมการแสดงผลบนหน้า login ด้วย Keycloak ใช้ alias เพื่อ route callback กลับไปยัง IdP configuration ที่ถูกต้อง ถ้าคุณเปลี่ยนชื่อหรือลบ IdP federated user links ที่อ้างอิง alias เดิมจะพัง — ผู้ใช้จะไม่สามารถ login ผ่าน provider นั้นได้จนกว่าจะอัปเดต link
+
+<Callout title="ลงทะเบียน redirect URI ที่ถูกต้องกับ provider">
+Redirect URI ที่ Keycloak เปิดเผยสำหรับ brokering นั้นแน่นอน: `&lt;keycloak-host&gt;/realms/&lt;realm&gt;/broker/&lt;alias&gt;/endpoint` คุณต้องลงทะเบียน URI นี้ตรง ๆ กับ external provider ความไม่ตรงกัน — host ผิด ชื่อรีล์มผิด alias ผิด trailing slash เกิน — จะทำให้ social login ล้มเหลวด้วย OAuth2 redirect URI error
+</Callout>
+
+export const quizSocialLogin = [
+  {
+    q: 'Keycloak ทำหน้าที่อะไรเมื่อผู้ใช้คลิก "Log in with Google"?',
+    options: [
+      'SAML service provider',
+      'Identity broker ที่ redirect ไปยัง Google และยอมรับผล',
+      'Google OAuth2 resource server',
+      'User database ที่สำเนาบัญชี Google',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'ต้องลงทะเบียน Keycloak broker redirect URI ที่ไหน?',
+    options: [
+      'ใน Keycloak realm settings',
+      'ใน Keycloak client settings ของแอป',
+      'ใน developer console ของ external provider',
+      'ใน Keycloak login theme',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Pattern ที่ถูกต้องของ Keycloak broker endpoint URI คืออะไร?',
+    options: [
+      '<keycloak-host>/realms/<realm>/protocol/openid-connect/token',
+      '<keycloak-host>/realms/<realm>/broker/<alias>/endpoint',
+      '<keycloak-host>/auth/realms/<realm>/social/<provider>',
+      '<keycloak-host>/realms/<realm>/clients/<alias>/callback',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'เกิดอะไรขึ้นถ้าเปลี่ยน IdP alias หลังจากผู้ใช้ login ผ่าน provider นั้นแล้ว?',
+    options: [
+      'ไม่มีอะไร — Keycloak migrate links อัตโนมัติ',
+      'Provider หยุดรับ login ใหม่',
+      'Federated user links ที่อ้างอิง alias เดิมจะพัง',
+      'Keycloak ลบผู้ใช้เหล่านั้นออกจากรีล์ม',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="federation-social/social-login" questions={quizSocialLogin} />
+
+<ProgressTracker client:visible id="federation-social/social-login" />

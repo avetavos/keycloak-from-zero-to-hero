@@ -1,0 +1,101 @@
+---
+title: 'ทัวร์ Admin Console'
+description: 'ทัวร์ Keycloak admin console: การเข้าสู่ระบบ, realm selector, การนำทางด้านซ้าย และการสร้าง realm แรก'
+sidebar:
+  order: 4
+---
+
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+admin console คือศูนย์ควบคุม Keycloak ของคุณ ทุก realm, client, user, role และ identity provider ถูกสร้างและจัดการที่นี่ ก่อนที่จะสร้างอะไร ควรใช้เวลาสักครู่ทำความเข้าใจ layout เพื่อไม่ให้หลงทาง
+
+## การเข้าสู่ระบบ
+
+1. ตรวจสอบให้แน่ใจว่า Keycloak กำลังทำงานอยู่ (ดู lesson ก่อนหน้าหากยังไม่ได้เริ่ม)
+2. เปิด `http://localhost:8080` ในเบราว์เซอร์
+3. คลิก "Administration Console"
+4. ป้อน `admin` เป็น username และ `admin` เป็น password
+5. คลิก "Sign in" คุณจะมาถึงหน้า home ของ master realm
+
+## Realm selector
+
+มุมบนซ้ายของ admin console แสดงชื่อ realm ปัจจุบัน — โดยค่าเริ่มต้นคือ "Keycloak" (master realm) คลิกเพื่อเปิด drop-down ที่แสดง realm ทั้งหมดและให้คุณสร้าง realm ใหม่ได้ ควรตรวจสอบเสมอว่าคุณอยู่ใน realm ไหนก่อนทำการเปลี่ยนแปลง เพราะง่ายมากที่จะสร้าง client ผิด realm โดยไม่ตั้งใจ
+
+## การนำทางด้านซ้าย
+
+sidebar ให้คุณเข้าถึง resource ทุกอย่างใน realm ปัจจุบัน:
+
+| Nav item | What you manage here |
+|---|---|
+| Realm settings | Token lifespans, security defences, email settings, themes |
+| Clients | Applications registered to use this realm for auth |
+| Client scopes | Shared protocol mappers and scope definitions |
+| Realm roles | Roles available to all clients in this realm |
+| Users | User accounts, credentials, and role assignments |
+| Groups | User groups and group-level role assignments |
+| Identity providers | External IdPs (Google, GitHub, SAML, OIDC) |
+| User federation | LDAP and Active Directory connections |
+| Sessions | Active user sessions across all clients |
+| Events | Audit log of login events and admin events |
+
+## สร้าง realm แรก (warm-up)
+
+1. คลิก realm selector (มุมบนซ้าย)
+2. คลิก "Create realm"
+3. ในช่อง "Realm name" ป้อน `my-app` (ตัวพิมพ์เล็ก ไม่มีเว้นวรรค)
+4. ปล่อย "Enabled" ไว้เป็น on
+5. คลิก "Create"
+6. ตอนนี้คุณอยู่ใน `my-app` realm แล้ว top-left selector จะแสดง "my-app"
+
+<Callout title="ตรวจสอบ realm เสมอ">
+สลับไปยัง realm ของคุณเสมอ (ผ่าน top-left selector) ก่อนสร้าง client, user หรือ role — เพราะง่ายมากที่จะทำงานผิด realm โดยไม่ตั้งใจ object ที่สร้างใน master ไม่ปรากฏใน realm ของแอปพลิเคชัน
+</Callout>
+
+export const quizConsole = [
+  {
+    q: 'คุณหา realm selector ได้ที่ไหนใน admin console?',
+    options: [
+      'มุมล่างขวา',
+      'มุมบนซ้าย',
+      'เมนู Settings',
+      'แท็บ Users',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'ส่วนใดใน nav ที่ใช้จัดการแอปพลิเคชันที่ integrate กับ Keycloak?',
+    options: [
+      'Realm settings',
+      'Users',
+      'Clients',
+      'Sessions',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'รูปแบบชื่อ realm ที่ปลอดภัยคืออะไร?',
+    options: [
+      'MY APP',
+      'my_app!',
+      'my-app',
+      'My App 2024',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'เหตุใดจึงควรหลีกเลี่ยงการทำงานใน master realm สำหรับแอปพลิเคชันของคุณ?',
+    options: [
+      'master realm ไม่มีแท็บ clients',
+      'object ใน master ไม่ปรากฏใน application realm; master ใช้สำหรับบริหาร Keycloak เอง',
+      'master realm ลบไม่ได้',
+      'ผู้ใช้ไม่สามารถ login ผ่าน master realm',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="intro-setup/admin-console" questions={quizConsole} />
+
+<ProgressTracker client:visible id="intro-setup/admin-console" />

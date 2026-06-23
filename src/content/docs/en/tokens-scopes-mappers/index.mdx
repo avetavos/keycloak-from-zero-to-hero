@@ -1,0 +1,81 @@
+---
+title: 'Tokens, Scopes & Mappers'
+description: 'Overview of how tokens carry identity and permissions, scopes decide what goes in them, and mappers add claims.'
+sidebar:
+  order: 1
+---
+
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## What this module covers
+
+Tokens are the beating heart of every Keycloak-secured system. When a user logs in, Keycloak issues tokens that your applications and APIs use to verify identity and enforce authorisation. Understanding what goes into a token — and why — is essential for building secure, well-designed systems.
+
+This module walks through three tightly related concepts:
+
+- **Tokens** — the JWTs that carry identity and permissions between parties.
+- **Scopes** — the named bundles that control which claims and permissions end up in a token.
+- **Mappers** — the rules that transform user data into token claims.
+
+## Lessons in this module
+
+| Lesson | What you will learn |
+|---|---|
+| [Token Types](./token-types) | Access tokens, ID tokens, and refresh tokens — and when to use each |
+| [Client Scopes](./client-scopes) | Default vs optional scopes, built-in scopes, and how to assign them |
+| [Protocol Mappers](./protocol-mappers) | Adding and transforming claims with mappers |
+| [Token Lifespans](./token-lifespans) | Configuring access, refresh, and session lifespans |
+
+## Learning outcomes
+
+By the end of this module you will be able to:
+
+- Explain the difference between an access token, an ID token, and a refresh token.
+- Describe which token your REST API should validate on every request.
+- Create and assign client scopes — both default and optional.
+- Add a protocol mapper to include a custom claim in an access token.
+- Configure token lifespans at the realm level and override them per client.
+- Explain why short access token lifespans improve security.
+
+<Callout title="The access token is your API's gatekeeper">
+The access token is what your APIs check — design its claims deliberately. Every claim in the token was either put there by a scope or a mapper.
+</Callout>
+
+export const quizIndex = [
+  {
+    q: 'What do protocol mappers do?',
+    options: [
+      'Set the token lifespan',
+      'Add or transform claims in tokens',
+      'Define which users can log in',
+      'Create client scopes',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What determines which claims appear in an access token?',
+    options: [
+      'The realm name',
+      "The user's password strength",
+      'The scopes assigned to the client and the mappers attached to those scopes',
+      'The redirect URI',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Which token does your REST API validate on every request?',
+    options: [
+      'ID token',
+      'Refresh token',
+      'Access token',
+      'Session token',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="tokens-scopes-mappers/index" questions={quizIndex} />
+
+<ProgressTracker client:visible id="tokens-scopes-mappers/index" />

@@ -1,0 +1,139 @@
+---
+title: Users
+description: 'Learn how to create and manage users in Keycloak — including attributes, email verification, enabling and disabling accounts, and querying users via the Admin REST API.'
+sidebar:
+  order: 2
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## What is a user?
+
+A **user** in Keycloak is an identity record stored inside a realm. It holds the account details — username, email, name, and any custom attributes — along with credentials and the lifecycle state of the account.
+
+Users are realm-scoped. A user created in the `my-app` realm does not automatically exist in any other realm. This boundary is intentional: each realm is an independent identity domain, and sharing users across realms requires federation rather than simple reuse.
+
+You can manage users through the Keycloak admin console, via the Admin REST API, or by federating an external directory (LDAP, Active Directory). This lesson focuses on the console and REST API.
+
+## Creating a user
+
+1. Open the Keycloak admin console and select the correct realm from the top-left drop-down.
+2. Click **Users** in the left sidebar.
+3. Click **Add user** (top-right of the users list).
+4. Fill in the user details:
+   - **Username** — required; must be unique within the realm. Use lowercase and avoid spaces (e.g., `jane.doe`).
+   - **Email** — optional but strongly recommended; required if you plan to use email-based flows such as password reset.
+   - **First name** and **Last name** — optional display fields.
+   - **Email verified** — toggle this **On** if you are creating the account on behalf of a known, trusted user and do not want Keycloak to send a verification email. Leave it **Off** to require email verification on first login.
+5. Click **Create**.
+
+Keycloak creates the user and opens their detail page. The account has no password yet — you will set credentials from the **Credentials** tab.
+
+## The users list and search
+
+The **Users** page shows a paginated list of all users in the realm. Use the search bar at the top to find users by:
+
+- **Username** — partial match is supported (e.g., searching `jane` returns `jane.doe` and `jane.smith`).
+- **Email** — exact or partial match.
+- **First name** or **Last name**.
+
+Click a username to open the user detail view with its tabs: Details, Attributes, Credentials, Role mappings, Groups, Consents, Sessions, and Admin events.
+
+## User attributes
+
+Attributes are arbitrary key-value pairs attached to a user. They are useful for storing application-specific metadata — for example, a department code, a customer ID, or a preferred locale — without modifying the Keycloak data model.
+
+To add an attribute:
+
+1. Open the user's detail page and click the **Attributes** tab.
+2. Click **Add attribute**.
+3. Enter a **Key** (e.g., `department`) and a **Value** (e.g., `engineering`).
+4. Click **Save**.
+
+Attributes are returned in the `attributes` claim of the user's token if you map them to a client scope using a User Attribute mapper. Without a mapper, attributes remain server-side only.
+
+## Enabling and disabling a user
+
+Every user has an **Enabled** toggle on their **Details** tab. When a user is disabled:
+
+- Active sessions are terminated.
+- The user cannot start a new login, regardless of valid credentials.
+- The account record is preserved — you can re-enable the user at any time.
+
+This is useful for temporarily locking an account without deleting it. To change the state, open the user's detail page, toggle **Enabled** on or off, and click **Save**.
+
+## Querying users via the Admin REST API
+
+The Admin REST API lets you list, search, and manage users programmatically. Before calling the API, obtain a service-account or admin token with the `manage-users` or `view-users` realm role.
+
+export const listUsersCode = `curl -s -H "Authorization: Bearer \${TOKEN}" http://localhost:8080/admin/realms/my-app/users | jq .`;
+
+<CopyCode client:visible code={listUsersCode} label="Copy curl" />
+
+Replace `my-app` with your realm name and `TOKEN` with a valid bearer token. The response is a JSON array where each element is a user object containing `id`, `username`, `email`, `firstName`, `lastName`, `enabled`, `emailVerified`, and `attributes`.
+
+You can add query parameters to filter the results:
+
+```bash
+# Search by email (partial match)
+curl -s -H "Authorization: Bearer ${TOKEN}" \
+  "http://localhost:8080/admin/realms/my-app/users?email=jane" | jq .
+
+# Paginate: skip first 20, return next 10
+curl -s -H "Authorization: Bearer ${TOKEN}" \
+  "http://localhost:8080/admin/realms/my-app/users?first=20&max=10" | jq .
+```
+
+<Callout title="Email verification matters">
+Set **Email verified** on the user when you create the account, or assign the `verify-email` required action — unverified users can be a security gap. If a user's email is unverified, an attacker who gained access to the email address could receive password-reset links intended for a different account.
+</Callout>
+
+export const quizUsers = [
+  {
+    q: 'Which field is required when creating a user in Keycloak?',
+    options: [
+      'Email',
+      'First name',
+      'Username',
+      'Last name',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'What are user attributes in Keycloak?',
+    options: [
+      'Built-in fields like username and email that cannot be changed',
+      'Arbitrary key-value pairs for storing custom metadata on a user',
+      'Roles assigned directly to the user',
+      'Required actions the user must complete on next login',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What happens when you disable a user in Keycloak?',
+    options: [
+      'The user record is permanently deleted',
+      'The user can still log in but cannot access protected resources',
+      'Active sessions are terminated and the user cannot start a new login',
+      'Only future logins are blocked; active sessions continue until they expire',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Why does leaving "Email verified" off matter for security?',
+    options: [
+      'Unverified users cannot be assigned roles',
+      'An attacker who controls the email address could receive password-reset links for that account',
+      'Keycloak will not store the user record until the email is verified',
+      'The user cannot set a password until their email is verified',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="users-groups-credentials/users" questions={quizUsers} />
+
+<ProgressTracker client:visible id="users-groups-credentials/users" />

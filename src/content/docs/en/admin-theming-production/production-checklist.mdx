@@ -1,0 +1,154 @@
+---
+title: Production Checklist
+description: 'Harden Keycloak for production: run start with an optimised build, wire in an external database, set a fixed hostname, terminate HTTPS correctly, and use realm export/import for config-as-code.'
+sidebar:
+  order: 5
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## From start-dev to production
+
+`start-dev` mode exists only for local development. It disables the optimised build, uses an embedded H2 database, generates a self-signed certificate, and relaxes hostname validation. None of these defaults are safe in production. When you are ready to go live, there are four things you must address.
+
+## The four production must-haves
+
+### 1. External database
+
+By default, `start-dev` uses an embedded H2 database that lives inside the container. Restart the container and all data is gone. In production, point Keycloak at an external database — PostgreSQL is the recommended choice.
+
+Set these environment variables:
+
+```
+KC_DB=postgres
+KC_DB_URL=jdbc:postgresql://db-host:5432/keycloak
+KC_DB_USERNAME=keycloak
+KC_DB_PASSWORD=<secret>
+```
+
+### 2. Fixed hostname
+
+Keycloak embeds its own hostname into token issuers, OIDC discovery documents, and redirect validation. If the hostname is wrong, tokens are rejected by clients. Set it explicitly:
+
+```
+KC_HOSTNAME=auth.example.com
+```
+
+For local testing behind a reverse proxy, you may also need `KC_HOSTNAME_STRICT=false`, but never use that flag in production.
+
+### 3. HTTPS and reverse proxy
+
+Keycloak must be served over HTTPS. You have two common options:
+
+- **Edge termination (recommended):** A reverse proxy (Nginx, Traefik, AWS ALB) handles TLS and forwards plain HTTP to Keycloak. Tell Keycloak to trust the proxy headers:
+
+  ```
+  KC_PROXY_HEADERS=xforwarded
+  ```
+
+- **Passthrough:** Keycloak handles TLS itself. Provide a certificate and private key via `KC_HTTPS_CERTIFICATE_FILE` and `KC_HTTPS_CERTIFICATE_KEY_FILE`.
+
+### 4. Optimised build
+
+In production, run `kc.sh build` before `kc.sh start`. The build step compiles provider configuration, augments the Quarkus app, and caches classpath scanning — reducing startup time from ~30 s to ~3 s. Most Docker deployments do this in a multi-stage Dockerfile:
+
+```bash
+# Build stage
+kc.sh build --db=postgres
+
+# Runtime stage
+kc.sh start --optimized
+```
+
+## A production docker run
+
+Here is a minimal `docker run` that combines all four must-haves:
+
+export const prodRunCode = `docker run -d --name keycloak \\
+  -p 8080:8080 \\
+  -e KC_DB=postgres \\
+  -e KC_DB_URL=jdbc:postgresql://db:5432/keycloak \\
+  -e KC_DB_USERNAME=keycloak \\
+  -e KC_DB_PASSWORD=\${DB_PASSWORD} \\
+  -e KC_HOSTNAME=auth.example.com \\
+  -e KC_PROXY_HEADERS=xforwarded \\
+  -e KEYCLOAK_ADMIN=admin \\
+  -e KEYCLOAK_ADMIN_PASSWORD=\${ADMIN_PASSWORD} \\
+  quay.io/keycloak/keycloak:latest \\
+  start --optimized`;
+
+<CopyCode client:visible code={prodRunCode} label="Copy docker run" />
+
+Pass `DB_PASSWORD` and `ADMIN_PASSWORD` from your secrets manager — never hardcode them in the command.
+
+## Config-as-code with realm export/import
+
+Manual admin-console clicks are not repeatable. Export your realm configuration as JSON and commit it to version control:
+
+```bash
+# Export a realm
+/opt/keycloak/bin/kc.sh export --realm my-app --file /tmp/my-app-realm.json
+
+# Import on startup
+/opt/keycloak/bin/kc.sh start --import-realm
+```
+
+Place `my-app-realm.json` in `/opt/keycloak/data/import/` and Keycloak will import it automatically on first start. This makes realm configuration reproducible across environments.
+
+## Backup strategy
+
+Keycloak's state lives entirely in the external database. Back up the database using your database provider's standard backup mechanism. The container itself is stateless and does not need to be backed up — just ensure the realm export JSON is in version control as a configuration baseline.
+
+<Callout title="The four production must-haves">
+External database, fixed hostname, HTTPS, and an optimised build — `start-dev` has none of them. Switching from `start-dev` to `start --optimized` without these four in place will break your deployment.
+</Callout>
+
+export const quizProduction = [
+  {
+    q: 'What database does start-dev use by default?',
+    options: [
+      'PostgreSQL',
+      'MySQL',
+      'Embedded H2',
+      'SQLite',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'What does KC_PROXY_HEADERS=xforwarded tell Keycloak?',
+    options: [
+      'To disable HTTPS entirely',
+      'To trust X-Forwarded-* headers from a reverse proxy for hostname and protocol detection',
+      'To forward all requests to an external proxy',
+      'To require client certificates',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Why should you run kc.sh build before kc.sh start in production?',
+    options: [
+      'To create the external database schema',
+      'To compile provider configuration and reduce startup time',
+      'To generate a self-signed TLS certificate',
+      'To export the default realm configuration',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'How do you make Keycloak automatically import a realm on first startup?',
+    options: [
+      'Set KC_REALM_IMPORT=true',
+      'Place the realm JSON in /opt/keycloak/data/import/ and run start --import-realm',
+      'Call the Admin REST API before Keycloak starts',
+      'Enable the auto-import event listener',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="admin-theming-production/production-checklist" questions={quizProduction} />
+
+<ProgressTracker client:visible id="admin-theming-production/production-checklist" />

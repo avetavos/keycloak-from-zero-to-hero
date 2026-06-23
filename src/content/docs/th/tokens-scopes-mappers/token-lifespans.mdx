@@ -1,0 +1,101 @@
+---
+title: Token Lifespans
+description: 'เรียนรู้วิธีตั้งค่า lifespan ของ access token, refresh token และ session ใน Keycloak'
+sidebar:
+  order: 5
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Token Lifespans คืออะไร
+
+ทุก token ที่ Keycloak ออกมีอายุ (lifespan) การตั้งค่าที่ถูกต้องเป็นการสมดุลระหว่างประสบการณ์ผู้ใช้ (ไม่ต้อง login ซ้ำบ่อย) กับความปลอดภัย (จำกัดความเสียหายหาก token หลุด)
+
+## ประเภท Token และ Lifespan
+
+| Token | ค่าเริ่มต้นและหมายเหตุ |
+|---|---|
+| Access token | ค่าเริ่มต้น 5 นาที — อายุสั้นโดยตั้งใจเพื่อจำกัดความเสียหายหากหลุด |
+| Refresh token | ควบคุมด้วย SSO session idle และ SSO session max |
+| Offline token | เป็น refresh token ที่รอดจากการ restart server |
+
+## ที่ตั้งค่า Lifespan
+
+มีสองที่หลักในการตั้งค่า lifespan:
+
+- **Realm settings** — ตั้งค่าระดับ realm เป็น default ให้ client ทั้งหมด
+- **Client Advanced tab** — override ค่าเฉพาะสำหรับ client นั้นๆ
+
+## วิธีตั้งค่า Lifespan ระดับ Realm
+
+1. ไปที่ **Realm settings** → tab **Tokens**
+2. ปรับ **Access Token Lifespan** ตามต้องการ (เช่น 5 นาที)
+3. ปรับ **SSO Session Idle** และ **SSO Session Max** เพื่อควบคุม refresh token
+4. คลิก **Save**
+
+## วิธี Override Lifespan สำหรับ Client เดียว
+
+1. ไปที่ **Clients** → เลือก client ของคุณ
+2. คลิก tab **Advanced**
+3. เลื่อนลงไปที่ส่วน **Token Lifespan**
+4. ตั้งค่า **Access Token Lifespan** เป็นค่าที่ต้องการ
+5. คลิก **Save**
+
+## วิธีตรวจสอบ Expiry ของ Token
+
+export const inspectTokenCode = `jwt_payload=\$(echo "YOUR_ACCESS_TOKEN" | cut -d '.' -f2 | base64 -d 2>/dev/null); echo \$jwt_payload | python3 -m json.tool`;
+
+<CopyCode client:visible code={inspectTokenCode} label="Copy curl" />
+
+<Callout title="Access token อายุสั้น + refresh token = best practice">
+ตั้งค่า access token ให้มีอายุสั้น (1–5 นาที) และพึ่ง refresh token เพื่อรักษา session หาก access token ถูกดักจับหรือหลุดออกไป มันจะหมดอายุก่อนที่ผู้โจมตีจะใช้ประโยชน์ได้มาก
+</Callout>
+
+export const quizTokenLifespans = [
+  {
+    q: 'จะตั้งค่า access token lifespan เริ่มต้นของ realm ได้ที่ไหน?',
+    options: [
+      'Clients → Advanced tab',
+      'Realm settings → Tokens tab',
+      'Users → Sessions tab',
+      'Client scopes → Settings tab',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'SSO Session Idle ควบคุมอะไร?',
+    options: [
+      'ระยะเวลาที่ access token มีความถูกต้อง',
+      'ระยะเวลาที่ SSO session จะหมดอายุเมื่อไม่มีการใช้งาน',
+      'จำนวน client ที่แชร์ session ได้',
+      'จำนวน offline token สูงสุด',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'ข้อดีของการตั้งค่า access token lifespan ให้สั้นคืออะไร?',
+    options: [
+      'ลดจำนวน database query',
+      'บังคับให้ผู้ใช้ login บ่อยขึ้น',
+      'จำกัดช่วงเวลาที่อาจถูกนำไปใช้งานในทางที่ผิดหาก token หลุด',
+      'ทำให้ลายเซ็น token แข็งแกร่งขึ้น',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'จะ override access token lifespan สำหรับ client เดียวได้อย่างไร?',
+    options: [
+      'ใน Realm settings → Sessions tab',
+      'ใน Advanced tab ของ client → Token Lifespan section',
+      'ด้วยการเพิ่ม protocol mapper',
+      'ด้วยการสร้าง client scope ใหม่',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="tokens-scopes-mappers/token-lifespans" questions={quizTokenLifespans} />
+<ProgressTracker client:visible id="tokens-scopes-mappers/token-lifespans" />

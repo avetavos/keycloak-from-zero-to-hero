@@ -1,0 +1,107 @@
+---
+title: 'Run Keycloak with Docker'
+description: 'Start Keycloak in dev mode using Docker, explore the admin console and account console, and understand the start-dev command.'
+sidebar:
+  order: 3
+---
+
+import RunKeycloak from '../../../../components/RunKeycloak.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+The fastest way to run Keycloak locally is with Docker. The official image on quay.io includes everything you need — no separate database, no install steps. One command and Keycloak is listening on port 8080.
+
+<RunKeycloak />
+
+## The start-dev command explained
+
+Here is what each part of the `docker run` command does:
+
+1. `docker run --name keycloak` — names the container so you can reference it later with `docker stop keycloak` or `docker rm keycloak`.
+2. `-p 8080:8080` — maps port 8080 on the host to port 8080 inside the container, so `http://localhost:8080` reaches Keycloak.
+3. `-e KC_BOOTSTRAP_ADMIN_USERNAME=admin` — sets the initial admin username. This environment variable is only used on the very first boot when no admin account exists yet.
+4. `-e KC_BOOTSTRAP_ADMIN_PASSWORD=admin` — sets the initial admin password. Change this in any real environment — never leave it as `admin` outside of local dev.
+5. `quay.io/keycloak/keycloak:latest` — the official Keycloak image from the Red Hat Quay registry. Pin to a specific version (e.g. `26.0`) in CI or staging.
+6. `start-dev` — starts Keycloak in development mode with an embedded H2 in-memory database and HTTP enabled. No TLS certificate is required.
+
+export const dockerRunCode = `docker run --name keycloak -p 8080:8080 \\\n  -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \\\n  -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin \\\n  quay.io/keycloak/keycloak:latest start-dev`;
+
+<CopyCode client:visible code={dockerRunCode} label="Copy docker run" />
+
+## Opening the admin console
+
+1. Wait for the log line that says `Keycloak X.Y.Z on JVM (powered by Quarkus) started` — this means Keycloak is ready.
+2. Open `http://localhost:8080` in your browser.
+3. Click "Administration Console".
+4. Sign in with username `admin` and password `admin`.
+5. You are now in the master realm's admin console.
+
+## Admin console vs account console
+
+The **admin console** (`http://localhost:8080`) is the management UI for administrators. You create realms, clients, users, roles, and identity providers here. Only team members who need to configure Keycloak should have access to it.
+
+The **account console** (`http://localhost:8080/realms/master/account`) is the self-service portal for end users. Users can update their profile, change their password, and manage their active sessions here. Your application users land here, not the admin console. Each realm has its own account console at `/realms/{realm-name}/account`.
+
+## Stopping and removing the container
+
+```bash
+# Stop the container
+docker stop keycloak
+# Remove the container (data is lost — this is dev mode)
+docker rm keycloak
+```
+
+Because `start-dev` uses an in-memory H2 database, all realms, clients, and users you created are gone when the container is removed. In the next module you will learn how to persist data with an external database.
+
+<Callout title="start-dev is for learning only">
+`start-dev` disables important production checks and uses an in-memory database. All data is lost when the container stops. Never use `start-dev` in production — use `start` with an external database instead.
+</Callout>
+
+export const quizDocker = [
+  {
+    q: 'What does the -p 8080:8080 flag do in the docker run command?',
+    options: [
+      'Sets the admin password to 8080',
+      'Maps port 8080 on the host to port 8080 in the container',
+      'Allocates 8080 MB of memory',
+      'Exposes port 8080 only to other containers',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which database does start-dev use?',
+    options: [
+      'PostgreSQL',
+      'MySQL',
+      'An embedded H2 in-memory database',
+      'SQLite',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'What is the difference between the admin console and the account console?',
+    options: [
+      'They are the same thing',
+      'The admin console is for administrators to manage Keycloak; the account console is for end users to manage their profile',
+      'The account console requires a separate installation',
+      'The admin console is only available on port 9090',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What happens to your data when you docker rm the Keycloak container in start-dev mode?',
+    options: [
+      'Data is automatically backed up',
+      'Data persists because it is stored in the image',
+      'All data is lost — start-dev uses an in-memory database',
+      'Data is saved to /tmp on the host',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="intro-setup/run-with-docker" questions={quizDocker} />
+
+<ProgressTracker client:visible id="intro-setup/run-with-docker" />

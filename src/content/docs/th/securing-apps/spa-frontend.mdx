@@ -1,0 +1,138 @@
+---
+title: SPA Frontend
+description: 'รักษาความปลอดภัย single-page application ด้วย keycloak-js: ติดตั้ง adapter เริ่มต้นด้วย PKCE อ่าน access token และแนบไปกับ API call'
+sidebar:
+  order: 2
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## การติดตั้ง keycloak-js
+
+`keycloak-js` คือ adapter อย่างเป็นทางการฝั่งเบราว์เซอร์สำหรับ Keycloak จัดการ Authorization Code + PKCE flow, การจัดเก็บ token, silent refresh และ logout โดยที่คุณไม่ต้องจัดการ redirect URL หรือการแลก token เอง
+
+ติดตั้งผ่าน npm:
+
+```bash
+npm install keycloak-js
+```
+
+package มี TypeScript types มาในตัว ไม่จำเป็นต้องติดตั้ง `@types` แยกต่างหาก
+
+## การสร้าง Keycloak instance
+
+ส่ง URL ของ realm, ชื่อ realm และ client ID เข้าไป ค่าสามตัวนี้คือขั้นต่ำที่จำเป็นสำหรับการระบุตัวตนแอปพลิเคชันให้กับ Keycloak:
+
+export const kcInitCode = `import Keycloak from 'keycloak-js';
+
+const keycloak = new Keycloak({
+  url: 'http://localhost:8080',
+  realm: 'my-app',
+  clientId: 'my-app-frontend',
+});
+
+keycloak
+  .init({ onLoad: 'login-required', pkceMethod: 'S256' })
+  .then((authenticated) => {
+    if (authenticated) {
+      console.log('Logged in as', keycloak.tokenParsed?.preferred_username);
+      startApp();
+    }
+  });
+
+function startApp() {
+  // Your app bootstrap goes here.
+  // keycloak.token is available from this point on.
+}`;
+
+<CopyCode client:visible code={kcInitCode} label="Copy init snippet" />
+
+ประเด็นสำคัญ:
+
+- `onLoad: 'login-required'` จะ redirect ผู้ใช้ไปยัง Keycloak ทันทีหากยังไม่ได้ authenticate ใช้ `'check-sso'` หากต้องการให้หน้าเว็บเข้าถึงได้โดยไม่ต้อง login และแสดงปุ่ม login แทน
+- `pkceMethod: 'S256'` เปิดใช้งาน PKCE (Proof Key for Code Exchange) ซึ่งจำเป็นสำหรับ public client (SPA) เพราะไม่สามารถเก็บ client secret ได้อย่างปลอดภัย PKCE แทนที่ secret ด้วย code challenge ที่สร้างขึ้นต่อ request
+
+## การเรียก API ที่ได้รับการป้องกัน
+
+หลังจาก `init` resolve กลับมาด้วย `authenticated: true` แล้ว `keycloak.token` จะเก็บ JWT string ดิบไว้ แนบมันเป็น Bearer token ใน API request ทุกครั้ง:
+
+export const apiFetchCode = `async function fetchProfile() {
+  await keycloak.updateToken(30); // refresh if expiring in < 30 seconds
+
+  const response = await fetch('https://api.example.com/profile', {
+    headers: {
+      Authorization: \`Bearer \${keycloak.token}\`,
+    },
+  });
+
+  return response.json();
+}`;
+
+<CopyCode client:visible code={apiFetchCode} label="Copy fetch snippet" />
+
+`updateToken(minValidity)` ตรวจสอบว่า token ปัจจุบันจะหมดอายุภายใน `minValidity` วินาทีหรือไม่ ถ้าใช่จะใช้ refresh token เพื่อรับ token ใหม่แบบ silent เรียกใช้ก่อนแนบ `keycloak.token` เสมอ เพื่อหลีกเลี่ยงการส่ง JWT ที่หมดอายุ
+
+## การอ่าน claims จาก token
+
+payload ที่ถอดรหัสแล้วอยู่ใน `keycloak.tokenParsed` claims ที่ใช้บ่อย:
+
+```ts
+keycloak.tokenParsed?.preferred_username  // username
+keycloak.tokenParsed?.email               // email address
+keycloak.tokenParsed?.realm_access?.roles // array of realm roles
+keycloak.tokenParsed?.resource_access?.['my-app-frontend']?.roles // client roles
+```
+
+<Callout title="กำหนดค่า client เป็น Public พร้อม PKCE">
+ใน Keycloak admin console ต้องตั้งค่า Client authentication เป็น Off (public client) และถ้าใช้ Keycloak 21+ PKCE จะถูกบังคับใช้โดย keycloak-js adapter โดยอัตโนมัติเมื่อส่ง pkceMethod: 'S256' keycloak-js เก็บ token ในหน่วยความจำ ไม่ใช่ใน localStorage และจัดการ silent refresh ให้คุณเอง อย่าเก็บ token ใน localStorage หรือ sessionStorage เอง
+</Callout>
+
+export const quizSpaFrontend = [
+  {
+    q: 'ออปชัน pkceMethod: "S256" ทำหน้าที่อะไรเมื่อส่งให้ keycloak.init()?',
+    options: [
+      'เปิดใช้งานการ authenticate แบบ client secret',
+      'เปิดใช้งาน PKCE โดยแทนที่ client secret ด้วย code challenge ที่สร้างขึ้นต่อ request',
+      'กำหนด algorithm ที่ใช้เซ็น token เป็น SHA-256',
+      'ปิดการ refresh token',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'เหตุใดจึงควรเรียก keycloak.updateToken(30) ก่อนแนบ token ไปกับ API request?',
+    options: [
+      'เพื่อบังคับให้ login ใหม่หากผู้ใช้ไม่มีการใช้งาน',
+      'เพื่อถอดรหัส payload ของ JWT ไปยัง keycloak.tokenParsed',
+      'เพื่อ refresh token แบบ silent หากกำลังจะหมดอายุ จะได้ไม่ส่ง JWT ที่หมดอายุออกไป',
+      'เพื่อบันทึก request ลงใน audit log ของ Keycloak',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'โดยค่าเริ่มต้น keycloak-js จัดเก็บ access token ไว้ที่ใด?',
+    options: [
+      'ใน localStorage ภายใต้ key "kc_token"',
+      'ใน sessionStorage',
+      'ใน cookie ของเบราว์เซอร์',
+      'ในหน่วยความจำ (ตัวแปร JavaScript)',
+    ],
+    answer: 3,
+  },
+  {
+    q: 'ค่า onLoad ใดที่ redirect ผู้ใช้ไปยัง Keycloak ทันทีหากยังไม่ได้ authenticate?',
+    options: [
+      'check-sso',
+      'login-required',
+      'silent-sso',
+      'auto-redirect',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="securing-apps/spa-frontend" questions={quizSpaFrontend} />
+
+<ProgressTracker client:visible id="securing-apps/spa-frontend" />

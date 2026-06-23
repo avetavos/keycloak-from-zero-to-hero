@@ -1,0 +1,77 @@
+---
+title: 'Users, Groups & Credentials'
+description: 'ภาพรวมของโมดูล Users, Groups & Credentials — เรียนรู้ว่า Keycloak จัดการ identity, รวม user เข้าเป็น group, และบังคับการพิสูจน์ตัวตนผ่าน credential และ required action อย่างไร'
+sidebar:
+  order: 1
+---
+
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## โมดูลนี้ครอบคลุมอะไรบ้าง
+
+Keycloak แยกแยะอย่างชัดเจนระหว่างว่าใครคนหนึ่ง **เป็นใคร** (identity ของเขา), เขา **พิสูจน์** ตัวตนอย่างไร (credential), และเขา **ได้รับอนุญาตให้ทำอะไร** (role และ permission) โมดูลนี้จะโฟกัสที่ด้าน identity ของสมการนี้
+
+เมื่อจบโมดูลนี้ คุณจะรู้วิธีสร้างและจัดการ user, จัดระเบียบพวกเขาเข้าเป็น group, กำหนดและรีเซ็ต credential, และพา user ผ่าน required action ต่าง ๆ — ทั้งหมดนี้อยู่ภายใน Keycloak admin console และผ่าน Admin REST API
+
+### บทเรียนในโมดูล
+
+| ลำดับ | บทเรียน | สิ่งที่คุณจะได้เรียนรู้ |
+|-------|--------|---------------------|
+| 1 | **Users** | สร้าง user, จัดการ attribute, เปิดหรือปิดการใช้งานบัญชี, ยืนยันอีเมล |
+| 2 | **Groups** | สร้างลำดับชั้นของ group, เพิ่ม user เข้า group, สืบทอด role ผ่านการเป็นสมาชิก group |
+| 3 | **Credentials** | ตั้ง password, รีเซ็ต credential, ตั้งค่า OTP, เข้าใจลำดับความสำคัญของ credential |
+| 4 | **Required Actions** | กำหนด action ในตัว (ยืนยันอีเมล, อัปเดต password, ตั้งค่า OTP), สร้าง action แบบกำหนดเอง |
+| 5 | **User Federation** | เชื่อมต่อ LDAP หรือ Active Directory server, ตั้งค่า mapper, ซิงค์ user ตามต้องการ |
+
+<Callout title="ประเด็นสำคัญ">
+ใน Keycloak นั้น identity (user) แยกออกจาก authorization (role และ group) — คุณสามารถจัดการมันได้อย่างอิสระ บัญชี user จะไม่มี permission ใด ๆ จนกว่าคุณจะแนบ role หรือการเป็นสมาชิก group ให้กับมัน
+</Callout>
+
+## ชิ้นส่วนต่าง ๆ ประกอบเข้าด้วยกันอย่างไร
+
+**user** คือ record ที่จัดเก็บอยู่ภายใน realm หนึ่ง โดย realm คือขอบเขต — user ใน realm `my-app` ไม่สามารถล็อกอินเข้า realm `other-app` ได้ เว้นแต่บัญชีของพวกเขาจะมีอยู่ที่นั่นด้วย
+
+**Group** ช่วยให้คุณรวม user เข้าด้วยกัน เพื่อให้คุณจัดการการกำหนด role, attribute, และ required action ได้ในที่เดียวแทนที่จะทำทีละ user โดย group สามารถซ้อนกันเป็นลำดับชั้นได้
+
+**Credential** คือความลับหรือปัจจัยที่สอง (second factor) ที่ user นำเสนอเพื่อพิสูจน์ identity ของตน Keycloak รองรับ password, รหัส OTP, passkey และอื่น ๆ credential แต่ละชนิดมีลำดับความสำคัญและวงจรชีวิตของตัวเอง
+
+**Required action** คืองานที่ Keycloak บังคับให้ user ทำให้เสร็จก่อนที่พวกเขาจะล็อกอินได้อย่างสมบูรณ์ — ตัวอย่างเช่น การยืนยันอีเมลแอดเดรส หรือการตั้ง password ใหม่หลังจากที่ admin รีเซ็ต
+
+export const quizIndex = [
+  {
+    q: 'user ใน Keycloak คืออะไร?',
+    options: [
+      'role ที่ให้สิทธิ์เข้าถึง client',
+      'record ของ identity ที่จัดเก็บอยู่ภายใน realm',
+      'แอปพลิเคชัน client ที่ลงทะเบียนไว้ใน Keycloak',
+      'policy ที่ควบคุม login flow',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'จุดประสงค์หลักของ group ใน Keycloak คืออะไร?',
+    options: [
+      'เพื่อเข้ารหัส password ของ user',
+      'เพื่อกำหนด redirect URI ให้กับ client',
+      'เพื่อรวม user เข้าด้วยกันให้สามารถจัดการ role และการตั้งค่าได้ในที่เดียว',
+      'เพื่อสร้าง authentication flow แยกต่างหาก',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'required action ใน Keycloak คืออะไร?',
+    options: [
+      'permission ที่ต้องได้รับก่อนที่จะสร้าง user ได้',
+      'งานที่ user ต้องทำให้เสร็จก่อนที่จะล็อกอินได้อย่างสมบูรณ์',
+      'การตั้งค่า client ที่บังคับให้ต้องตั้งหลังจากสร้างเสร็จ',
+      'ขั้นตอนของ admin ที่จำเป็นก่อนเผยแพร่ realm',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="users-groups-credentials/index" questions={quizIndex} />
+
+<ProgressTracker client:visible id="users-groups-credentials/index" />

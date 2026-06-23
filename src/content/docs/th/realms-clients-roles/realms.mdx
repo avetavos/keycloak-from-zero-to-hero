@@ -1,0 +1,127 @@
+---
+title: Realms
+description: 'ทำความเข้าใจ realm ในฐานะขอบเขตการแยก (isolation boundary) บทบาทของ master realm และวิธีสร้างกับตั้งค่า realm ของคุณเอง'
+sidebar:
+  order: 2
+---
+
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## realm คืออะไร?
+
+**realm** คือ container ระดับบนสุดใน Keycloak ทุกอ็อบเจกต์ใน Keycloak — ไม่ว่าจะเป็น user, client, role, identity provider, token policy — ล้วนอยู่ใน realm หนึ่งเดียวเท่านั้น realm แต่ละตัวแยกออกจากกันอย่างสมบูรณ์: user ใน realm `shop` ไม่สามารถ log in เข้าแอปพลิเคชันที่ลงทะเบียนไว้ใน realm `blog` ได้ และ session ของพวกเขาก็จะไม่ถูกแชร์กัน
+
+คุณสามารถนึกถึง realm ว่าเหมือน tenant ในระบบ SaaS แบบ multi-tenant ได้ เพียงแต่ว่าแต่ละ realm ถูกจัดการอยู่ภายใน Keycloak server เครื่องเดียวทั้งหมด
+
+## master realm
+
+Keycloak ติดตั้งมาพร้อม realm หนึ่งตัวอยู่แล้วคือ **master** master realm มีจุดประสงค์พิเศษ: มันคือ realm สำหรับงานบริหารจัดการ เมื่อคุณเปิด Keycloak admin console แล้ว log in คุณกำลังยืนยันตัวตนกับ master อยู่
+
+master realm สามารถสร้างและจัดการ realm อื่น ๆ ได้ แต่ไม่ควรนำไปใช้ลงทะเบียนแอปพลิเคชันของคุณเองหรือเก็บ user ของแอปพลิเคชันของคุณ การปนกัน user ของแอปกับ super-user ฝ่ายบริหารของ master ถือเป็นความเสี่ยงด้านความปลอดภัยที่ร้ายแรง
+
+## การสร้าง realm
+
+1. เปิด Keycloak admin console ที่ `http://localhost:8080` แล้ว sign in ด้วย admin credentials ของคุณ
+2. ที่มุมบนซ้าย ให้คลิกที่ drop-down ชื่อ realm (ตอนแรกจะแสดงเป็น **Keycloak** หรือ **master**)
+3. คลิก **Create realm**
+4. ในช่อง **Realm name** ให้ใส่ชื่อ realm ที่สั้น เป็นตัวพิมพ์เล็ก และคั่นด้วยขีดกลาง (เช่น `my-app`)
+5. ตรวจสอบให้แน่ใจว่า **Enabled** ถูกเปิดอยู่
+6. คลิก **Create**
+
+Keycloak จะสร้าง realm แล้วสลับ context ของ console ของคุณเข้าไปใน realm นั้น การตั้งค่าทั้งหมดหลังจากนี้ (client, role, user) จะอยู่ใน realm ใหม่นี้
+
+## พาทัวร์การตั้งค่า realm
+
+หลังจากสร้าง realm แล้ว ให้คลิก **Realm settings** ในแถบด้านซ้าย การตั้งค่าถูกจัดเป็นแท็บต่าง ๆ:
+
+### General
+
+- **Display name** — ชื่อที่อ่านง่ายสำหรับคนทั่วไป แสดงบนหน้า login
+- **Frontend URL** — override URL ที่ Keycloak ใช้สร้าง redirect link (มีประโยชน์เมื่ออยู่หลัง reverse proxy)
+- **HTML display name** — รองรับ HTML สำหรับหน้า login ที่ทำแบรนด์
+
+### Login
+
+- **User registration** — อนุญาตให้สมัครสมาชิกเองได้
+- **Forgot password** — เปิดใช้งานขั้นตอนรีเซ็ตรหัสผ่าน (ต้องตั้งค่า email ไว้)
+- **Remember me** — ให้ user ยังคง log in อยู่ข้ามการรีสตาร์ท browser ได้
+- **Verify email** — บังคับให้ user ยืนยัน email address หลังจากสมัครสมาชิก
+- **Login with email** — อนุญาตให้ user กรอก email address แทน username ได้
+
+### Email
+
+ตั้งค่า SMTP server ที่ Keycloak ใช้ส่ง email ยืนยันตัวตนและรีเซ็ตรหัสผ่าน จำเป็นต้องตั้งค่าหากคุณเปิดใช้งานขั้นตอนใด ๆ ที่ต้องอาศัย email
+
+### Tokens
+
+การตั้งค่าสำคัญที่ควบคุมอายุและพฤติกรรมของ token:
+
+| การตั้งค่า | ค่าเริ่มต้น | สิ่งที่ควบคุม |
+|---|---|---|
+| Access token lifespan | 5 นาที | access token มีอายุนานแค่ไหน |
+| SSO session idle | 30 นาที | session หมดอายุหากไม่มีการใช้งานนานเท่านี้ |
+| SSO session max | 10 ชั่วโมง | ขีดจำกัดสูงสุดของความยาว session |
+| Refresh token lifespan | เท่ากับ SSO session | refresh token ใช้ได้นานแค่ไหน |
+
+access token ที่มีอายุสั้นลงจะลดช่วงเวลาที่ตกอยู่ในความเสี่ยงหาก token ถูกขโมย แลกกับการต้อง refresh บ่อยขึ้น
+
+### Keys
+
+Keycloak จะสร้าง cryptographic key สำหรับ sign token ให้โดยอัตโนมัติ แท็บ **Keys** จะแสดง key provider ที่ใช้งานอยู่ สำหรับ production คุณควรหมุน (rotate) key เป็นระยะ provider แบบ `RS256` คือค่าเริ่มต้นและสร้าง JWT ที่ sign ด้วย RSA private key; client จะตรวจสอบ signature โดยใช้ public key ที่มีอยู่ที่ JWKS endpoint ของ realm:
+
+```
+http://localhost:8080/realms/{realm-name}/protocol/openid-connect/certs
+```
+
+<Callout title="ห้ามสร้างแอปใน master เด็ดขาด">
+อย่าลงทะเบียนแอปพลิเคชันของคุณหรือเก็บ user ของแอปพลิเคชันไว้ใน master realm master realm สงวนไว้สำหรับการบริหารจัดการ Keycloak ให้สร้าง realm เฉพาะสำหรับทุกโปรเจกต์หรือทุกผลิตภัณฑ์
+</Callout>
+
+export const quizRealms = [
+  {
+    q: 'master realm ใน Keycloak มีจุดประสงค์อะไร?',
+    options: [
+      'เก็บ user สำหรับแอปพลิเคชันหลักของคุณ',
+      'เป็น realm สำหรับงานบริหารจัดการที่สงวนไว้ใช้จัดการตัว Keycloak เอง',
+      'เป็น realm เดียวที่รองรับ OIDC',
+      'เป็น realm เริ่มต้นสำหรับ client ใหม่ทั้งหมด',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'การตั้งค่า token ตัวใดที่คุณควรปรับให้สั้นลงเพื่อลดช่วงความเสี่ยงหาก access token ถูกขโมย?',
+    options: [
+      'SSO session max',
+      'Refresh token lifespan',
+      'Access token lifespan',
+      'SSO session idle',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'ใน admin console คุณเริ่มขั้นตอนการสร้าง realm ใหม่ได้ที่ไหน?',
+    options: [
+      'Clients → Create client',
+      'drop-down ชื่อ realm ที่มุมบนซ้าย → Create realm',
+      'Realm settings → General → New',
+      'Users → Add realm',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'URL path ใดที่เปิดเผย public signing key ของ realm สำหรับการตรวจสอบ token?',
+    options: [
+      '/realms/{realm}/protocol/openid-connect/token',
+      '/realms/{realm}/protocol/openid-connect/certs',
+      '/realms/{realm}/keys/active',
+      '/admin/realms/{realm}/keys',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="realms-clients-roles/realms" questions={quizRealms} />
+
+<ProgressTracker client:visible id="realms-clients-roles/realms" />

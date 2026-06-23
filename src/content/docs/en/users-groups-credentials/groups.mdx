@@ -1,0 +1,137 @@
+---
+title: Groups
+description: 'Learn how to create groups, add members, map roles to groups, work with subgroups, and configure default groups in Keycloak.'
+sidebar:
+  order: 3
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Groups vs roles
+
+In Keycloak there are two related but distinct concepts: **groups** and **roles**.
+
+- A **role** is a permission or capability (e.g., `admin`, `viewer`, `editor`). Roles are granted to users and checked by applications to decide what a user is allowed to do.
+- A **group** is a container for users. Groups do not grant permissions on their own — they gain permissions through the roles mapped to them.
+
+The power of the combination: map roles to a group, then add users to the group. Every member of the group automatically inherits all roles assigned to that group. When you need to change permissions for a set of users, you update the group's role mapping once instead of touching every individual user account.
+
+## Creating a group
+
+1. In the admin console, make sure you are in the correct realm (check the top-left drop-down).
+2. Click **Groups** in the left sidebar.
+3. Click **Create group** (top-right of the groups list).
+4. Enter a **Name** for the group (e.g., `developers`, `support-agents`).
+5. Click **Save**.
+
+The new group now appears in the groups list. Click its name to open the group's detail page and access its tabs.
+
+## Adding members to a group
+
+1. Open the group from the **Groups** list.
+2. Click the **Members** tab.
+3. Click **Add member**.
+4. In the search dialog, type the username or email to find the user.
+5. Select the user and click **Add**.
+
+The user now appears in the Members tab and immediately inherits any roles mapped to this group.
+
+## Mapping roles to a group
+
+Role mappings on a group work the same way as role mappings on an individual user — the difference is that every current and future group member inherits the mapped roles automatically.
+
+1. Open the group from the **Groups** list.
+2. Click the **Role mapping** tab.
+3. Click **Assign role**.
+4. Use the search box to find the realm role (or client role) you want to assign.
+5. Select one or more roles and click **Assign**.
+
+The assigned roles are now listed under the group's role mappings. Any user who is a member of the group will have these roles included in their token.
+
+## Subgroups
+
+Keycloak supports a hierarchy of groups. A **subgroup** (child group) lives under a parent group. Members of a subgroup inherit the roles mapped to that subgroup — but they do not automatically inherit the roles of the parent group unless they are also a direct member of the parent.
+
+To create a subgroup:
+
+1. Open the parent group from the **Groups** list.
+2. Click the **Child groups** tab (or **Sub groups**, depending on your Keycloak version).
+3. Click **Create group**.
+4. Enter a **Name** for the child group and click **Save**.
+
+You can then add members and map roles to the subgroup independently of the parent. This makes it easy to model organizational hierarchies (e.g., `engineering` → `backend`, `frontend`).
+
+## Default groups
+
+A **default group** is a group that every new user is automatically added to upon self-registration. This is useful when you want all newly registered users to start with a baseline set of roles without any administrator action.
+
+To configure default groups:
+
+1. Click **Realm settings** in the left sidebar.
+2. Click the **User registration** tab.
+3. Under **Default groups**, click **Add groups**.
+4. Select one or more groups from the list and click **Add**.
+
+Any user who registers through the Keycloak Account Console or the self-registration flow will be automatically placed in all default groups — and will therefore inherit their mapped roles.
+
+## Inspecting group members via the REST API
+
+export const groupMembersCode = `curl -s -H "Authorization: Bearer \${TOKEN}" http://localhost:8080/admin/realms/my-app/groups/\${GROUP_ID}/members | jq .`;
+
+<CopyCode client:visible code={groupMembersCode} label="Copy curl" />
+
+Replace `TOKEN` with a valid admin access token and `GROUP_ID` with the UUID of the group (visible in the URL when you open the group in the admin console).
+
+<Callout title="Groups over per-user roles">
+Assign roles to groups, then put users in groups — far easier to manage than assigning roles to individual users. When a user's responsibilities change, move them between groups instead of hunting down every role assignment on their account.
+</Callout>
+
+export const quizGroups = [
+  {
+    q: 'What is the key difference between a group and a role in Keycloak?',
+    options: [
+      'Groups grant permissions directly; roles are just labels',
+      'Roles grant permissions; groups are containers for users that inherit mapped roles',
+      'Groups and roles are identical — both grant permissions',
+      'A role can contain users; a group cannot',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which tab do you use to add an existing user to a group?',
+    options: [
+      'Role mapping',
+      'Attributes',
+      'Members',
+      'Child groups',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'If you map the "editor" role to a group, what happens to a user who joins that group?',
+    options: [
+      'Nothing — the user must also be granted the role individually',
+      'The user inherits the "editor" role automatically',
+      'The user is removed from all other roles',
+      'The role is copied to the user permanently and removing the user from the group has no effect',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Where do you configure which groups new self-registered users are automatically added to?',
+    options: [
+      'Clients → Default groups',
+      'Realm settings → User registration → Default groups',
+      'Groups → Settings → Auto-join',
+      'Authentication → Flows → Registration',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="users-groups-credentials/groups" questions={quizGroups} />
+
+<ProgressTracker client:visible id="users-groups-credentials/groups" />

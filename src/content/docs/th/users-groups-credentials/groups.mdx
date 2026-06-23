@@ -1,0 +1,137 @@
+---
+title: Groups
+description: 'เรียนรู้วิธีสร้าง group, เพิ่มสมาชิก, map role ให้กับ group, ทำงานกับ subgroup, และตั้งค่า default group ใน Keycloak'
+sidebar:
+  order: 3
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Group กับ role ต่างกันอย่างไร
+
+ใน Keycloak มีสองแนวคิดที่เกี่ยวข้องกันแต่แตกต่างกัน คือ **group** และ **role**
+
+- **role** คือ permission หรือความสามารถ (เช่น `admin`, `viewer`, `editor`) role จะถูกมอบให้กับ user และถูกตรวจสอบโดยแอปพลิเคชันเพื่อตัดสินว่า user ได้รับอนุญาตให้ทำอะไร
+- **group** คือ container สำหรับ user group ไม่ได้มอบ permission ด้วยตัวมันเอง — มันได้รับ permission ผ่าน role ที่ map ไว้กับมัน
+
+พลังของการใช้ร่วมกัน: map role ไปยัง group, แล้วเพิ่ม user เข้า group สมาชิกทุกคนของ group จะสืบทอด role ทั้งหมดที่กำหนดให้กับ group นั้นโดยอัตโนมัติ เมื่อคุณต้องการเปลี่ยน permission ให้กับชุดของ user คุณก็อัปเดต role mapping ของ group เพียงครั้งเดียวแทนที่จะต้องไปแตะทุกบัญชี user แต่ละราย
+
+## การสร้าง group
+
+1. ใน admin console ตรวจสอบให้แน่ใจว่าคุณอยู่ใน realm ที่ถูกต้อง (ตรวจสอบจาก drop-down ที่มุมซ้ายบน)
+2. คลิก **Groups** ในแถบด้านซ้าย
+3. คลิก **Create group** (มุมขวาบนของรายการ group)
+4. ใส่ **Name** สำหรับ group (เช่น `developers`, `support-agents`)
+5. คลิก **Save**
+
+group ใหม่จะปรากฏในรายการ group ตอนนี้ คลิกชื่อของมันเพื่อเปิดหน้ารายละเอียดของ group และเข้าถึงแท็บต่าง ๆ ของมัน
+
+## การเพิ่มสมาชิกเข้า group
+
+1. เปิด group จากรายการ **Groups**
+2. คลิกแท็บ **Members**
+3. คลิก **Add member**
+4. ในกล่องค้นหา พิมพ์ username หรืออีเมลเพื่อค้นหา user
+5. เลือก user แล้วคลิก **Add**
+
+ตอนนี้ user จะปรากฏในแท็บ Members และสืบทอด role ใด ๆ ที่ map ไว้กับ group นี้ทันที
+
+## การ map role ให้กับ group
+
+Role mapping บน group ทำงานเหมือนกับ role mapping บน user แต่ละราย — ความแตกต่างคือสมาชิกของ group ทุกคนทั้งในปัจจุบันและอนาคตจะสืบทอด role ที่ map ไว้โดยอัตโนมัติ
+
+1. เปิด group จากรายการ **Groups**
+2. คลิกแท็บ **Role mapping**
+3. คลิก **Assign role**
+4. ใช้กล่องค้นหาเพื่อค้นหา realm role (หรือ client role) ที่คุณต้องการกำหนด
+5. เลือก role หนึ่งรายการหรือมากกว่าแล้วคลิก **Assign**
+
+role ที่กำหนดจะแสดงอยู่ภายใต้ role mapping ของ group ตอนนี้ user คนใดก็ตามที่เป็นสมาชิกของ group จะมี role เหล่านี้รวมอยู่ใน token ของพวกเขา
+
+## Subgroups
+
+Keycloak รองรับลำดับชั้นของ group **subgroup** (child group) อยู่ภายใต้ parent group สมาชิกของ subgroup จะสืบทอด role ที่ map ไว้กับ subgroup นั้น — แต่พวกเขาจะไม่สืบทอด role ของ parent group โดยอัตโนมัติ เว้นแต่พวกเขาจะเป็นสมาชิกโดยตรงของ parent ด้วย
+
+วิธีสร้าง subgroup:
+
+1. เปิด parent group จากรายการ **Groups**
+2. คลิกแท็บ **Child groups** (หรือ **Sub groups** ขึ้นอยู่กับเวอร์ชัน Keycloak ของคุณ)
+3. คลิก **Create group**
+4. ใส่ **Name** สำหรับ child group แล้วคลิก **Save**
+
+จากนั้นคุณสามารถเพิ่มสมาชิกและ map role ให้กับ subgroup ได้อย่างอิสระจาก parent สิ่งนี้ทำให้ง่ายต่อการจำลองลำดับชั้นขององค์กร (เช่น `engineering` → `backend`, `frontend`)
+
+## Default groups
+
+**default group** คือ group ที่ user ใหม่ทุกคนจะถูกเพิ่มเข้าโดยอัตโนมัติเมื่อสมัครสมาชิกด้วยตนเอง (self-registration) สิ่งนี้มีประโยชน์เมื่อคุณต้องการให้ user ที่ลงทะเบียนใหม่ทั้งหมดเริ่มต้นด้วยชุด role พื้นฐานโดยไม่ต้องให้ผู้ดูแลระบบดำเนินการใด ๆ
+
+วิธีตั้งค่า default group:
+
+1. คลิก **Realm settings** ในแถบด้านซ้าย
+2. คลิกแท็บ **User registration**
+3. ภายใต้ **Default groups** คลิก **Add groups**
+4. เลือก group หนึ่งรายการหรือมากกว่าจากรายการแล้วคลิก **Add**
+
+user คนใดก็ตามที่ลงทะเบียนผ่าน Keycloak Account Console หรือ self-registration flow จะถูกจัดวางใน default group ทั้งหมดโดยอัตโนมัติ — และจะสืบทอด role ที่ map ไว้กับ group เหล่านั้นด้วย
+
+## การตรวจสอบสมาชิกของ group ผ่าน REST API
+
+export const groupMembersCode = `curl -s -H "Authorization: Bearer \${TOKEN}" http://localhost:8080/admin/realms/my-app/groups/\${GROUP_ID}/members | jq .`;
+
+<CopyCode client:visible code={groupMembersCode} label="Copy curl" />
+
+แทนที่ `TOKEN` ด้วย admin access token ที่ถูกต้อง และ `GROUP_ID` ด้วย UUID ของ group (มองเห็นได้ใน URL เมื่อคุณเปิด group ใน admin console)
+
+<Callout title="Group ดีกว่า role แบบราย user">
+กำหนด role ให้กับ group, แล้วใส่ user เข้า group — จัดการง่ายกว่าการกำหนด role ให้กับ user แต่ละรายมาก เมื่อความรับผิดชอบของ user เปลี่ยนไป ให้ย้ายพวกเขาระหว่าง group แทนที่จะไล่ค้นหาทุก role assignment บนบัญชีของพวกเขา
+</Callout>
+
+export const quizGroups = [
+  {
+    q: 'ความแตกต่างที่สำคัญระหว่าง group กับ role ใน Keycloak คืออะไร?',
+    options: [
+      'group มอบ permission โดยตรง; role เป็นเพียง label',
+      'role มอบ permission; group เป็น container สำหรับ user ที่สืบทอด role ที่ map ไว้',
+      'group และ role เหมือนกัน — ทั้งคู่มอบ permission',
+      'role สามารถบรรจุ user ได้; group ทำไม่ได้',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'คุณใช้แท็บใดเพื่อเพิ่ม user ที่มีอยู่แล้วเข้า group?',
+    options: [
+      'Role mapping',
+      'Attributes',
+      'Members',
+      'Child groups',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'หากคุณ map role "editor" ให้กับ group เกิดอะไรขึ้นกับ user ที่เข้าร่วม group นั้น?',
+    options: [
+      'ไม่มีอะไรเกิดขึ้น — user ต้องได้รับ role แบบรายบุคคลด้วย',
+      'user สืบทอด role "editor" โดยอัตโนมัติ',
+      'user ถูกลบออกจาก role อื่น ๆ ทั้งหมด',
+      'role ถูกคัดลอกไปยัง user อย่างถาวร และการลบ user ออกจาก group จะไม่มีผลใด ๆ',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'คุณตั้งค่าว่า user ที่สมัครด้วยตนเองใหม่จะถูกเพิ่มเข้า group ใดโดยอัตโนมัติได้ที่ไหน?',
+    options: [
+      'Clients → Default groups',
+      'Realm settings → User registration → Default groups',
+      'Groups → Settings → Auto-join',
+      'Authentication → Flows → Registration',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="users-groups-credentials/groups" questions={quizGroups} />
+
+<ProgressTracker client:visible id="users-groups-credentials/groups" />

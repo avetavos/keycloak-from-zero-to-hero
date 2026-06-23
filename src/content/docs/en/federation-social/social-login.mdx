@@ -1,0 +1,126 @@
+---
+title: Social Login
+description: 'Add a social identity provider (Google or GitHub) to a Keycloak realm so users can log in with their existing account.'
+sidebar:
+  order: 2
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## What is social login?
+
+**Social login** lets your users authenticate with a provider they already have an account with — Google, GitHub, Facebook, Apple, and many others — instead of creating a new username and password in your realm. Under the hood, Keycloak acts as an identity broker: it redirects the user to the chosen provider, the provider authenticates them, and Keycloak accepts the resulting token. Your application never interacts with the external provider directly.
+
+Keycloak ships with built-in connectors for the most common social providers. Each connector is called an **identity provider** (IdP) in the admin console.
+
+## Step 1 — obtain credentials from the provider
+
+Before you configure anything in Keycloak you need an OAuth2 client registered at the provider. The exact steps differ by provider, but the pattern is always the same.
+
+**For Google:**
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com) and create or select a project.
+2. Navigate to **APIs & Services → Credentials → Create Credentials → OAuth client ID**.
+3. Set the application type to **Web application**.
+4. In the **Authorised redirect URIs** field, enter Keycloak's broker endpoint for your realm (see Step 2 below).
+5. Click **Create**. Note the **Client ID** and **Client secret**.
+
+**For GitHub:**
+
+1. Go to **GitHub → Settings → Developer settings → OAuth Apps → New OAuth App**.
+2. Set the **Authorization callback URL** to Keycloak's broker endpoint (see Step 2 below).
+3. Click **Register application**. Note the **Client ID** and generate a **Client secret**.
+
+## Step 2 — find the redirect URI to register with the provider
+
+Keycloak exposes a fixed broker endpoint for each identity provider alias. You must register this URI with the external provider — it is where the provider sends the user back after authentication.
+
+The URI follows this pattern:
+
+export const redirectUriCode = `https://<keycloak-host>/realms/<realm>/broker/<alias>/endpoint`;
+
+<CopyCode client:visible code={redirectUriCode} label="Copy redirect URI pattern" />
+
+For example, if your Keycloak runs at `https://auth.example.com`, your realm is `my-app`, and you will use the alias `google`, the redirect URI is:
+
+```text
+https://auth.example.com/realms/my-app/broker/google/endpoint
+```
+
+Register this URI exactly as shown in the provider's developer console. A mismatch — even a trailing slash difference — will cause the social login to fail with a redirect URI mismatch error.
+
+## Step 3 — add the identity provider in Keycloak
+
+1. Open the **Keycloak admin console** and switch to your target realm.
+2. Click **Identity providers** in the left sidebar.
+3. Click **Add provider** and select **Google** (or **GitHub**, or any other listed provider).
+4. Keycloak pre-fills the **Alias** (e.g., `google`). Leave it unless you have a naming reason to change it.
+5. Paste the **Client ID** from Step 1 into the **Client ID** field.
+6. Paste the **Client secret** from Step 1 into the **Client secret** field.
+7. Leave all other settings at their defaults for now.
+8. Click **Save**.
+
+## Step 4 — test the social login
+
+1. Open your realm's login page: `https://<keycloak-host>/realms/<realm>/account`.
+2. You should see a new button — "Log in with Google" or "Sign in with GitHub" — below the username/password form.
+3. Click the button. You will be redirected to the external provider's login page.
+4. Authenticate with the external provider. You will be redirected back to Keycloak, and Keycloak will create a federated user in your realm (or link to an existing one via the first-login flow).
+
+## Provider alias and the login button
+
+The **alias** you set in Step 3 appears in the broker endpoint URI and also controls the display on the login page. Keycloak uses the alias to route the callback back to the correct IdP configuration. If you rename or delete an IdP, existing federated user links that reference the old alias will break — users will not be able to log in via that provider until the link is updated.
+
+<Callout title="Register the exact redirect URI with the provider">
+The redirect URI Keycloak exposes for brokering is fixed: `<keycloak-host>/realms/<realm>/broker/<alias>/endpoint`. You must register this URI exactly with the external provider. Any mismatch — wrong host, wrong realm name, wrong alias, extra trailing slash — will cause the social login to fail with an OAuth2 redirect URI error.
+</Callout>
+
+export const quizSocialLogin = [
+  {
+    q: 'What does Keycloak act as when a user clicks "Log in with Google"?',
+    options: [
+      'A SAML service provider',
+      'An identity broker that redirects to Google and accepts the result',
+      'A Google OAuth2 resource server',
+      'A user database that mirrors Google accounts',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Where must you register the Keycloak broker redirect URI?',
+    options: [
+      'In the Keycloak realm settings',
+      'In the Keycloak client settings for your app',
+      'In the external provider\'s developer console',
+      'In the Keycloak login theme',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'What is the correct pattern for the Keycloak broker endpoint URI?',
+    options: [
+      '<keycloak-host>/realms/<realm>/protocol/openid-connect/token',
+      '<keycloak-host>/realms/<realm>/broker/<alias>/endpoint',
+      '<keycloak-host>/auth/realms/<realm>/social/<provider>',
+      '<keycloak-host>/realms/<realm>/clients/<alias>/callback',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What happens if you change the IdP alias after users have already logged in via that provider?',
+    options: [
+      'Nothing — Keycloak automatically migrates the links',
+      'The provider stops accepting new logins',
+      'Existing federated user links that reference the old alias will break',
+      'Keycloak deletes those users from the realm',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="federation-social/social-login" questions={quizSocialLogin} />
+
+<ProgressTracker client:visible id="federation-social/social-login" />

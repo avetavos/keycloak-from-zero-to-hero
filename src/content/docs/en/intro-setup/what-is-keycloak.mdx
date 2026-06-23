@@ -1,0 +1,103 @@
+---
+title: 'What is Keycloak?'
+description: 'Core capabilities of Keycloak: SSO, OIDC/OAuth2/SAML, user management, identity brokering, user federation, and the admin console.'
+sidebar:
+  order: 2
+---
+
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+Keycloak is an open-source IAM server maintained by Red Hat. It runs as a standalone server (the Quarkus distribution) and your applications integrate with it over standard protocols. Your apps never see passwords — they send users to Keycloak and receive signed tokens back.
+
+## Core capabilities
+
+### Single Sign-On (SSO)
+
+Once a user authenticates with Keycloak, any other application in the same realm can receive a valid token without asking the user to log in again. The session lives in Keycloak, not in your apps.
+
+### Standard protocols
+
+Keycloak speaks OpenID Connect (OIDC) and OAuth2 as its primary protocols. It also supports SAML 2.0 for legacy enterprise integrations. Any compliant application — regardless of language or framework — can integrate without custom auth code.
+
+### User management
+
+The admin console and REST API let you create, update, disable, and search users. Users can reset passwords, verify their email, configure TOTP, and manage sessions — all through Keycloak, not your app.
+
+### Identity brokering and social login
+
+Keycloak can delegate authentication to external identity providers — Google, GitHub, Microsoft, Facebook, or any OIDC/SAML-compatible IdP. Users click "Sign in with Google" on YOUR realm's login page; Keycloak handles the federation.
+
+### User federation
+
+If your organisation already has users in LDAP or Active Directory, Keycloak can connect directly. Users authenticate against their existing directory; Keycloak synchronises attributes and manages sessions.
+
+### Admin console and REST API
+
+Every operation available in the admin console is also available via the REST API. You can automate realm setup, client registration, and user creation using the API or the Keycloak Terraform provider.
+
+## Where Keycloak sits in your architecture
+
+Keycloak sits between your users and your applications. Users authenticate once with Keycloak and receive signed tokens. Your apps validate those tokens locally — without calling Keycloak on every request.
+
+```
+Users
+  │
+  ▼
+Keycloak (auth server)
+  │   issues signed tokens
+  ▼
+Your Apps
+```
+
+<Callout title="Key point">
+Keycloak speaks OIDC/OAuth2 and SAML — any compliant app can integrate without custom auth code.
+</Callout>
+
+export const quizWhatIs = [
+  {
+    q: 'What does SSO mean in the context of Keycloak?',
+    options: [
+      'Each app has its own login page',
+      'Once authenticated, users can access multiple apps without logging in again',
+      'Users share a single password across all apps',
+      'Keycloak stores passwords for all apps',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which user directory systems can Keycloak federate with?',
+    options: [
+      'MySQL and PostgreSQL',
+      'Redis and Memcached',
+      'LDAP and Active Directory',
+      'S3 and GCS',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'What is identity brokering?',
+    options: [
+      'Storing user passwords in an encrypted vault',
+      'Delegating authentication to an external identity provider such as Google or GitHub',
+      'Synchronising users between two Keycloak realms',
+      'Creating machine-to-machine tokens',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which Keycloak distribution is recommended for modern deployments?',
+    options: [
+      'WildFly distribution',
+      'Quarkus distribution',
+      'Tomcat distribution',
+      'Spring Boot embedded distribution',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="intro-setup/what-is-keycloak" questions={quizWhatIs} />
+
+<ProgressTracker client:visible id="intro-setup/what-is-keycloak" />

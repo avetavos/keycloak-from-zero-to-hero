@@ -1,0 +1,134 @@
+---
+title: IdP Mappers
+description: 'Use identity provider mappers to copy claims and attributes from an external IdP onto Keycloak users at login time.'
+sidebar:
+  order: 5
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Why mappers are needed
+
+When a user logs in via a brokered identity provider, the external IdP sends a token (for OIDC) or an assertion (for SAML) that contains **claims** — pieces of information about the user such as their email address, display name, group memberships, or department. Keycloak does not automatically map all of these onto the local user record.
+
+**IdP mappers** are rules you configure on an identity provider that tell Keycloak: "when this user logs in via this IdP, take claim `X` from their external token and set it as Keycloak attribute `Y`" (or assign them role `Z`, or set a specific username template).
+
+Without mappers, brokered users often have incomplete profiles and no realm roles — because Keycloak only copies a minimal set of standard attributes (email, first name, last name) from the external token by default.
+
+## Types of IdP mappers
+
+| Mapper type | What it does |
+|---|---|
+| **Attribute importer** | Copies a named claim from the external token into a Keycloak user attribute (e.g., `department` claim → `department` attribute). |
+| **Hardcoded attribute** | Sets a specific Keycloak user attribute to a fixed value for all users from this IdP (e.g., set `org` to `acme-corp` for everyone from the Acme IdP). |
+| **Hardcoded role** | Assigns a Keycloak realm role or client role to every user who logs in via this IdP. |
+| **Role importer** | Maps a specific claim value from the external token to a Keycloak role (e.g., if the external token has `groups: ["admin"]`, assign the Keycloak `admin` realm role). |
+| **Username template importer** | Constructs the Keycloak username from a template using claim values (e.g., `\${CLAIM.email}` to set the username to the external email). |
+| **Hardcoded user session note** | Attaches a fixed value to the user's session (used for auditing). |
+
+## Step 1 — navigate to the IdP's mapper list
+
+1. In the admin console, click **Identity providers** in the left sidebar.
+2. Click the alias of the identity provider you want to configure.
+3. Click the **Mappers** tab.
+4. Click **Add mapper**.
+
+## Step 2 — configure an attribute importer
+
+To copy the external `department` claim onto the Keycloak user:
+
+1. Set **Mapper type** to **Attribute importer**.
+2. Set **Name** to something descriptive, e.g., `Import department`.
+3. Set **Claim** (for OIDC) or **Attribute** (for SAML) to `department` — the exact key as it appears in the external token.
+4. Set **User attribute name** to `department` — the name of the Keycloak user attribute to populate.
+5. Click **Save**.
+
+The next time a user logs in via this IdP, Keycloak will copy the `department` value from their external token into their Keycloak profile.
+
+## Step 3 — configure a hardcoded role mapper
+
+To assign the Keycloak realm role `employee` to everyone who logs in via this IdP:
+
+1. Click **Add mapper**.
+2. Set **Mapper type** to **Hardcoded role**.
+3. Set **Name** to `Assign employee role`.
+4. In **Role**, start typing `employee` and select the realm role from the dropdown.
+5. Click **Save**.
+
+## Sync mode per mapper
+
+Each mapper has a **Sync mode** setting (overriding the IdP-level sync mode):
+
+```text
+INHERIT  — use the IdP-level sync mode setting.
+LEGACY   — only apply this mapper on first login.
+FORCE    — re-apply this mapper on every login (useful for roles and attributes that may change in the external IdP).
+```
+
+export const syncModeNote = `# Use FORCE for attributes/roles that change frequently in the external IdP
+Mapper sync mode: FORCE`;
+
+<CopyCode client:visible code={syncModeNote} label="Copy recommendation" />
+
+## Checking the result
+
+After saving mappers and logging in as a brokered user, you can verify the result:
+
+1. Go to **Users** in the left sidebar and find the brokered user.
+2. Click the user's username.
+3. On the **Details** tab, check the **Attributes** section for imported attributes.
+4. On the **Role mappings** tab, check for the hardcoded role.
+
+<Callout title="Use IdP mappers to copy external claims onto Keycloak users">
+Without IdP mappers, brokered users arrive with only the minimal standard claims (email, first name, last name). Use mappers to copy the external provider's claims — groups, department, custom attributes — onto the Keycloak user at login. Use FORCE sync mode for any mapper whose value may change between logins.
+</Callout>
+
+export const quizIdpMappers = [
+  {
+    q: 'What does an attribute importer mapper do?',
+    options: [
+      'Assigns a fixed Keycloak role to all users from the IdP',
+      'Copies a named claim from the external token into a Keycloak user attribute',
+      'Creates a new identity provider from an existing user attribute',
+      'Sets a hardcoded username for all brokered users',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'When should you use mapper sync mode FORCE?',
+    options: [
+      'Only on the first login, to avoid overwriting manual changes',
+      'Never — FORCE disables attribute mappers',
+      'When the attribute or role may change in the external IdP between logins',
+      'When the external IdP uses SAML instead of OIDC',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Which mapper type assigns the same Keycloak role to every user from a given IdP?',
+    options: [
+      'Attribute importer',
+      'Role importer',
+      'Hardcoded role',
+      'Username template importer',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Where in the admin console do you add a mapper for a brokered IdP?',
+    options: [
+      'Authentication → Flows → First broker login',
+      'Identity providers → <alias> → Mappers tab',
+      'Clients → <client> → Mappers tab',
+      'User federation → <provider> → Mappers tab',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="federation-social/idp-mappers" questions={quizIdpMappers} />
+
+<ProgressTracker client:visible id="federation-social/idp-mappers" />

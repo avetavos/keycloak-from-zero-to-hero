@@ -1,0 +1,93 @@
+---
+title: 'Identity Federation & Social Login'
+description: 'ภาพรวมของ identity brokering และ user federation ใน Keycloak — สองกลยุทธ์ที่ต่างกันสำหรับการนำ external identities เข้ามาในรีล์มของคุณ'
+sidebar:
+  order: 1
+---
+
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## สองวิธีในการนำ external identities เข้ามา
+
+การ deploy Keycloak ในสภาพแวดล้อมจริงมักต้องรองรับ identities ที่อยู่นอกรีล์ม บางทีผู้ใช้มีบัญชี Google อยู่แล้วและต้องการ login ด้วยบัญชีนั้น หรือบริษัทมี Active Directory ที่เต็มไปด้วยพนักงานที่ไม่ควรต้องสร้างบัญชีใหม่ใน Keycloak Keycloak แก้ปัญหาทั้งสองได้ด้วยกลไกที่ต่างกัน
+
+### Identity brokering
+
+**Identity brokering** หมายความว่า Keycloak ทำหน้าที่เป็นตัวกลางที่น่าเชื่อถือระหว่างแอปพลิเคชันกับ identity provider (IdP) อื่น เมื่อผู้ใช้เลือก "Log in with Google" (หรือ provider ที่รองรับ OIDC/SAML) Keycloak จะ redirect ผู้ใช้ไปยัง external provider นั้น รับ token หรือ assertion กลับมา แล้วออก token ของตัวเองให้แอปพลิเคชัน แอปพลิเคชันไม่ต้องติดต่อกับ external provider โดยตรงเลย
+
+ใช้ identity brokering เมื่อ:
+
+- ต้องการเพิ่ม social login (Google, GitHub, Facebook, Apple ฯลฯ)
+- ต้องการ federate กับระบบ SSO ขององค์กรอื่น (Keycloak อีกตัว, Azure AD, Okta ฯลฯ)
+- ระบบภายนอกรองรับ OIDC หรือ SAML
+
+### User federation
+
+**User federation** หมายความว่า Keycloak เชื่อมต่อกับ external user store (โดยทั่วไปคือ LDAP หรือ Active Directory) และอ่านข้อมูลผู้ใช้จากที่นั่น Keycloak ไม่จำเป็นต้องคัดลอกผู้ใช้เข้า database ของตัวเองโดยค่าเริ่มต้น — มันค้นหาจาก external store เมื่อต้องการ ผู้ใช้สามารถ login ด้วย credentials ที่มีอยู่เดิม (รหัสผ่าน LDAP)
+
+ใช้ user federation เมื่อ:
+
+- องค์กรมีผู้ใช้หลายพันคนใน Active Directory หรือ OpenLDAP อยู่แล้ว
+- ต้องการ single source of truth สำหรับบัญชีผู้ใช้
+- ต้องการให้ Keycloak ดูเหมือนเป็นแค่แอปอีกตัวใน directory ที่มีอยู่
+
+### ความแตกต่างหลัก
+
+| | Identity brokering | User federation |
+|---|---|---|
+| Login flow | Redirect ไปยัง external IdP | Keycloak authenticate (ใช้ LDAP bind สำหรับรหัสผ่าน) |
+| แหล่งผู้ใช้ | Database ผู้ใช้ของ external IdP | LDAP / Active Directory |
+| Protocol | OIDC หรือ SAML | LDAP protocol |
+| Use case หลัก | Social login, org-to-org SSO | Corporate directory integration |
+
+## บทเรียนในโมดูลนี้
+
+| บทเรียน | สิ่งที่จะได้เรียนรู้ |
+|---|---|
+| [Social Login](./social-login) | เพิ่ม Google หรือ GitHub เป็น social login provider |
+| [Identity Brokering](./identity-brokering) | Broker กับ OIDC/SAML IdP และจัดการ first-login flow |
+| [LDAP Federation](./ldap-federation) | เชื่อมต่อ Keycloak กับ LDAP หรือ Active Directory |
+| [IdP Mappers](./idp-mappers) | Map external claims และ attributes ลงบนผู้ใช้ Keycloak |
+
+<Callout title="Brokering กับ federation">
+Identity brokering มอบหมายการ login ให้กับ IdP อื่น — ผู้ใช้ authenticate ที่นั่นและ Keycloak ยอมรับผล User federation ดึงผู้ใช้ที่มีอยู่เข้า Keycloak จาก external store เช่น LDAP — Keycloak กลายเป็น authentication front-end สำหรับบัญชีเหล่านั้น สองอย่างนี้แก้ปัญหาต่างกันและสามารถใช้ร่วมกันได้
+</Callout>
+
+export const quizFedIndex = [
+  {
+    q: 'Identity brokering ทำอะไร?',
+    options: [
+      'คัดลอกผู้ใช้ทั้งหมดจาก external LDAP เข้า Keycloak',
+      'มอบหมายการ login ให้กับ external IdP และรับ token หรือ assertion กลับมา',
+      'สร้างรีล์มใหม่สำหรับ external provider แต่ละตัว',
+      'ปิดหน้า login ของ Keycloak โดยสิ้นเชิง',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'เมื่อไหร่ที่ user federation เป็นตัวเลือกที่ถูกต้อง?',
+    options: [
+      'เมื่อต้องการเพิ่มปุ่ม Google login',
+      'เมื่อต้องการ federate กับ Keycloak อีกตัว',
+      'เมื่อองค์กรมีผู้ใช้อยู่แล้วใน Active Directory หรือ LDAP',
+      'เมื่อต้องการ SAML assertions จากองค์กรพันธมิตร',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'User federation กับ Active Directory ใช้ protocol อะไร?',
+    options: [
+      'OIDC',
+      'SAML',
+      'LDAP',
+      'OAuth2',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="federation-social/index" questions={quizFedIndex} />
+
+<ProgressTracker client:visible id="federation-social/index" />

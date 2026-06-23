@@ -1,0 +1,150 @@
+---
+title: Framework Adapters
+description: 'ผสาน Keycloak กับ framework ยอดนิยม: Spring Boot (Spring Security OAuth2 Resource Server), Node/Express (express-oauth2-jwt-bearer) และ pattern ทั่วไปของ OIDC ควรใช้ไลบรารี OIDC มาตรฐานแทน Keycloak adapter รุ่นเก่า'
+sidebar:
+  order: 5
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Pattern ทั่วไป
+
+การผสาน framework ทุกตัวเป็นไปตาม two-role model เดียวกัน:
+
+- **Frontend / OIDC client**: ไลบรารีใดก็ตามที่ implement Authorization Code + PKCE flow (keycloak-js สำหรับเบราว์เซอร์, AppAuth สำหรับมือถือ, MSAL สำหรับ Microsoft stack เป็นต้น)
+- **Backend / resource server**: ไลบรารีใดก็ตามที่ตรวจสอบ Bearer JWT กับ JWKS endpoint ของ realm
+
+ประเด็นสำคัญคือ backend ไม่ต้องการไลบรารีเฉพาะของ Keycloak — ต้องการเพียงไลบรารีที่ตรวจสอบ JWT กับ JWKS URL ได้ ซึ่งเป็นฟีเจอร์มาตรฐานของ ecosystem OAuth2/OIDC ที่โตแล้วทุกตัว
+
+## Spring Boot (Spring Security OAuth2 Resource Server)
+
+เพิ่ม dependency Spring Security OAuth2 Resource Server ใน `pom.xml`:
+
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+</dependency>
+```
+
+จากนั้นชี้ Spring ไปยัง issuer URI ของ realm Spring จะดึง JWKS โดยอัตโนมัติ ตรวจสอบ JWT ที่เข้ามา และเติมข้อมูลใน `SecurityContextHolder` ด้วย claims ที่ถอดรหัสแล้ว:
+
+export const springYamlCode = `spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/my-app`;
+
+<CopyCode client:visible code={springYamlCode} label="Copy application.yml" />
+
+Spring Security หา JWKS URL โดยอัตโนมัติจาก issuer URI โดยดึงข้อมูลจาก OIDC discovery document ไม่ต้องการโค้ดเฉพาะของ Keycloak
+
+การตั้งค่า security แบบ minimal เพื่อป้องกัน endpoint ทั้งหมด:
+
+```java
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/public/**").permitAll()
+                .anyRequest().authenticated()
+            )
+            .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+        return http.build();
+    }
+}
+```
+
+## Node ด้วย express-oauth2-jwt-bearer
+
+`express-oauth2-jwt-bearer` คือ middleware ที่ Auth0 สร้างขึ้นภายใต้ MIT license ห่อหุ้ม `jose` สำหรับ Express ติดตั้ง:
+
+```bash
+npm install express-oauth2-jwt-bearer
+```
+
+```ts
+import { auth } from 'express-oauth2-jwt-bearer';
+import express from 'express';
+
+const checkJwt = auth({
+  audience: 'my-app-backend',
+  issuerBaseURL: 'http://localhost:8080/realms/my-app',
+});
+
+const app = express();
+
+app.get('/profile', checkJwt, (req, res) => {
+  res.json({ sub: req.auth?.payload.sub });
+});
+```
+
+## Keycloak adapter รุ่นเก่าที่ถูก deprecated
+
+Keycloak เคยมี adapter เฉพาะสำหรับแต่ละ framework: `keycloak-connect` สำหรับ Node, Keycloak Spring Boot adapter และอื่น ๆ adapter เหล่านี้ **ถูก deprecated** ตั้งแต่ Keycloak 19 และอาจถูกลบออกในที่สุด project ใหม่ควรใช้:
+
+| Framework | ไลบรารีที่แนะนำ |
+|---|---|
+| Browser SPA | `keycloak-js` (official ยังคงได้รับการดูแล) |
+| Spring Boot backend | Spring Security OAuth2 Resource Server |
+| Node/Express backend | `jose` หรือ `express-oauth2-jwt-bearer` |
+| Backend อื่น ๆ | JWT library ใดก็ได้ที่รองรับ JWKS |
+
+<Callout title="ใช้ OIDC/OAuth2 มาตรฐานแทน adapter รุ่นเก่า">
+Keycloak adapter เฉพาะ framework รุ่นเก่า (keycloak-connect, Keycloak Spring adapter) ถูก deprecated แล้ว จะไม่ได้รับฟีเจอร์ใหม่และอาจถูกลบออก backend ของคุณต้องการเพียงการตรวจสอบ JWT เท่านั้น — ไลบรารีใดก็ได้ที่ตรวจสอบ token ที่ลงนามด้วย JWKS ได้ก็ทำงานได้ การใช้ OAuth2 resource server support มาตรฐานใน framework ทำให้โค้ดของคุณ portable ข้าม identity provider ต่าง ๆ
+</Callout>
+
+export const quizFrameworkAdapters = [
+  {
+    q: 'property issuer-uri ของ Spring Security บอกอะไรกับ Spring Boot?',
+    options: [
+      'URL ของ Keycloak admin console',
+      'URL ของ realm ที่ service นี้ควรยอมรับและตรวจสอบ JWT',
+      'client secret สำหรับ confidential client',
+      'URL ที่จะ redirect ผู้ใช้ไปเพื่อ login',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Spring Security ค้นหา JWKS URL จาก issuer-uri ได้อย่างไร?',
+    options: [
+      'มัน hardcode ไว้ใน source code ของ Spring Security สำหรับ Keycloak',
+      'คุณต้องกำหนดค่าด้วยตนเองใน application.yml',
+      'Spring ดึง OIDC discovery document ที่ issuer-uri/.well-known/openid-configuration แล้วอ่านค่าจาก field jwks_uri',
+      'Spring เรียก Keycloak admin API เพื่อดึง key',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'เหตุใด Keycloak adapter เฉพาะ framework รุ่นเก่า (keycloak-connect เป็นต้น) จึงไม่แนะนำให้ใช้?',
+    options: [
+      'มีให้ใช้เฉพาะในรูปแบบ commercial add-on เท่านั้น',
+      'ถูก deprecated ไม่ได้รับฟีเจอร์ใหม่ และผูกโค้ดของคุณไว้กับ API เฉพาะของ Keycloak',
+      'ไม่รองรับ PKCE',
+      'ต้องใช้ Java 17 ขึ้นไป',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'ฟีเจอร์ keycloak-js ตัวใดที่ยังคงเป็นตัวเลือกที่แนะนำสำหรับ browser SPA?',
+    options: [
+      'keycloak-js v2 adapter ที่ถูก deprecated',
+      'keycloak-js (official ยังคงได้รับการดูแลอย่างต่อเนื่อง)',
+      'Keycloak JavaScript policy engine',
+      'Keycloak REST client library',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="securing-apps/framework-adapters" questions={quizFrameworkAdapters} />
+
+<ProgressTracker client:visible id="securing-apps/framework-adapters" />

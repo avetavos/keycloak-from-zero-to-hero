@@ -1,0 +1,145 @@
+---
+title: Backend API
+description: 'Validate JWTs on your Node/Express backend (resource server): fetch the realm JWKS, verify signature, issuer, audience, and expiry using the jose library.'
+sidebar:
+  order: 3
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## What a resource server must do
+
+When a client sends a request with an `Authorization: Bearer <token>` header, your backend must:
+
+1. **Fetch the realm's JWKS** — the set of public keys Keycloak uses to sign JWTs. The URL is `<keycloak-url>/realms/<realm>/protocol/openid-connect/certs`.
+2. **Verify the signature** — confirm the JWT was signed by Keycloak, not forged by an attacker.
+3. **Verify the issuer (`iss`)** — the token's `iss` claim must equal `<keycloak-url>/realms/<realm>`. A token from a different Keycloak realm or a different server should be rejected.
+4. **Verify the audience (`aud`)** — the `aud` claim should include your client ID, ensuring the token was issued for your API.
+5. **Verify expiry (`exp`)** — reject tokens that have expired.
+
+Failing any of these checks means the token is invalid and the request must be rejected with `401 Unauthorized`.
+
+## Node/Express example with jose
+
+The `jose` library is a modern, dependency-free JWT library that supports JWKS fetching and all standard verification checks. Install it:
+
+```bash
+npm install jose
+```
+
+export const backendApiCode = `import { createRemoteJWKSet, jwtVerify } from 'jose';
+import express from 'express';
+
+const KEYCLOAK_URL = 'http://localhost:8080';
+const REALM = 'my-app';
+const CLIENT_ID = 'my-app-backend';
+
+// Cache the JWKS remote keyset — jose handles key rotation automatically.
+const JWKS = createRemoteJWKSet(
+  new URL(\`\${KEYCLOAK_URL}/realms/\${REALM}/protocol/openid-connect/certs\`)
+);
+
+async function requireAuth(req, res, next) {
+  const authHeader = req.headers['authorization'] ?? '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+  if (!token) {
+    return res.status(401).json({ error: 'Missing bearer token' });
+  }
+
+  try {
+    const { payload } = await jwtVerify(token, JWKS, {
+      issuer: \`\${KEYCLOAK_URL}/realms/\${REALM}\`,
+      audience: CLIENT_ID,
+    });
+    req.user = payload; // attach claims to the request
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
+
+const app = express();
+
+app.get('/profile', requireAuth, (req, res) => {
+  res.json({
+    username: req.user.preferred_username,
+    email: req.user.email,
+    roles: req.user.realm_access?.roles ?? [],
+  });
+});
+
+app.listen(3001, () => console.log('API listening on :3001'));`;
+
+<CopyCode client:visible code={backendApiCode} label="Copy Express middleware" />
+
+### What the code does
+
+- `createRemoteJWKSet` builds a cached key set from Keycloak's JWKS URL. When Keycloak rotates keys, `jose` automatically fetches the new keys.
+- `jwtVerify` verifies the signature, checks `iss` and `aud`, and rejects expired tokens. If any check fails, it throws — the `catch` block returns `401`.
+- After successful verification, `payload` contains all decoded JWT claims (sub, preferred_username, realm_access, etc.) and you can use them for authorisation logic.
+
+## Checking roles from the token
+
+Keycloak encodes realm roles in `realm_access.roles` and client-specific roles in `resource_access.<clientId>.roles`. A simple role-check helper:
+
+```ts
+function hasRole(user: Record<string, unknown>, role: string): boolean {
+  const roles = (user.realm_access as { roles?: string[] })?.roles ?? [];
+  return roles.includes(role);
+}
+```
+
+<Callout title="Validate signature, issuer, audience, and expiry — all four">
+A token that merely exists is not a valid token. An attacker can craft a JWT with any claims they like; only the cryptographic signature proves it came from Keycloak. Equally, a valid signature is not enough — you must also confirm the token was issued for your realm (iss) and intended for your API (aud), and that it has not expired.
+</Callout>
+
+export const quizBackendApi = [
+  {
+    q: 'What does the iss (issuer) claim in a Keycloak JWT contain?',
+    options: [
+      'The client ID of the application',
+      'The username of the logged-in user',
+      'The URL of the Keycloak realm that issued the token',
+      'The expiry timestamp in ISO format',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'What happens if the aud (audience) claim does not match your backend client ID?',
+    options: [
+      'The token is silently accepted',
+      'Keycloak automatically reissues the token',
+      'The JWT verification fails and you should return 401',
+      'The token is valid but roles are stripped',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Why does createRemoteJWKSet from jose cache the JWKS?',
+    options: [
+      'To avoid paying for Keycloak API calls',
+      'To support key rotation — jose automatically fetches new keys when a token references an unknown key ID',
+      'Because the JWKS URL is not publicly accessible',
+      'To store tokens in the database',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Where does Keycloak publish its public signing keys (JWKS)?',
+    options: [
+      '/realms/{realm}/protocol/openid-connect/token',
+      '/realms/{realm}/protocol/openid-connect/userinfo',
+      '/realms/{realm}/protocol/openid-connect/certs',
+      '/realms/{realm}/.well-known/openid-configuration',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="securing-apps/backend-api" questions={quizBackendApi} />
+
+<ProgressTracker client:visible id="securing-apps/backend-api" />

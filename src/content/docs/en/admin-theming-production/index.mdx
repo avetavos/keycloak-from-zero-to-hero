@@ -1,0 +1,69 @@
+---
+title: 'Admin, Theming & Production'
+description: 'An overview of operating Keycloak: automate realm setup with the Admin REST API, customise the look with themes, observe what is happening via events, and harden the server for production.'
+sidebar:
+  order: 1
+---
+
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## What this module covers
+
+This module takes you from a working Keycloak installation to one that is automated, branded, observable, and production-ready. The four pillars are:
+
+- **Admin REST API** — every action you perform in the admin console is backed by a REST API. You can automate realm setup, user provisioning, and client configuration from scripts or CI pipelines instead of clicking through the UI every time.
+- **Themes** — Keycloak renders its own login, account, and admin pages. You can replace these with your own templates to match your brand.
+- **Events & audit** — Keycloak records login events and admin events. Enable them before you go live so you have an audit trail when something goes wrong.
+- **Production hardening** — switching from `start-dev` to the optimised `start` mode, wiring in an external database, setting a fixed hostname, and terminating HTTPS correctly.
+
+## Lessons in this module
+
+| Lesson | What you will learn |
+|---|---|
+| [Admin REST API](./admin-rest-api) | Get a token and automate with the Admin REST API |
+| [Themes](./themes) | Customise login, account, and admin pages |
+| [Events & Audit](./events-audit) | Enable and query login and admin events |
+| [Production Checklist](./production-checklist) | External DB, hostname, HTTPS, and optimised build |
+
+<Callout title="Key point">
+Everything you do in the admin console you can also do via the Admin REST API — automate realm setup, client registration, and user provisioning rather than clicking through the UI every time you deploy.
+</Callout>
+
+export const quizIndex = [
+  {
+    q: 'Which of the following best describes the Admin REST API?',
+    options: [
+      'A read-only reporting endpoint',
+      'A programmatic interface that mirrors every action available in the admin console',
+      'A webhook that Keycloak calls when events occur',
+      'A database migration tool',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which Keycloak theme type is the one your end-users actually see?',
+    options: [
+      'Admin theme',
+      'Email theme',
+      'Login theme',
+      'Account theme',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Why should you enable events before going to production?',
+    options: [
+      'Events are required for HTTPS to work',
+      'Events give you an audit trail of login and admin actions before an incident happens',
+      'Events replace the need for an external database',
+      'Events are needed to run the optimised start mode',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="admin-theming-production/index" questions={quizIndex} />
+
+<ProgressTracker client:visible id="admin-theming-production/index" />

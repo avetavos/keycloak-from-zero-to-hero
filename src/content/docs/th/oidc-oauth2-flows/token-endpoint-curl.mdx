@@ -1,0 +1,119 @@
+---
+title: 'Token Endpoint ภาคปฏิบัติ'
+description: 'รับ token จาก Keycloak ด้วย Direct Access Grant (password grant) — เหมาะสำหรับการทดสอบและ scripting'
+sidebar:
+  order: 5
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Direct Access Grant คืออะไร
+
+Direct Access Grant (หรือ password grant) ช่วยให้ client แลก username และ password ของผู้ใช้เป็น token โดยตรงที่ token endpoint โดยไม่ต้องผ่านการ redirect ของเบราว์เซอร์
+
+เนื่องจาก credential ของผู้ใช้ถูกส่งตรงไปยัง client ก่อนแล้วค่อยส่งต่อไปยัง Keycloak grant นี้จึงเหมาะสำหรับ testing script, CLI tool และสภาพแวดล้อมการพัฒนาเท่านั้น — ไม่ใช่แอปที่ใช้งานจริง
+
+## เมื่อไรควรใช้
+
+ใช้ Direct Access Grant สำหรับ:
+
+- Test script ที่ต้องการ token โดยไม่มีเบราว์เซอร์
+- CLI tool ที่ authenticate ด้วย credential ของผู้ใช้ชั่วคราว
+- การทดสอบ API ในสภาพแวดล้อม development
+
+**อย่า**ใช้สำหรับแอปที่ผู้ใช้ใช้งานจริง ให้ใช้ Authorization Code + PKCE แทน
+
+## การขอ token ด้วย password grant
+
+export const passwordGrantCode = `curl -X POST https://\${KC_URL}/realms/\${REALM}/protocol/openid-connect/token \\
+  -d "grant_type=password" \\
+  -d "client_id=\${CLIENT_ID}" \\
+  -d "username=\${USERNAME}" \\
+  -d "password=\${PASSWORD}"`;
+
+<CopyCode client:visible code={passwordGrantCode} label="Copy curl" />
+
+## ผลลัพธ์ที่ได้รับ
+
+Keycloak จะส่งคืน JSON object ที่มี token ต่างๆ ดังนี้:
+
+```json
+{
+  "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expires_in": 300,
+  "refresh_expires_in": 1800,
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "Bearer",
+  "id_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "session_state": "abc123",
+  "scope": "openid profile email"
+}
+```
+
+## การใช้ access token กับ API
+
+ส่ง access token ไปยัง API ด้วย Authorization header แบบ Bearer:
+
+```
+Authorization: Bearer <access_token>
+```
+
+## การถอดรหัส JWT
+
+export const jwtDecodeCode = `echo \${ACCESS_TOKEN} | cut -d. -f2 | base64 -d | jq .`;
+
+<CopyCode client:visible code={jwtDecodeCode} label="Copy JWT decode" />
+
+<Callout title="Password grant ใช้สำหรับการทดสอบเท่านั้น">
+Direct Access Grant เหมาะสำหรับ testing script และ CLI tool แต่อย่าใช้ในแอปจริง เพราะเปิดเผย credential ของผู้ใช้ให้กับ client ใช้ Authorization Code + PKCE สำหรับแอปเบราว์เซอร์และมือถือ
+</Callout>
+
+export const quizTokenEndpoint = [
+  {
+    q: 'Direct Access Grant (password grant) ใช้ทำอะไรเป็นหลัก?',
+    options: [
+      'แอปที่ผู้ใช้ใช้งานใน production',
+      'SPA ที่ใช้ PKCE',
+      'Testing scripting และ CLI tools',
+      'การเรียก machine-to-machine',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'ใช้ header ใดในการส่ง access token ไปยัง API?',
+    options: [
+      'X-API-Key',
+      'Authorization: Bearer <token>',
+      'Cookie: token=<value>',
+      'X-Auth-Token',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'expires_in ในผลลัพธ์ token หมายถึงอะไร?',
+    options: [
+      'เวลาที่ออก token',
+      'จำนวนวันที่ token ใช้ได้',
+      'อายุของ access token เป็นวินาที',
+      'วันหมดอายุของ refresh token',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'เหตุใดจึงควรหลีกเลี่ยง password grant ในแอปจริง?',
+    options: [
+      'ไม่ส่งคืน access token',
+      'ข้าม Keycloak ทั้งหมด',
+      'เปิดเผย credential ของผู้ใช้ให้กับแอปพลิเคชัน client',
+      'ต้องใช้ PKCE',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="oidc-oauth2-flows/token-endpoint-curl" questions={quizTokenEndpoint} />
+
+<ProgressTracker client:visible id="oidc-oauth2-flows/token-endpoint-curl" />

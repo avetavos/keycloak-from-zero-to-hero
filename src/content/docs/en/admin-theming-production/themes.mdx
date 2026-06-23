@@ -1,0 +1,136 @@
+---
+title: Themes
+description: 'Learn how Keycloak themes work, how to set a realm login theme in the admin console, and how to deploy a custom theme to the themes/ directory.'
+sidebar:
+  order: 3
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## What are Keycloak themes?
+
+Keycloak renders several pages using its own HTML templates. Each page category is called a **theme type**:
+
+| Theme type | What it controls |
+|---|---|
+| `login` | The login, registration, password-reset, and OTP pages |
+| `account` | The self-service account management console |
+| `email` | Email templates (verification, password reset, etc.) |
+| `admin` | The Keycloak admin console itself |
+
+The `login` theme is the one your end-users see. Customising it to match your brand makes the authentication experience feel native to your product.
+
+## Setting a realm's login theme
+
+You can change the active login theme for any realm from the admin console:
+
+1. Open the admin console and select your realm from the top-left drop-down.
+2. Click **Realm settings** in the left sidebar.
+3. Click the **Themes** tab.
+4. Under **Login theme**, open the drop-down and choose your theme (e.g., `keycloak` for the default, or your custom theme name).
+5. Under **Account theme**, **Email theme**, and **Admin console theme**, choose accordingly.
+6. Click **Save**.
+
+The change takes effect immediately — no restart required.
+
+## Structure of a custom theme
+
+A custom theme is a directory you place under Keycloak's `themes/` folder. The minimal structure for a login theme looks like this:
+
+```
+themes/
+└── my-brand/
+    └── login/
+        ├── theme.properties
+        ├── resources/
+        │   ├── css/
+        │   │   └── login.css
+        │   └── img/
+        │       └── logo.png
+        └── messages/
+            └── messages_en.properties
+```
+
+The `theme.properties` file declares which parent theme yours inherits from. Start by extending the built-in `keycloak` theme so you only need to override what you change:
+
+export const themePropertiesCode = `parent=keycloak
+import=common/keycloak`;
+
+<CopyCode client:visible code={themePropertiesCode} label="Copy theme.properties" />
+
+With this in place, Keycloak falls back to the parent for any template or resource you have not overridden.
+
+## Deploying a custom theme
+
+For the Quarkus-based Keycloak distribution, copy your theme directory into the container's `/opt/keycloak/themes/` folder. The simplest approach with Docker is a bind-mount:
+
+```bash
+docker run -p 8080:8080 \
+  -v "$(pwd)/themes/my-brand:/opt/keycloak/themes/my-brand" \
+  -e KEYCLOAK_ADMIN=admin \
+  -e KEYCLOAK_ADMIN_PASSWORD=admin \
+  quay.io/keycloak/keycloak:latest \
+  start-dev
+```
+
+After the container starts, your theme appears in the **Login theme** drop-down in Realm settings.
+
+## Keycloakify for React-based themes
+
+If you prefer to build your login pages with React, **Keycloakify** (keycloakify.dev) is the recommended tool. It compiles your React components into a Keycloak-compatible theme JAR. The output is a `.jar` file you drop into `/opt/keycloak/providers/` — Keycloak auto-discovers it on startup.
+
+Keycloakify gives you full React component control over every login page while staying compatible with Keycloak's internal message-passing and form-submission protocol.
+
+<Callout title="Customise the login theme">
+Customise the login theme to match your brand — it is the one Keycloak page your users actually see. Even a simple logo swap and colour change dramatically improves the perceived quality of your product.
+</Callout>
+
+export const quizThemes = [
+  {
+    q: 'Which Keycloak theme type controls the login and registration pages?',
+    options: [
+      'account',
+      'admin',
+      'email',
+      'login',
+    ],
+    answer: 3,
+  },
+  {
+    q: 'Where in the admin console do you change a realm\'s active login theme?',
+    options: [
+      'Clients > Settings',
+      'Realm settings > Themes',
+      'Identity providers > Themes',
+      'Users > Attributes',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What does the parent= line in theme.properties do?',
+    options: [
+      'It sets the realm that owns the theme',
+      'It declares which built-in theme to fall back to for resources you have not overridden',
+      'It specifies the admin account for the theme',
+      'It enables email notifications',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What does Keycloakify do?',
+    options: [
+      'It is a Keycloak admin CLI replacement',
+      'It compiles React components into a Keycloak-compatible theme JAR',
+      'It generates Admin REST API client code',
+      'It encrypts theme files for production',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="admin-theming-production/themes" questions={quizThemes} />
+
+<ProgressTracker client:visible id="admin-theming-production/themes" />

@@ -1,0 +1,80 @@
+---
+title: Securing Apps
+description: 'An overview of the two halves of securing an application with Keycloak: the frontend logs the user in and gets a token; the backend validates that token on every request.'
+sidebar:
+  order: 1
+---
+
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Two halves, one security model
+
+Integrating Keycloak into an application is not a single task — it is two distinct responsibilities that must both be done correctly.
+
+**The frontend** (a browser-based SPA, a mobile app, or any public client) is responsible for the login experience. It redirects the user to Keycloak, receives the authorization code, exchanges it for tokens, and stores those tokens safely in memory. From that point on, it attaches the access token to every API call it makes.
+
+**The backend** (your REST API, your resource server) never talks to Keycloak on the user's behalf during a request. Instead, it receives the access token in the `Authorization` header, fetches Keycloak's public keys from the JWKS endpoint, and verifies the token's signature, issuer, audience, and expiry. Only after that verification passes does the backend trust the identity claims inside the token.
+
+## What this module covers
+
+| Lesson | What you will learn |
+|---|---|
+| SPA Frontend | Install keycloak-js, initialise it with PKCE, attach the token to API calls |
+| Backend API | Fetch JWKS, verify the JWT in Node/Express, reject invalid tokens |
+| Refresh & Logout | updateToken(), session lifetimes, and the end-session endpoint |
+| Framework Adapters | Spring Boot, Node, and the general OIDC resource-server pattern |
+
+Each lesson is standalone — you can jump to the one that matches your stack today.
+
+<Callout title="Never trust the frontend for authorisation">
+The frontend holds the token, but the backend must validate it. Never skip JWT validation on the server and rely on the client saying "the user is logged in". The backend is the only place where authorisation decisions are trustworthy.
+</Callout>
+
+export const quizSecuringAppsIndex = [
+  {
+    q: 'What is the responsibility of the FRONTEND in a Keycloak-secured application?',
+    options: [
+      'Validating the JWT signature on every request',
+      'Logging the user in, getting a token, and attaching it to API calls',
+      'Fetching the JWKS endpoint to verify tokens',
+      'Storing user roles in the database',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What is the responsibility of the BACKEND (resource server) in a Keycloak-secured application?',
+    options: [
+      'Redirecting the user to Keycloak for login',
+      'Storing the access token in a cookie',
+      'Verifying the JWT signature, issuer, audience, and expiry on every request',
+      'Generating the authorization code',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Which endpoint does the backend use to fetch Keycloak public keys for JWT verification?',
+    options: [
+      'The token endpoint',
+      'The userinfo endpoint',
+      'The JWKS endpoint',
+      'The authorization endpoint',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Why must the backend validate the JWT on every request rather than trusting the frontend?',
+    options: [
+      'Because the frontend cannot store tokens',
+      'Because only the backend can decode Base64',
+      'Because the frontend is a public client and its claims cannot be trusted without cryptographic proof',
+      'Because Keycloak requires a backend call on every login',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="securing-apps/index" questions={quizSecuringAppsIndex} />
+
+<ProgressTracker client:visible id="securing-apps/index" />

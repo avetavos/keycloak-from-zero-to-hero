@@ -1,0 +1,145 @@
+---
+title: LDAP User Federation
+description: 'เชื่อมต่อ Keycloak กับ LDAP หรือ Active Directory เพื่อให้ผู้ใช้ใน directory ที่มีอยู่ login ได้โดยไม่ต้องสร้างบัญชี Keycloak ใหม่'
+sidebar:
+  order: 4
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## User federation คืออะไร?
+
+**User federation** ช่วยให้ Keycloak อ่าน (และอาจเขียน) บัญชีผู้ใช้จาก external store แทน database ภายในของตัวเอง Store ที่พบบ่อยที่สุดคือ **LDAP** (Lightweight Directory Access Protocol) ซึ่งเป็น protocol ที่ใช้โดย:
+
+- **OpenLDAP** — LDAP server แบบ open-source
+- **Microsoft Active Directory (AD)** — enterprise directory service ที่พบในเครือข่ายองค์กรส่วนใหญ่
+- **Apache Directory Server**, **389 Directory Server** และอื่น ๆ
+
+เมื่อผู้ใช้พยายาม login Keycloak จะค้นหาพวกเขาใน LDAP directory และมอบหมายการตรวจสอบรหัสผ่านให้กับ LDAP bind จากมุมมองผู้ใช้ พวกเขาแค่ login ด้วย credentials directory ที่ใช้ปกติ
+
+## ขั้นตอนที่ 1 — เพิ่ม LDAP provider
+
+1. ใน admin console ตรวจสอบว่าอยู่ในรีล์มที่ถูกต้อง
+2. คลิก **User federation** ใน left sidebar
+3. คลิก **Add provider** และเลือก **LDAP**
+4. Keycloak แสดงฟอร์มตั้งค่า LDAP
+
+## ขั้นตอนที่ 2 — Connection settings
+
+กรอกรายละเอียดการเชื่อมต่อ:
+
+| ช่อง | สิ่งที่ต้องกรอก |
+|---|---|
+| **Vendor** | เลือก **Active Directory** สำหรับ AD หรือ **Other** สำหรับ OpenLDAP ซึ่งจะกรอกค่าเริ่มต้น DN structures และ attributes ที่เหมาะสม |
+| **Connection URL** | URI ของ LDAP server เช่น `ldap://ldap.example.com:389` หรือ `ldaps://ldap.example.com:636` (LDAPS สำหรับการเข้ารหัส) |
+| **Enable StartTLS** | ทางเลือกที่นิยมแทน LDAPS สำหรับเข้ารหัสการเชื่อมต่อบน port 389 |
+| **Connection pooling** | เปิดใช้ใน production เพื่อนำ LDAP connections กลับมาใช้ |
+
+คลิก **Test connection** เพื่อยืนยันว่า Keycloak เข้าถึง server ได้ก่อนดำเนินการต่อ
+
+## ขั้นตอนที่ 3 — Bind settings
+
+Keycloak ต้องใช้ service account เพื่อค้นหา directory เรียกว่า **bind DN**
+
+| ช่อง | สิ่งที่ต้องกรอก |
+|---|---|
+| **Bind type** | `simple` สำหรับ username/password bind |
+| **Bind DN** | Distinguished name ของ service account เช่น `cn=keycloak-svc,ou=service-accounts,dc=example,dc=com` |
+| **Bind credentials** | รหัสผ่าน service account เก็บใน Keycloak vault หรือ environment variable — ห้าม hardcode |
+
+คลิก **Test authentication** เพื่อยืนยันว่า bind credentials ทำงานได้
+
+## ขั้นตอนที่ 4 — LDAP searching และ user DN
+
+| ช่อง | สิ่งที่ต้องกรอก |
+|---|---|
+| **Users DN** | Base DN สำหรับค้นหาผู้ใช้ เช่น `ou=users,dc=example,dc=com` |
+| **Username LDAP attribute** | LDAP attribute ที่ map กับ Keycloak username สำหรับ AD ใช้ `sAMAccountName` สำหรับ OpenLDAP ใช้ `uid` |
+| **RDN LDAP attribute** | โดยทั่วไปคือ `cn` หรือเหมือนกับ username attribute |
+| **UUID LDAP attribute** | สำหรับ AD: `objectGUID` สำหรับ OpenLDAP: `entryUUID` ใช้เป็น internal user ID ของ Keycloak |
+| **User object classes** | สำหรับ AD: `person, organizationalPerson, user` สำหรับ OpenLDAP: `inetOrgPerson, organizationalPerson` |
+
+## ขั้นตอนที่ 5 — Edit mode และ import
+
+สองการตั้งค่านี้กำหนดวิธีที่ Keycloak sync ผู้ใช้และจะเขียนกลับไปยัง LDAP หรือไม่
+
+### Edit mode
+
+```text
+READ_ONLY   — Keycloak ไม่สามารถแก้ไข LDAP attributes ใด ๆ การเปลี่ยนรหัสผ่านถูกปฏิเสธ ใช้สำหรับ corporate AD ที่ Keycloak ไม่ควรแตะต้อง directory
+WRITABLE    — Keycloak สามารถอัปเดต LDAP attributes และ sync การเปลี่ยนรหัสผ่านกลับไปยัง LDAP ใช้เฉพาะเมื่อ Keycloak ได้รับอนุญาตให้เขียนใน directory
+UNSYNCED    — Keycloak เก็บการเปลี่ยนแปลง attributes ในเครื่อง (ใน DB ของตัวเอง) โดยไม่เขียนไปยัง LDAP
+```
+
+export const editModeNote = `# Recommended default for most deployments
+Edit mode: READ_ONLY`;
+
+<CopyCode client:visible code={editModeNote} label="Copy recommendation" />
+
+### Import users
+
+- **On** (ค่าเริ่มต้น) — Keycloak import ข้อมูลผู้ใช้เข้า local database เมื่อ login ครั้งแรกและหลัง sync แต่ละครั้ง การค้นหาเร็วเพราะ query จาก local DB
+- **Off** — Keycloak query LDAP ทุกครั้งที่ login เก็บข้อมูลในเครื่องน้อยกว่า แต่ทุก authentication ต้องผ่าน LDAP server
+
+## ขั้นตอนที่ 6 — Sync และ Save
+
+1. คลิก **Save**
+2. กลับไปที่หน้า **User federation** เปิด LDAP provider ของคุณ
+3. เลื่อนลงไปที่ส่วน **Synchronization**
+4. คลิก **Synchronize all users** เพื่อ sync ทั้งหมดทันที หรือตั้งค่า **Changed users sync** ให้รันตามกำหนดเวลา
+
+หลัง sync ไปที่ **Users** ใน left sidebar คุณควรเห็นผู้ใช้ LDAP พร้อม badge "federated"
+
+<Callout title="เลือก READ_ONLY ถ้าไม่ได้ตั้งใจจะเขียนกลับไปยัง LDAP">
+Edit mode `READ_ONLY` ป้องกัน Keycloak จากการแก้ไข LDAP directory นี่คือค่าเริ่มต้นที่ปลอดภัยสำหรับการ deploy Active Directory ในองค์กรที่ฝ่าย IT เป็นเจ้าของ directory เปลี่ยนเป็น `WRITABLE` เฉพาะเมื่อองค์กรอนุมัติให้ Keycloak เป็น client ที่เขียนได้ใน directory อย่างชัดเจน
+</Callout>
+
+export const quizLdap = [
+  {
+    q: 'ควรใช้ LDAP attribute อะไรเป็น username สำหรับ Active Directory?',
+    options: [
+      'uid',
+      'cn',
+      'sAMAccountName',
+      'objectGUID',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'LDAP edit mode READ_ONLY หมายความว่าอะไร?',
+    options: [
+      'Keycloak อ่านผู้ใช้ได้แต่เก็บการเปลี่ยนแปลง attributes ในเครื่อง',
+      'Keycloak ไม่สามารถแก้ไข LDAP attributes ใด ๆ — การเปลี่ยนรหัสผ่านถูกปฏิเสธ',
+      'Keycloak อ่าน LDAP เฉพาะระหว่าง initial sync',
+      'ผู้ใช้อ่านได้เฉพาะ profile ของตัวเอง — ไม่สามารถเปลี่ยนแปลงได้',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'จุดประสงค์ของ bind DN ใน LDAP federation คืออะไร?',
+    options: [
+      'เป็น base path ที่ Keycloak ค้นหาผู้ใช้',
+      'ระบุ UUID attribute ใน directory',
+      'เป็น service account ที่ Keycloak ใช้ query LDAP directory',
+      'กำหนด edit mode สำหรับ federation provider',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'เมื่อปิด "Import users" จะเกิดอะไรขึ้นทุกครั้งที่ login?',
+    options: [
+      'Keycloak สร้าง local copy ของผู้ใช้เฉพาะ login แรก',
+      'Keycloak query LDAP server ทุกครั้งที่ authenticate',
+      'Keycloak fallback ไปยัง internal user database',
+      'Keycloak ปิดการ authenticate ด้วยรหัสผ่านสำหรับผู้ใช้ LDAP',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="federation-social/ldap-federation" questions={quizLdap} />
+
+<ProgressTracker client:visible id="federation-social/ldap-federation" />

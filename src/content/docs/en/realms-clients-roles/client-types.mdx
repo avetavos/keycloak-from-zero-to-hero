@@ -1,0 +1,155 @@
+---
+title: Client Types
+description: 'Public vs confidential clients — when to use each, how PKCE works, and where to find a confidential client secret.'
+sidebar:
+  order: 4
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Why client type matters
+
+When your application requests a token from Keycloak, Keycloak needs to know: can this application keep a secret? A native mobile app or a browser-based SPA distributes its code to end-user devices — there is no safe place to store a client secret. A server-side application runs in a controlled environment where a secret can be kept out of reach. This distinction drives the **public vs confidential** split.
+
+## Public clients
+
+A **public client** cannot hold a secret. Its source code, compiled bundle, or binary is delivered to the user's device or browser where it can be inspected. Because there is no secret, Keycloak cannot verify the identity of the client itself — it can only verify the user.
+
+Use a public client for:
+
+- Single-page applications (React, Vue, Angular, Svelte)
+- Mobile and desktop applications (iOS, Android, Electron)
+- CLI tools that act on behalf of a human user
+
+### PKCE — the protection for public clients
+
+Without a client secret, the Authorization Code flow is vulnerable to code interception: an attacker intercepts the authorization code and exchanges it for tokens before your app can. **PKCE** (Proof Key for Code Exchange, RFC 7636) closes this gap.
+
+How PKCE works:
+
+1. Your app generates a random string called the **code verifier**.
+2. Your app hashes it (SHA-256) to produce the **code challenge**.
+3. Your app sends the code challenge to Keycloak when starting the login.
+4. Keycloak stores the code challenge.
+5. After the user authenticates, Keycloak sends the authorization code to your redirect URI.
+6. Your app sends the authorization code **and the original code verifier** to exchange for tokens.
+7. Keycloak hashes the verifier, compares it to the stored challenge, and only issues tokens if they match.
+
+An attacker who intercepts the code does not have the verifier, so they cannot exchange it. PKCE is mandatory for public clients with modern Keycloak; the admin console will warn you if you leave it off.
+
+### Configuring a public client
+
+1. In the admin console, open your client's **Settings** tab.
+2. Confirm **Client authentication** is **Off** — this marks the client as public.
+3. Scroll to **Advanced** (or the **Advanced** tab) and confirm **Proof Key for Code Exchange Code Challenge Method** is set to **S256**.
+
+No client secret is generated for a public client. Your application uses only its client ID.
+
+## Confidential clients
+
+A **confidential client** can hold a secret because it runs in a controlled, server-side environment. Keycloak issues a **client secret** that your application must present alongside the authorization code when exchanging for tokens. This proves to Keycloak that the request is coming from your legitimate server, not from someone who intercepted a code.
+
+Use a confidential client for:
+
+- Server-side web applications (Node.js/Express, Spring Boot, Django, Laravel)
+- Backend services that call other APIs on their own behalf (machine-to-machine / client credentials flow)
+- Workers and daemons
+
+### Enabling client authentication
+
+1. In the admin console, open your client's **Settings** tab.
+2. Toggle **Client authentication** to **On**.
+3. Click **Save**.
+
+Keycloak automatically creates a client secret and shows a **Credentials** tab on the client.
+
+### Finding the client secret
+
+1. Open the client in the admin console.
+2. Click the **Credentials** tab.
+3. The **Client secret** field shows the secret value. Click the eye icon to reveal it, or click **Copy to clipboard**.
+4. To rotate the secret, click **Regenerate** — the old secret is immediately invalidated.
+
+export const clientSecretCurlCode = `curl -X POST http://localhost:8080/realms/my-app/protocol/openid-connect/token \\
+  -H 'Content-Type: application/x-www-form-urlencoded' \\
+  -d 'grant_type=client_credentials' \\
+  -d 'client_id=my-backend-service' \\
+  -d 'client_secret=YOUR_CLIENT_SECRET'`;
+
+<CopyCode client:visible code={clientSecretCurlCode} label="Copy curl" />
+
+This curl demonstrates the **client credentials** grant — a machine-to-machine flow where no user is involved. Replace `my-app`, `my-backend-service`, and `YOUR_CLIENT_SECRET` with your values.
+
+## Bearer-only and service accounts
+
+Two additional client modes are worth knowing:
+
+### Bearer-only (legacy)
+
+A **bearer-only** client does not participate in login flows. It only validates tokens that other clients have obtained. This was common in older Keycloak setups for pure REST API servers. In modern Keycloak, bearer-only is largely superseded by using a confidential client with the client credentials grant, or by configuring your API server to validate JWTs directly using the realm's JWKS endpoint without registering a special client.
+
+### Service accounts (client credentials)
+
+When you enable **Client authentication** on a client and also check **Service accounts roles** under Capability config, Keycloak creates a virtual user called the service account for that client. You can assign realm roles and client roles to this service account, and they will appear in the machine-to-machine token. This is the correct pattern for a backend service that needs scoped permissions.
+
+## Summary table
+
+| Client type | Has secret | Typical use case | Auth method |
+|---|---|---|---|
+| Public | No | SPA, mobile, CLI | Authorization Code + PKCE |
+| Confidential | Yes | Server-side app | Authorization Code + client secret |
+| Confidential (service account) | Yes | M2M / daemon | Client credentials grant |
+
+<Callout title="Public clients must use PKCE; server apps need a secret">
+Browser and mobile apps are public clients — they cannot store a secret, so they must use PKCE to protect the authorization code exchange. Server-side applications are confidential clients and authenticate with a client secret that never leaves the server.
+</Callout>
+
+export const quizClientTypes = [
+  {
+    q: 'Which type of application should use a public client?',
+    options: [
+      'A Spring Boot server-side web application',
+      'A Node.js backend API',
+      'A React single-page application running in the browser',
+      'A cron job daemon',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'What problem does PKCE solve for public clients?',
+    options: [
+      'It encrypts the client secret so it can be stored in the browser',
+      'It prevents an intercepted authorization code from being exchanged for tokens',
+      'It removes the need for redirect URIs',
+      'It signs the ID token with the client\'s private key',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Where do you find a confidential client\'s secret in the Keycloak admin console?',
+    options: [
+      'Realm settings → Keys',
+      'The client\'s Credentials tab',
+      'The client\'s Advanced tab',
+      'Users → Service accounts',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which capability must be enabled on a client before Keycloak creates a service account for it?',
+    options: [
+      'Authorization',
+      'Direct access grants',
+      'Client authentication',
+      'Standard flow',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="realms-clients-roles/client-types" questions={quizClientTypes} />
+
+<ProgressTracker client:visible id="realms-clients-roles/client-types" />

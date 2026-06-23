@@ -1,0 +1,155 @@
+---
+title: Client Types
+description: 'public กับ confidential client — ใช้แบบไหนเมื่อไหร่ PKCE ทำงานอย่างไร และหา client secret ของ confidential client ได้ที่ไหน'
+sidebar:
+  order: 4
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## ทำไมประเภทของ client จึงสำคัญ
+
+เมื่อแอปพลิเคชันของคุณขอ token จาก Keycloak Keycloak จำเป็นต้องรู้ว่า: แอปพลิเคชันนี้เก็บความลับได้หรือไม่? native mobile app หรือ browser-based SPA แจกจ่าย code ของมันไปยังอุปกรณ์ของ end-user ซึ่งไม่มีที่ปลอดภัยให้เก็บ client secret ส่วนแอปพลิเคชันฝั่ง server รันอยู่ในสภาพแวดล้อมที่ควบคุมได้ ซึ่งสามารถเก็บความลับให้พ้นมือคนอื่นได้ ความแตกต่างนี้เองที่นำไปสู่การแบ่งเป็น **public กับ confidential**
+
+## Public client
+
+**public client** ไม่สามารถถือความลับได้ source code, compiled bundle หรือ binary ของมันถูกส่งไปยังอุปกรณ์หรือ browser ของ user ซึ่งสามารถถูกตรวจสอบดูได้ เนื่องจากไม่มีความลับ Keycloak จึงไม่สามารถยืนยันตัวตนของ client เองได้ — มันยืนยันได้เพียงตัว user เท่านั้น
+
+ใช้ public client สำหรับ:
+
+- Single-page application (React, Vue, Angular, Svelte)
+- แอปพลิเคชันบน mobile และ desktop (iOS, Android, Electron)
+- เครื่องมือ CLI ที่ทำงานแทน user ที่เป็นมนุษย์
+
+### PKCE — การป้องกันสำหรับ public client
+
+หากไม่มี client secret Authorization Code flow จะมีช่องโหว่ต่อการ intercept code: ผู้โจมตี intercept authorization code แล้วนำไปแลก token ก่อนที่แอปของคุณจะทำได้ **PKCE** (Proof Key for Code Exchange, RFC 7636) ปิดช่องโหว่นี้
+
+PKCE ทำงานอย่างไร:
+
+1. แอปของคุณสร้าง random string ที่เรียกว่า **code verifier**
+2. แอปของคุณ hash มัน (SHA-256) เพื่อสร้าง **code challenge**
+3. แอปของคุณส่ง code challenge ไปยัง Keycloak ตอนเริ่ม login
+4. Keycloak เก็บ code challenge ไว้
+5. หลังจาก user ยืนยันตัวตน Keycloak ส่ง authorization code ไปยัง redirect URI ของคุณ
+6. แอปของคุณส่ง authorization code **และ code verifier ตัวเดิม** เพื่อแลกเป็น token
+7. Keycloak hash verifier นั้น เทียบกับ challenge ที่เก็บไว้ และจะออก token ให้ก็ต่อเมื่อตรงกันเท่านั้น
+
+ผู้โจมตีที่ intercept code ได้จะไม่มี verifier จึงไม่สามารถนำไปแลกได้ PKCE เป็นสิ่งบังคับสำหรับ public client บน Keycloak สมัยใหม่; admin console จะเตือนคุณหากคุณปล่อยให้มันปิดอยู่
+
+### การตั้งค่า public client
+
+1. ใน admin console ให้เปิดแท็บ **Settings** ของ client คุณ
+2. ยืนยันว่า **Client authentication** เป็น **Off** — สิ่งนี้กำหนดให้ client เป็น public
+3. เลื่อนไปที่ **Advanced** (หรือแท็บ **Advanced**) แล้วยืนยันว่า **Proof Key for Code Exchange Code Challenge Method** ถูกตั้งค่าเป็น **S256**
+
+public client จะไม่มีการสร้าง client secret ขึ้นมา แอปพลิเคชันของคุณจะใช้เพียง client ID เท่านั้น
+
+## Confidential client
+
+**confidential client** สามารถถือความลับได้เพราะมันรันอยู่ในสภาพแวดล้อมฝั่ง server ที่ควบคุมได้ Keycloak จะออก **client secret** ที่แอปพลิเคชันของคุณต้องแสดงควบคู่ไปกับ authorization code เมื่อแลกเป็น token สิ่งนี้พิสูจน์ต่อ Keycloak ว่าคำขอมาจาก server ที่ถูกต้องของคุณ ไม่ใช่จากคนที่ intercept code ไป
+
+ใช้ confidential client สำหรับ:
+
+- แอปพลิเคชันเว็บฝั่ง server (Node.js/Express, Spring Boot, Django, Laravel)
+- backend service ที่เรียก API อื่นในนามของตัวเอง (machine-to-machine / client credentials flow)
+- worker และ daemon
+
+### การเปิดใช้งาน client authentication
+
+1. ใน admin console ให้เปิดแท็บ **Settings** ของ client คุณ
+2. สลับ **Client authentication** ไปเป็น **On**
+3. คลิก **Save**
+
+Keycloak จะสร้าง client secret ให้โดยอัตโนมัติและแสดงแท็บ **Credentials** บน client
+
+### การค้นหา client secret
+
+1. เปิด client ใน admin console
+2. คลิกแท็บ **Credentials**
+3. ช่อง **Client secret** จะแสดงค่าความลับ คลิกไอคอนรูปตาเพื่อเปิดเผยมัน หรือคลิก **Copy to clipboard**
+4. หากต้องการหมุน (rotate) secret ให้คลิก **Regenerate** — secret เดิมจะถูกยกเลิกทันที
+
+export const clientSecretCurlCode = `curl -X POST http://localhost:8080/realms/my-app/protocol/openid-connect/token \\
+  -H 'Content-Type: application/x-www-form-urlencoded' \\
+  -d 'grant_type=client_credentials' \\
+  -d 'client_id=my-backend-service' \\
+  -d 'client_secret=YOUR_CLIENT_SECRET'`;
+
+<CopyCode client:visible code={clientSecretCurlCode} label="Copy curl" />
+
+curl นี้สาธิต grant แบบ **client credentials** — flow แบบ machine-to-machine ที่ไม่มี user เข้ามาเกี่ยวข้อง แทนที่ `my-app`, `my-backend-service` และ `YOUR_CLIENT_SECRET` ด้วยค่าของคุณ
+
+## Bearer-only และ service account
+
+มี client mode เพิ่มเติมอีกสองแบบที่ควรรู้จัก:
+
+### Bearer-only (legacy)
+
+**bearer-only** client ไม่มีส่วนร่วมใน login flow มันเพียงตรวจสอบ token ที่ client อื่นได้มาเท่านั้น แบบนี้เคยพบได้ทั่วไปใน Keycloak setup รุ่นเก่าสำหรับ REST API server ล้วน ๆ แต่ใน Keycloak สมัยใหม่ bearer-only ถูกแทนที่ไปเป็นส่วนใหญ่แล้วด้วยการใช้ confidential client กับ client credentials grant หรือด้วยการตั้งค่าให้ API server ของคุณตรวจสอบ JWT โดยตรงผ่าน JWKS endpoint ของ realm โดยไม่ต้องลงทะเบียน client พิเศษ
+
+### Service account (client credentials)
+
+เมื่อคุณเปิดใช้งาน **Client authentication** บน client และติ๊ก **Service accounts roles** ใต้ Capability config ด้วย Keycloak จะสร้าง virtual user ที่เรียกว่า service account ขึ้นมาสำหรับ client นั้น คุณสามารถกำหนด realm role และ client role ให้กับ service account นี้ได้ และมันจะปรากฏใน token แบบ machine-to-machine นี่คือ pattern ที่ถูกต้องสำหรับ backend service ที่ต้องการสิทธิ์แบบจำกัดขอบเขต
+
+## ตารางสรุป
+
+| ประเภท client | มี secret | กรณีใช้งานทั่วไป | วิธี auth |
+|---|---|---|---|
+| Public | ไม่มี | SPA, mobile, CLI | Authorization Code + PKCE |
+| Confidential | มี | แอปฝั่ง server | Authorization Code + client secret |
+| Confidential (service account) | มี | M2M / daemon | Client credentials grant |
+
+<Callout title="public client ต้องใช้ PKCE; แอปฝั่ง server ต้องมี secret">
+แอปบน browser และ mobile เป็น public client — พวกมันเก็บความลับไม่ได้ จึงต้องใช้ PKCE เพื่อปกป้องการแลก authorization code แอปพลิเคชันฝั่ง server เป็น confidential client และยืนยันตัวตนด้วย client secret ที่ไม่มีวันออกไปจาก server
+</Callout>
+
+export const quizClientTypes = [
+  {
+    q: 'แอปพลิเคชันประเภทใดที่ควรใช้ public client?',
+    options: [
+      'แอปพลิเคชันเว็บฝั่ง server แบบ Spring Boot',
+      'backend API แบบ Node.js',
+      'React single-page application ที่รันอยู่ใน browser',
+      'cron job daemon',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'PKCE แก้ปัญหาอะไรให้กับ public client?',
+    options: [
+      'มันเข้ารหัส client secret เพื่อให้เก็บไว้ใน browser ได้',
+      'มันป้องกันไม่ให้ authorization code ที่ถูก intercept ไปแลกเป็น token ได้',
+      'มันกำจัดความจำเป็นในการใช้ redirect URI',
+      'มัน sign ID token ด้วย private key ของ client',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'คุณหา secret ของ confidential client ใน Keycloak admin console ได้ที่ไหน?',
+    options: [
+      'Realm settings → Keys',
+      'แท็บ Credentials ของ client',
+      'แท็บ Advanced ของ client',
+      'Users → Service accounts',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'ต้องเปิดใช้งาน capability ใดบน client ก่อนที่ Keycloak จะสร้าง service account ให้?',
+    options: [
+      'Authorization',
+      'Direct access grants',
+      'Client authentication',
+      'Standard flow',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="realms-clients-roles/client-types" questions={quizClientTypes} />
+
+<ProgressTracker client:visible id="realms-clients-roles/client-types" />

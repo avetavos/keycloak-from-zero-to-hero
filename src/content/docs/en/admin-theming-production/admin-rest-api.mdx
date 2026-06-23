@@ -1,0 +1,141 @@
+---
+title: Admin REST API
+description: 'Learn how to obtain an admin access token from the admin-cli client or a service account and use it to automate Keycloak via the Admin REST API.'
+sidebar:
+  order: 2
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## What is the Admin REST API?
+
+Every button in the Keycloak admin console is backed by the Admin REST API. The same HTTP endpoints that the console uses are fully documented and available to you. This means you can:
+
+- Automate realm creation and configuration in a CI pipeline.
+- Provision users and assign roles from a bootstrap script.
+- Register clients programmatically instead of clicking through the wizard.
+
+The API lives at `https://<keycloak-host>/admin/realms/<realm>/...`.
+
+## Getting an admin access token
+
+Before calling any admin endpoint you need a Bearer token issued by Keycloak itself. There are two common approaches.
+
+### Option 1 — the built-in admin-cli client
+
+Keycloak ships with a client called `admin-cli` in the `master` realm. You can exchange the master-admin credentials for a token:
+
+export const tokenCode = `curl -s -X POST https://localhost:8080/realms/master/protocol/openid-connect/token \\
+  -d client_id=admin-cli \\
+  -d grant_type=password \\
+  -d username=admin \\
+  -d password=admin \\
+  | jq -r '.access_token'`;
+
+<CopyCode client:visible code={tokenCode} label="Copy curl" />
+
+Store the result in a variable, for example `TOKEN=$(...)`. The token is short-lived (typically 60 seconds), so request a fresh one each time your script runs.
+
+### Option 2 — a dedicated service account
+
+For automated pipelines, create a confidential client in the realm you are managing, enable **Service accounts roles**, and assign it the `realm-management` roles it needs (e.g., `manage-users`, `manage-clients`). Then exchange client credentials:
+
+export const serviceAccountTokenCode = `curl -s -X POST https://localhost:8080/realms/my-app/protocol/openid-connect/token \\
+  -d client_id=my-admin-client \\
+  -d client_secret=YOUR_CLIENT_SECRET \\
+  -d grant_type=client_credentials \\
+  | jq -r '.access_token'`;
+
+<CopyCode client:visible code={serviceAccountTokenCode} label="Copy curl" />
+
+## Calling an Admin REST API endpoint
+
+Once you have a token, pass it as a Bearer header. Here is an example that lists all users in a realm:
+
+export const listUsersCode = `curl -s https://localhost:8080/admin/realms/my-app/users \\
+  -H "Authorization: Bearer \${TOKEN}" \\
+  | jq .`;
+
+<CopyCode client:visible code={listUsersCode} label="Copy curl" />
+
+Replace `my-app` with your realm name and `\${TOKEN}` with the access token you obtained above.
+
+Common admin endpoints:
+
+| Operation | Method | Path |
+|---|---|---|
+| List users | GET | `/admin/realms/{realm}/users` |
+| Create user | POST | `/admin/realms/{realm}/users` |
+| List clients | GET | `/admin/realms/{realm}/clients` |
+| List realm roles | GET | `/admin/realms/{realm}/roles` |
+
+## kcadm.sh as an alternative
+
+Keycloak ships with a CLI tool called `kcadm.sh` (inside the container at `/opt/keycloak/bin/kcadm.sh`). It wraps the Admin REST API with a friendlier syntax:
+
+```bash
+# Authenticate once
+/opt/keycloak/bin/kcadm.sh config credentials \
+  --server http://localhost:8080 \
+  --realm master \
+  --user admin --password admin
+
+# List users in a realm
+/opt/keycloak/bin/kcadm.sh get users -r my-app
+```
+
+`kcadm.sh` caches the token locally, so you only need to authenticate once per session. For scripts that run inside the Keycloak container (e.g., in a Docker entrypoint), `kcadm.sh` is often simpler than raw curl.
+
+<Callout title="Use a service account, not the master admin password">
+Create a dedicated service-account client with only the admin roles it actually needs — do not automate with the master admin username and password. This limits blast radius if the credentials are ever leaked, and lets you rotate the client secret independently.
+</Callout>
+
+export const quizAdminApi = [
+  {
+    q: 'What HTTP header do you use to authenticate Admin REST API calls?',
+    options: [
+      'X-Api-Key',
+      'Authorization: Bearer <token>',
+      'Cookie: session=<id>',
+      'X-Keycloak-Token',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which grant type does a service account use to obtain a token?',
+    options: [
+      'authorization_code',
+      'password',
+      'client_credentials',
+      'refresh_token',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'What is the correct Admin REST API path to list users in a realm called "shop"?',
+    options: [
+      '/realms/shop/users',
+      '/admin/realms/shop/users',
+      '/api/realms/shop/users',
+      '/auth/realms/shop/users',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Why is kcadm.sh sometimes simpler than raw curl for admin scripts?',
+    options: [
+      'It communicates directly with the database',
+      'It caches the admin token locally so you only authenticate once per session',
+      'It bypasses realm isolation',
+      'It does not require a running Keycloak server',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="admin-theming-production/admin-rest-api" questions={quizAdminApi} />
+
+<ProgressTracker client:visible id="admin-theming-production/admin-rest-api" />

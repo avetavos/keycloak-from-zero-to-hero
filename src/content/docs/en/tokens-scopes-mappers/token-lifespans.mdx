@@ -1,0 +1,131 @@
+---
+title: 'Token Lifespans'
+description: 'Learn how to configure access token, refresh token, and session lifespans in Keycloak — and why short access tokens matter.'
+sidebar:
+  order: 5
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Why lifespans matter
+
+Every token Keycloak issues has a lifespan. Getting these right is a balance between user experience (fewer re-logins) and security (limiting damage if a token leaks). A token that never expires is dangerous — if it leaks, an attacker has indefinite access. A token that expires every 30 seconds is secure but unusable.
+
+## Token lifespans reference
+
+### Access token lifespan
+
+Default: **5 minutes (300 seconds)**. Short by design — if an access token leaks, the window of misuse is small. The `exp` claim in the token reflects this value. Your API must reject any token where `exp` is in the past.
+
+A 5-minute access token means an attacker who intercepts it has at most 5 minutes to use it before it is worthless. Combine this with HTTPS-only transport and the risk is minimal.
+
+### Refresh token lifespan
+
+The refresh token lifespan is controlled by two session settings:
+
+- **SSO Session Idle** (default: 30 minutes) — if the user is inactive for this long, the session (and refresh token) expires.
+- **SSO Session Max** (default: 10 hours) — the hard upper limit on how long a session can last, regardless of activity.
+
+The client can silently obtain new access tokens using the refresh token as long as the session is within these bounds.
+
+### Offline token
+
+An offline refresh token is a special refresh token that survives server restarts and persists beyond the normal SSO session expiry. It requires the `offline_access` scope to be requested at login. Offline tokens are controlled by separate settings:
+
+- **Offline Session Idle** — how long an inactive offline session persists.
+- **Offline Session Max** — the hard upper limit on offline session lifetime.
+
+Use offline tokens for mobile apps or long-running background services that need to stay authenticated without a user present.
+
+## Where to configure lifespans
+
+There are two places to set token lifespans in Keycloak:
+
+**Realm-level** (applies to all clients in the realm):
+- **Realm settings** → **Tokens** tab — access token lifespan and SSO session settings.
+- **Realm settings** → **Sessions** tab — offline session settings.
+
+**Client-level override** (applies to one client only):
+- Individual client → **Advanced** tab → **Token Lifespan** section.
+- Client settings override the realm defaults for that client only. Useful when one client needs a longer or shorter lifespan than the rest.
+
+## Configuring lifespans at the realm level
+
+1. In the admin console, click **Realm settings** in the left sidebar.
+2. Click the **Tokens** tab.
+3. Adjust **Access Token Lifespan** (recommended: 1–5 minutes for most apps; 5–15 minutes for SPAs with silent refresh).
+4. Adjust **SSO Session Idle** — how long before an inactive session expires (default 30 minutes).
+5. Adjust **SSO Session Max** — the hard upper limit on session length (default 10 hours).
+6. Click **Save**.
+
+## Overriding the access token lifespan for a single client
+
+1. In the admin console, click **Clients** and select your client.
+2. Click the **Advanced** tab.
+3. Scroll to the **Token Lifespan** section.
+4. Set **Access Token Lifespan** to override the realm default for this client only.
+5. Click **Save**.
+
+## Inspecting a token's expiry
+
+You can decode a token on the command line to check its `exp` and `iat` claims. The difference `exp - iat` tells you the configured lifespan in seconds.
+
+export const inspectTokenCode = `jwt_payload=\$(echo "YOUR_ACCESS_TOKEN" | cut -d '.' -f2 | base64 -d 2>/dev/null); echo \$jwt_payload | python3 -m json.tool`;
+
+<CopyCode client:visible code={inspectTokenCode} label="Copy decode command" />
+
+Replace `YOUR_ACCESS_TOKEN` with an actual token. The `exp` minus `iat` value shows you the configured access token lifespan in seconds.
+
+<Callout title="Short access tokens + refresh tokens = best practice">
+Keep access tokens short-lived (1–5 minutes) and rely on refresh tokens to maintain sessions. A short access token limits the damage window if it is intercepted or leaked — it expires before an attacker can make significant use of it.
+</Callout>
+
+export const quizTokenLifespans = [
+  {
+    q: 'Where do you configure the default access token lifespan for a realm?',
+    options: [
+      'Clients → Advanced tab',
+      'Realm settings → Tokens tab',
+      'Users → Sessions tab',
+      'Client scopes → Settings tab',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What does SSO Session Idle control?',
+    options: [
+      'How long an access token is valid',
+      'How long before an inactive SSO session expires',
+      'How many clients can share a session',
+      'The maximum number of offline tokens',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What is the advantage of a short access token lifespan?',
+    options: [
+      'It reduces the number of database queries',
+      'It forces users to log in more often',
+      'It limits the misuse window if the token is leaked',
+      'It makes the token signature stronger',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'How do you override the access token lifespan for a single client?',
+    options: [
+      'In Realm settings → Sessions tab',
+      "In the client's Advanced tab → Token Lifespan section",
+      'By adding a protocol mapper',
+      'By creating a new client scope',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="tokens-scopes-mappers/token-lifespans" questions={quizTokenLifespans} />
+
+<ProgressTracker client:visible id="tokens-scopes-mappers/token-lifespans" />

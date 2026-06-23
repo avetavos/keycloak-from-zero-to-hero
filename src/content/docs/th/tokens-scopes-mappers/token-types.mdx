@@ -1,0 +1,126 @@
+---
+title: ประเภทของ Token
+description: 'เรียนรู้ความแตกต่างระหว่าง access token, ID token และ refresh token รวมถึงวิธีใช้งานที่ถูกต้อง'
+sidebar:
+  order: 2
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## ประเภทของ Token ใน Keycloak
+
+Keycloak ออก token สามประเภทในขั้นตอน OIDC flow แต่ละประเภทมีวัตถุประสงค์ต่างกัน
+
+## Access Token
+
+ใช้อนุญาต API call — เป็น JWT อายุสั้นที่ API ของคุณตรวจสอบในทุก request Bearer token นี้คือสิ่งที่คุณส่งไปใน `Authorization` header เมื่อเรียก backend service
+
+## ID Token
+
+บอก client ว่าผู้ใช้คือใคร — ใช้ได้เฉพาะใน client เท่านั้น เช่น เพื่อแสดงชื่อผู้ใช้ใน UI ห้ามส่ง ID token ไปยัง backend API เด็ดขาด
+
+## Refresh Token
+
+อายุยาวกว่า access token — ใช้ขอ access token ใหม่โดยไม่ต้อง login ซ้ำ ส่งได้เฉพาะไปยัง Keycloak token endpoint เท่านั้น
+
+## ตัวอย่าง Decoded JWT
+
+ด้านล่างนี้คือ access token ที่ถูก decode แล้ว แสดง header, payload และ claim ต่างๆ ที่ Keycloak ใส่ไว้:
+
+export const decodedAccessTokenCode = `{
+  "header": {
+    "alg": "RS256",
+    "typ": "JWT",
+    "kid": "abc123"
+  },
+  "payload": {
+    "exp": 1719878400,
+    "iat": 1719874800,
+    "jti": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "iss": "https://auth.example.com/realms/my-app",
+    "aud": "account",
+    "sub": "user-uuid-here",
+    "typ": "Bearer",
+    "azp": "my-app-frontend",
+    "scope": "openid profile email roles",
+    "realm_access": {
+      "roles": ["offline_access", "uma_authorization", "user"]
+    },
+    "resource_access": {
+      "my-app-frontend": {
+        "roles": ["app-user"]
+      }
+    },
+    "email_verified": true,
+    "name": "Alice Example",
+    "preferred_username": "alice",
+    "email": "alice@example.com"
+  }
+}`;
+
+<CopyCode client:visible code={decodedAccessTokenCode} label="Copy curl" />
+
+## Claim สำคัญใน Access Token
+
+| Claim | ความหมาย |
+|---|---|
+| `sub` | Unique ID ของผู้ใช้ |
+| `iss` | URL ของ realm ที่ออก token |
+| `aud` | ผู้รับ token ที่ตั้งใจ |
+| `exp` | เวลาที่ token หมดอายุ (Unix timestamp) |
+| `azp` | Client ที่ขอ token |
+| `scope` | Scope ที่ถูก grant |
+| `realm_access.roles` | Realm roles ของผู้ใช้ |
+
+<Callout title="ส่ง access token ไปยัง API ไม่ใช่ ID token">
+ส่ง access token ไปยัง API ของคุณเป็น Bearer token ใน Authorization header ใช้ ID token เฉพาะใน client เพื่อแสดงข้อมูลผู้ใช้ — อย่าส่ง ID token ไปยัง backend service เด็ดขาด
+</Callout>
+
+export const quizTokenTypes = [
+  {
+    q: 'REST API ของคุณตรวจสอบ token ใด?',
+    options: [
+      'ID token',
+      'Refresh token',
+      'Access token',
+      'Session cookie',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'claim `sub` บรรจุข้อมูลอะไร?',
+    options: [
+      'อีเมลของผู้ใช้',
+      'Client ID',
+      'Unique identifier ของผู้ใช้ (subject)',
+      'เวลาหมดอายุของ token',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Refresh token ใช้ทำอะไร?',
+    options: [
+      'อนุญาต API call โดยตรง',
+      'แสดงชื่อผู้ใช้ใน UI',
+      'ขอ access token ใหม่โดยไม่ต้องพิสูจน์ตัวตนซ้ำ',
+      'เข้ารหัส access token',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'claim ใดแสดง realm-level roles ของผู้ใช้?',
+    options: [
+      'scope',
+      'azp',
+      'realm_access',
+      'aud',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="tokens-scopes-mappers/token-types" questions={quizTokenTypes} />
+<ProgressTracker client:visible id="tokens-scopes-mappers/token-types" />

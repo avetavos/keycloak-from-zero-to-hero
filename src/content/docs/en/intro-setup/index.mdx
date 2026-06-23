@@ -1,0 +1,100 @@
+---
+title: 'Intro & Setup'
+description: 'An overview of the Keycloak course and how to get Keycloak running locally with Docker.'
+sidebar:
+  order: 1
+---
+
+import RunKeycloak from '../../../../components/RunKeycloak.astro';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+<RunKeycloak />
+
+## What is Keycloak?
+
+Keycloak is an open-source Identity and Access Management (IAM) server. It handles authentication, Single Sign-On (SSO), and authorization for your applications using industry standards: OpenID Connect (OIDC), OAuth2, and SAML. Instead of building login forms, password hashing, token handling, and MFA in every app, you delegate all of that to Keycloak.
+
+## What this course covers
+
+- **Intro & Setup** (this module)
+- **Realms, Clients & Roles**
+- **Users, Groups & Credentials**
+- **OIDC & OAuth2 Flows**
+- **Securing Apps**
+- **Tokens, Scopes & Mappers**
+- **Identity Federation & Social Login**
+- **Admin, Theming & Production**
+
+## The core loop
+
+Every Keycloak workflow follows the same four-step loop:
+
+1. Run Keycloak with Docker
+2. Open the admin console
+3. Create a realm and register a client
+4. Secure your app using OIDC
+
+```
+Docker run Keycloak
+        │
+        ▼
+  Admin console
+        │
+        ▼
+  Create realm + client
+        │
+        ▼
+  Secure your app (OIDC)
+```
+
+## Lessons in this module
+
+| Lesson | What you will learn |
+|---|---|
+| What is Keycloak? | Core concepts, protocols, and where Keycloak fits in your architecture |
+| Run with Docker | Start Keycloak locally and log in to the admin console |
+| Admin Console Tour | Navigate realms, clients, users, and roles in the UI |
+| Dev vs Production | Differences between `start-dev` and production mode |
+
+<Callout title="Key point">
+Keycloak centralizes login so your apps never store passwords — they delegate to Keycloak via OIDC.
+</Callout>
+
+export const quizIndex = [
+  {
+    q: 'What is Keycloak?',
+    options: [
+      'A cloud database service',
+      'An open-source Identity and Access Management server',
+      'A reverse proxy for microservices',
+      'A container orchestration tool',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which standard protocols does Keycloak support for authentication?',
+    options: [
+      'REST and GraphQL',
+      'SMTP and FTP',
+      'OpenID Connect, OAuth2, and SAML',
+      'SSH and TLS',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'What is the benefit of using Keycloak instead of building auth yourself?',
+    options: [
+      'It makes your app faster',
+      'It eliminates the need for a database',
+      'Your apps delegate identity to Keycloak instead of storing passwords themselves',
+      'It automatically deploys your app to the cloud',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="intro-setup/index" questions={quizIndex} />
+
+<ProgressTracker client:visible id="intro-setup/index" />

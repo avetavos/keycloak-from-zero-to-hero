@@ -1,0 +1,119 @@
+---
+title: 'Client Scopes'
+description: 'Learn what client scopes are, how default and optional scopes work, and how to assign them to a client.'
+sidebar:
+  order: 3
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## What is a client scope?
+
+A **client scope** is a named, reusable bundle of mappers — and optionally audience or resource restrictions. It lets you define a set of claims once and attach it to multiple clients. Instead of configuring the same mappers on every client individually, you configure them once on a scope and assign the scope to many clients.
+
+Think of a client scope as a named package that says: "when this scope is requested, add these claims to the token."
+
+## Default vs optional scopes
+
+Client scopes come in two types:
+
+**Default scopes** are always included in every token issued by the client, regardless of what the application requests. The client does not need to ask for them — they are on by default.
+
+**Optional scopes** are only included when the authorization request explicitly asks for them via the `scope` request parameter. If the client does not request an optional scope, its claims do not appear in the token. This keeps tokens small and avoids leaking unnecessary information.
+
+## Built-in scopes
+
+Keycloak ships with a set of built-in client scopes that cover the most common needs:
+
+| Scope | Claims added |
+|---|---|
+| `openid` | Required for OIDC. Signals that the response is an ID token. |
+| `profile` | `name`, `given_name`, `family_name`, `preferred_username` |
+| `email` | `email`, `email_verified` |
+| `roles` | `realm_access`, `resource_access` |
+| `address` | `address` (structured postal address) |
+| `phone` | `phone_number`, `phone_number_verified` |
+| `offline_access` | Grants a refresh token that persists beyond the normal SSO session. |
+| `microprofile-jwt` | Adds claims for MicroProfile JWT compatibility. |
+
+## Assigning an optional scope to a client
+
+1. In the admin console, navigate to **Clients** and select your client.
+2. Click the **Client scopes** tab.
+3. You will see two sections: **Assigned client scopes** and **Setup**. The table shows scopes with their type (Default or Optional).
+4. To add a scope, click **Add client scope** (top-right of the assigned list).
+5. Select the scope name from the list, choose **Default** or **Optional**, and click **Add**.
+6. To request an optional scope at login time, include it in the `scope` parameter of the authorization request: `scope=openid profile email address`
+
+## Creating a custom client scope
+
+1. In the left sidebar, click **Client scopes**.
+2. Click **Create client scope** (top-right).
+3. Enter a **Name** (e.g., `orders:read`) and set **Type** to **Optional**.
+4. Click **Save**. You will land on the scope's detail page with tabs: Settings, Mappers, Scope, Evaluate.
+5. Add mappers in the **Mappers** tab (see the [Protocol Mappers](./protocol-mappers) lesson).
+6. Assign the scope to your client as described above.
+
+## Authorization request with scope parameter
+
+When requesting an optional scope, include it in the `scope` query parameter of the authorization request:
+
+export const authRequestCode = `https://auth.example.com/realms/my-app/protocol/openid-connect/auth?client_id=my-app-frontend&response_type=code&redirect_uri=https://app.example.com/callback&scope=openid%20profile%20email%20address`;
+
+<CopyCode client:visible code={authRequestCode} label="Copy auth request URL" />
+
+The `%20` characters are URL-encoded spaces. Each scope name is space-separated (or `%20`-separated in the URL). Keycloak will only include the claims for the scopes listed here — and only if those scopes are assigned to the client (default or optional).
+
+<Callout title="Optional scopes keep tokens small">
+Optional client scopes keep access tokens small — Keycloak only includes their claims when the client explicitly requests them. Request only the scopes your application actually needs for the current operation.
+</Callout>
+
+export const quizClientScopes = [
+  {
+    q: 'What is a client scope?',
+    options: [
+      'A user role scoped to a client',
+      'A named bundle of mappers that can be attached to multiple clients',
+      'A type of OIDC flow',
+      'A redirect URI restriction',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'How do you request an optional client scope at authorization time?',
+    options: [
+      'Add it to Valid redirect URIs',
+      'Include it in the `scope` request parameter',
+      'Enable it in Realm settings',
+      'Set it as a required action on the user',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which built-in scope adds `realm_access` and `resource_access` to the token?',
+    options: [
+      'profile',
+      'email',
+      'openid',
+      'roles',
+    ],
+    answer: 3,
+  },
+  {
+    q: 'What is the difference between a Default scope and an Optional scope?',
+    options: [
+      'Default scopes cost more tokens to process',
+      'Default scopes are always included; optional scopes require an explicit request',
+      'Optional scopes are permanent; default scopes can be removed',
+      'There is no functional difference',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="tokens-scopes-mappers/client-scopes" questions={quizClientScopes} />
+
+<ProgressTracker client:visible id="tokens-scopes-mappers/client-scopes" />

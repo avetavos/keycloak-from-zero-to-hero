@@ -1,0 +1,108 @@
+---
+title: 'Dev vs Production Mode'
+description: 'Understand the difference between start-dev and start, configure KC_DB, KC_HOSTNAME, and KC_PROXY, and see a minimal production-mode command.'
+sidebar:
+  order: 5
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+Keycloak has two startup modes: `start-dev` for development and `start` for production. They are not interchangeable — `start-dev` makes several convenience compromises that are unsafe in a real environment. Understanding the difference is important before you move beyond local learning.
+
+## start-dev: development mode
+
+`start-dev` is optimised for getting started quickly. It uses an embedded H2 in-memory database (data is lost on restart), enables HTTP (no TLS), disables hostname verification, and relaxes several security checks. Use it only on localhost when learning Keycloak.
+
+```bash
+docker run --name keycloak -p 8080:8080 \
+  -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \
+  -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin \
+  quay.io/keycloak/keycloak:latest start-dev
+```
+
+## start: production mode
+
+`start` is the production command. It requires an external database, a fixed hostname, and HTTPS (or a configured reverse proxy). Keycloak will refuse to start in production mode without a valid hostname and TLS configuration. Key environment variables:
+
+| Environment variable | Purpose | Example |
+|---|---|---|
+| `KC_DB` | Database vendor | `postgres` |
+| `KC_DB_URL` | JDBC connection URL | `jdbc:postgresql://db:5432/keycloak` |
+| `KC_DB_USERNAME` | DB username | `keycloak` |
+| `KC_DB_PASSWORD` | DB password | `changeme` |
+| `KC_HOSTNAME` | Public hostname for Keycloak | `auth.example.com` |
+| `KC_PROXY_HEADERS` | Trust proxy headers (`xforwarded` or `forwarded`) | `xforwarded` |
+| `KC_HTTP_ENABLED` | Allow HTTP (needed behind a TLS-terminating proxy) | `true` |
+
+export const productionStartCode = `docker run --name keycloak -p 8080:8080 \\\n  -e KC_DB=postgres \\\n  -e KC_DB_URL=jdbc:postgresql://db:5432/keycloak \\\n  -e KC_DB_USERNAME=keycloak \\\n  -e KC_DB_PASSWORD=changeme \\\n  -e KC_HOSTNAME=auth.example.com \\\n  -e KC_PROXY_HEADERS=xforwarded \\\n  -e KC_HTTP_ENABLED=true \\\n  quay.io/keycloak/keycloak:latest start`;
+
+<CopyCode client:visible code={productionStartCode} label="Copy production start" />
+
+## Optimized build
+
+For production, Keycloak recommends running `kc.sh build` (or `kc.bat build`) inside the image before starting. This pre-processes configuration and significantly reduces startup time. A typical production Dockerfile uses a two-stage build: one stage to run `kc.sh build`, another to copy the built distribution and run `kc.sh start`.
+
+```bash
+# Stage 1: build
+FROM quay.io/keycloak/keycloak:latest AS builder
+RUN /opt/keycloak/bin/kc.sh build --db=postgres
+
+# Stage 2: run
+FROM quay.io/keycloak/keycloak:latest
+COPY --from=builder /opt/keycloak/ /opt/keycloak/
+ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start"]
+```
+
+<Callout title="Never run start-dev in production">
+Production needs an external database, a fixed hostname, and HTTPS — never run `start-dev` in production. It uses an in-memory database, skips hostname checks, and disables security features. Your data will be lost on every container restart.
+</Callout>
+
+export const quizDevProd = [
+  {
+    q: 'What database does start-dev use?',
+    options: [
+      'PostgreSQL',
+      'MySQL',
+      'An embedded H2 in-memory database',
+      'MongoDB',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Which environment variable sets the public hostname in production mode?',
+    options: [
+      'KC_ADMIN_HOSTNAME',
+      'KC_SERVER_NAME',
+      'KC_HOSTNAME',
+      'KC_PUBLIC_HOST',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'What is the purpose of running kc.sh build before kc.sh start in production?',
+    options: [
+      'It creates the admin user',
+      'It pre-processes configuration to reduce startup time',
+      'It migrates the database schema',
+      'It generates TLS certificates',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which KC_PROXY_HEADERS value should you use when Keycloak is behind an Nginx or load balancer that sets X-Forwarded-* headers?',
+    options: [
+      'none',
+      'forwarded',
+      'xforwarded',
+      'trusted',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="intro-setup/dev-vs-production" questions={quizDevProd} />
+
+<ProgressTracker client:visible id="intro-setup/dev-vs-production" />

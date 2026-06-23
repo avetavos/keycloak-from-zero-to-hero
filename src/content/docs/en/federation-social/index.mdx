@@ -1,0 +1,93 @@
+---
+title: 'Identity Federation & Social Login'
+description: 'An overview of identity brokering and user federation in Keycloak — two different strategies for bringing external identities into your realm.'
+sidebar:
+  order: 1
+---
+
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Two ways to bring in external identities
+
+Every real-world Keycloak deployment eventually needs to accept identities that live outside the realm itself. Maybe your users already have a Google account and you want them to log in with it. Maybe your company has an existing Active Directory full of employees who should not have to create a new Keycloak account. Keycloak solves both problems, but with different mechanisms.
+
+### Identity brokering
+
+**Identity brokering** means Keycloak acts as a trusted middleman between your application and another identity provider (IdP). When a user chooses to "Log in with Google" (or any OIDC/SAML-compliant provider), Keycloak redirects the user to that external provider, receives a token or assertion back, and then issues its own token to your application. Your application only ever talks to Keycloak — it never sees the external provider directly.
+
+Use identity brokering when:
+
+- You want to add social login (Google, GitHub, Facebook, Apple, etc.).
+- You want to federate with another organisation's SSO system (another Keycloak, Azure AD, Okta, etc.).
+- The external system speaks OIDC or SAML.
+
+### User federation
+
+**User federation** means Keycloak connects to an external user store (typically LDAP or Active Directory) and reads user records from it. Keycloak does not copy the users into its own database by default — it queries the external store on demand. The users can log in to Keycloak using their existing credentials (LDAP password), but authentication may happen locally in Keycloak or be delegated to the LDAP bind.
+
+Use user federation when:
+
+- Your organisation already has thousands of users in Active Directory or OpenLDAP.
+- You want a single source of truth for user accounts.
+- You want Keycloak to appear to those users as just another app in their existing directory.
+
+### The key difference
+
+| | Identity brokering | User federation |
+|---|---|---|
+| Login flow | Redirects to external IdP | Keycloak authenticates (uses LDAP bind for password) |
+| User source | External IdP's user database | LDAP / Active Directory |
+| Protocol | OIDC or SAML | LDAP protocol |
+| Typical use case | Social login, org-to-org SSO | Corporate directory integration |
+
+## What this module covers
+
+| Lesson | What you will learn |
+|---|---|
+| [Social Login](./social-login) | Add Google or GitHub as a social login provider |
+| [Identity Brokering](./identity-brokering) | Broker with any OIDC/SAML IdP and handle first-login flows |
+| [LDAP Federation](./ldap-federation) | Connect Keycloak to LDAP or Active Directory |
+| [IdP Mappers](./idp-mappers) | Map external claims and attributes onto Keycloak users |
+
+<Callout title="Brokering vs federation">
+Identity brokering delegates the login to another IdP — your user authenticates there and Keycloak accepts the result. User federation pulls existing users into Keycloak from an external store like LDAP — Keycloak becomes the authentication front-end for those accounts. They solve different problems and can be used together.
+</Callout>
+
+export const quizFedIndex = [
+  {
+    q: 'What does identity brokering do?',
+    options: [
+      'Copies all users from an external LDAP into Keycloak',
+      'Delegates the login to an external IdP and accepts a token or assertion back',
+      'Creates a new realm for each external provider',
+      'Disables the Keycloak login page entirely',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'When is user federation the right choice?',
+    options: [
+      'When you want to add a Google login button',
+      'When you want to federate with another Keycloak server',
+      'When your organisation already has users in Active Directory or LDAP',
+      'When you need SAML assertions from a partner organisation',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Which protocol does user federation with Active Directory use?',
+    options: [
+      'OIDC',
+      'SAML',
+      'LDAP',
+      'OAuth2',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="federation-social/index" questions={quizFedIndex} />
+
+<ProgressTracker client:visible id="federation-social/index" />

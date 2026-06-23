@@ -1,0 +1,77 @@
+---
+title: 'Users, Groups & Credentials'
+description: 'Overview of the Users, Groups & Credentials module — learn how Keycloak manages identities, bundles users into groups, and enforces authentication through credentials and required actions.'
+sidebar:
+  order: 1
+---
+
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## What this module covers
+
+Keycloak keeps a clear separation between who someone **is** (their identity), how they **prove** it (credentials), and what they are **allowed to do** (roles and permissions). This module focuses on the identity side of that equation.
+
+By the end of this module you will know how to create and manage users, organise them into groups, assign and reset credentials, and drive users through required actions — all inside the Keycloak admin console and via the Admin REST API.
+
+### Module lessons
+
+| Order | Lesson | What you will learn |
+|-------|--------|---------------------|
+| 1 | **Users** | Create users, manage attributes, enable or disable accounts, verify email |
+| 2 | **Groups** | Create group hierarchies, add users to groups, inherit roles through group membership |
+| 3 | **Credentials** | Set passwords, reset credentials, configure OTP, understand credential priority |
+| 4 | **Required Actions** | Assign built-in actions (verify email, update password, configure OTP), create custom actions |
+| 5 | **User Federation** | Connect an LDAP or Active Directory server, configure mappers, sync users on demand |
+
+<Callout title="Key point">
+In Keycloak, identities (users) are separate from authorization (roles and groups) — you can manage them independently. A user account holds no permissions until you attach roles or group memberships to it.
+</Callout>
+
+## How the pieces fit together
+
+A **user** is a record stored inside a realm. The realm is the boundary — users in realm `my-app` cannot log in to realm `other-app` unless their account exists there too.
+
+**Groups** let you bundle users so you can manage role assignments, attributes, and required actions in one place rather than per-user. Groups can be nested into a hierarchy.
+
+**Credentials** are the secrets or second factors a user presents to prove their identity. Keycloak supports passwords, OTP codes, passkeys, and more. Each credential type has its own priority and lifecycle.
+
+**Required actions** are tasks Keycloak forces a user to complete before they can fully log in — for example, verifying their email address or setting a new password after an admin reset.
+
+export const quizIndex = [
+  {
+    q: 'What is a user in Keycloak?',
+    options: [
+      'A role that grants access to a client',
+      'An identity record stored inside a realm',
+      'A client application registered in Keycloak',
+      'A policy that controls login flows',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What is the main purpose of groups in Keycloak?',
+    options: [
+      'To encrypt user passwords',
+      'To define redirect URIs for clients',
+      'To bundle users so roles and settings can be managed in one place',
+      'To create separate authentication flows',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'What is a required action in Keycloak?',
+    options: [
+      'A permission that must be granted before a user can be created',
+      'A task a user must complete before they can fully log in',
+      'A mandatory client setting that must be configured after creation',
+      'An admin step required before publishing a realm',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="users-groups-credentials/index" questions={quizIndex} />
+
+<ProgressTracker client:visible id="users-groups-credentials/index" />

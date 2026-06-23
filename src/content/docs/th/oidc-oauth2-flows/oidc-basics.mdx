@@ -1,0 +1,92 @@
+---
+title: 'OIDC Discovery Document'
+description: 'วิธีค้นหาและอ่าน OIDC discovery document ที่ Keycloak realm ทุกตัวเผยแพร่'
+sidebar:
+  order: 2
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Discovery document คืออะไร
+
+Keycloak realm ทุกตัวเผยแพร่ OpenID Connect discovery document ที่ `/.well-known/openid-configuration` ใต้ `/realms/<realm>`
+
+URL เต็ม:
+
+```
+https://<keycloak-host>/realms/<realm>/.well-known/openid-configuration
+```
+
+นี่คือแหล่งข้อมูลเดียวสำหรับทุก endpoint ที่แอปต้องการ fetch ครั้งเดียวตอนเริ่มต้นและคุณจะได้ทุกอย่าง — authorization endpoint, token endpoint, JWKS URI และอื่น ๆ
+
+## Endpoint สำคัญใน discovery document
+
+| ชื่อ endpoint | JSON key | วัตถุประสงค์ |
+|---|---|---|
+| Authorization endpoint | `authorization_endpoint` | Redirect ผู้ใช้ไปยังหน้า login |
+| Token endpoint | `token_endpoint` | แลก authorization code เป็น token |
+| UserInfo endpoint | `userinfo_endpoint` | ส่งคืน claim เกี่ยวกับผู้ใช้ที่ยืนยันตัวตนแล้ว |
+| JWKS URI | `jwks_uri` | Public key สำหรับยืนยัน JWT signature |
+| End session endpoint | `end_session_endpoint` | Logout ผู้ใช้ |
+
+## การ fetch discovery document
+
+แทนที่ `KC_URL` และ `REALM` ด้วยค่าของคุณ การตอบกลับจะเป็น JSON object ที่มี URL ของ endpoint ทั้งหมดข้างต้น
+
+export const discoveryCode = `curl https://\${KC_URL}/realms/\${REALM}/.well-known/openid-configuration | jq .`;
+
+<CopyCode client:visible code={discoveryCode} label="Copy curl" />
+
+<Callout title="เริ่มจาก discovery document เสมอ">
+อย่า hardcode URL ของ endpoint ทุก endpoint ที่แอปต้องการอยู่ใน discovery document เมื่อ Keycloak อัปเกรดหรือย้าย แอปจะรับ URL ใหม่อัตโนมัติหากดึง discovery doc ตอนเริ่มต้น
+</Callout>
+
+export const quizOidcBasics = [
+  {
+    q: 'Keycloak เผยแพร่ OIDC discovery document ที่ไหน?',
+    options: [
+      '/.well-known/openid-configuration ใต้ /realms/<realm>',
+      '/admin/master/console',
+      '/auth/admin/realms',
+      '/.well-known/jwks.json',
+    ],
+    answer: 0,
+  },
+  {
+    q: 'JSON key ใดใน discovery document ให้ token endpoint?',
+    options: [
+      'authorization_endpoint',
+      'token_endpoint',
+      'userinfo_endpoint',
+      'jwks_uri',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'JWKS URI ใช้ทำอะไร?',
+    options: [
+      'Logout ผู้ใช้',
+      'เก็บข้อมูลโปรไฟล์ผู้ใช้',
+      'ให้ public key สำหรับยืนยัน JWT signature',
+      'ออก refresh token',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'เหตุใดแอปควร fetch discovery document แทนการ hardcode endpoint?',
+    options: [
+      'เร็วกว่า hardcode',
+      'Keycloak อาจย้าย endpoint ข้ามเวอร์ชัน discovery ทำให้แอปรับ URL ใหม่อัตโนมัติ',
+      'URL ที่ hardcode ถูก CORS บล็อก',
+      'Token endpoint เปลี่ยนทุก login',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="oidc-oauth2-flows/oidc-basics" questions={quizOidcBasics} />
+
+<ProgressTracker client:visible id="oidc-oauth2-flows/oidc-basics" />

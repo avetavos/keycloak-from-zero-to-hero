@@ -1,0 +1,192 @@
+---
+title: Roles
+description: 'realm role กับ client role, composite role, การกำหนด role ให้ user และวิธีที่ role ปรากฏใน JWT token'
+sidebar:
+  order: 5
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## role คืออะไร?
+
+**role** คือป้ายสิทธิ์ (permission tag) ที่มีชื่อ ซึ่งคุณผูกเข้ากับ user (หรือ group) เมื่อ user ยืนยันตัวตน Keycloak จะฝัง role ของพวกเขาไว้ใน token แอปพลิเคชันของคุณอ่าน role เหล่านั้นจาก token แล้วตัดสินใจว่า user ได้รับอนุญาตให้ทำอะไรได้บ้าง — โดยไม่ต้องเรียก database เพิ่มเติม
+
+Keycloak มี role อยู่สองแบบ:
+
+- **Realm role** — กำหนดที่ระดับ realm ใช้ได้กับทุก client ใน realm
+- **Client role** — กำหนดบน client เฉพาะตัว จำกัดขอบเขตอยู่ที่ client นั้น
+
+## Realm role
+
+realm role มีผลทั่วทั้ง realm มันเหมาะกับสิทธิ์แบบหยาบ (coarse-grained) ที่ใช้ทั้งแอปพลิเคชัน เช่น `admin`, `support-agent` หรือ `billing-viewer` ที่อาจเกี่ยวข้องกับแอปพลิเคชันมากกว่าหนึ่งตัว
+
+### การสร้าง realm role
+
+1. ใน admin console ตรวจสอบให้แน่ใจว่าคุณอยู่ใน realm ที่ถูกต้อง
+2. คลิก **Realm roles** ในแถบด้านซ้าย
+3. คลิก **Create role** (มุมบนขวาของรายการ)
+4. ใส่ **Role name** (เช่น `app-admin`)
+5. เพิ่ม **Description** ก็ได้ (ไม่บังคับ)
+6. คลิก **Save**
+
+ตอนนี้ role พร้อมแล้วสำหรับนำไปกำหนดให้กับ user, group หรือ composite role
+
+## Client role
+
+client role ถูกกำหนดบน client เฉพาะตัวและมีความหมายเฉพาะกับ client นั้นเท่านั้น มันเหมาะกับสิทธิ์แบบละเอียด (fine-grained) ที่เจาะจงกับแอปพลิเคชัน เช่น `orders:read`, `orders:write` หรือ `reports:export`
+
+### การสร้าง client role
+
+1. ใน admin console คลิก **Clients** ในแถบด้านซ้าย แล้วเปิด client ที่คุณต้องการเพิ่ม role
+2. คลิกแท็บ **Roles** บน client
+3. คลิก **Create role**
+4. ใส่ **Role name** (เช่น `orders:read`)
+5. เพิ่ม **Description** ก็ได้ (ไม่บังคับ)
+6. คลิก **Save**
+
+## Composite role
+
+**composite role** คือ role ที่ให้สิทธิ์ทุก role ที่มันบรรจุอยู่โดยอัตโนมัติ แทนที่จะกำหนด role ห้าตัวแยกกันให้พนักงานใหม่ทุกคน คุณสร้าง composite role หนึ่งตัว (`employee`) ที่รวมทั้งหมดเข้าด้วยกัน แล้วกำหนดเพียงตัวเดียว
+
+### การสร้าง composite role
+
+1. สร้าง child role ก่อน (realm role หรือ client role)
+2. สร้าง realm role ใหม่ (เช่น `employee`)
+3. ในหน้ารายละเอียดของ role ให้คลิก **Action → Add associated roles** (หรือมองหาแท็บ **Associated roles**)
+4. ค้นหาและเลือก child role ที่คุณต้องการรวมเข้าด้วยกัน
+5. คลิก **Assign**
+
+ตอนนี้การกำหนด `employee` ให้กับ user จะให้สิทธิ์ทุก role ที่รวมไว้โดยอัตโนมัติ
+
+## การกำหนด role ให้กับ user
+
+1. ใน admin console คลิก **Users** ในแถบด้านซ้าย
+2. หา user แล้วคลิกที่ username เพื่อเปิดโปรไฟล์ของพวกเขา
+3. คลิกแท็บ **Role mapping**
+4. คลิก **Assign role**
+5. ในตัวกรอง ให้เลือก **Filter by realm roles** เพื่อดู realm role หรือ **Filter by clients** แล้วเลือก client ของคุณเพื่อดู client role
+6. ติ๊กช่องข้างแต่ละ role ที่คุณต้องการกำหนด
+7. คลิก **Assign**
+
+role จะมีผลทันทีสำหรับ login session ใหม่ session ที่มีอยู่เดิมจะไม่ถูกอัปเดตย้อนหลังจนกว่า user จะยืนยันตัวตนใหม่หรือ token ของพวกเขาถูก refresh
+
+## role ปรากฏใน token อย่างไร
+
+หลังจาก user ยืนยันตัวตน access token ของพวกเขา (ซึ่งเป็น JWT) จะมี role อยู่ใน claim มาตรฐานสองตัว:
+
+- `realm_access.roles` — array ของ realm-level role ทั้งหมดที่กำหนดให้ user
+- `resource_access.{client-id}.roles` — array ของ client role สำหรับ client เฉพาะตัวนั้น
+
+นี่คือ payload ของ JWT ที่ถอดรหัสแล้วซึ่งแสดงทั้งสองแบบ:
+
+export const decodedTokenCode = `{
+  "sub": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "preferred_username": "alice",
+  "email": "alice@example.com",
+  "realm_access": {
+    "roles": [
+      "app-admin",
+      "offline_access",
+      "uma_authorization"
+    ]
+  },
+  "resource_access": {
+    "my-app-backend": {
+      "roles": [
+        "orders:read",
+        "orders:write"
+      ]
+    },
+    "account": {
+      "roles": [
+        "manage-account",
+        "view-profile"
+      ]
+    }
+  }
+}`;
+
+<CopyCode client:visible code={decodedTokenCode} label="Copy decoded token" />
+
+### การอ่าน role ในแอปพลิเคชันของคุณ
+
+แอปพลิเคชันของคุณควรตรวจสอบ JWT signature โดยใช้ JWKS endpoint ของ realm จากนั้นจึงอ่าน role จาก claim ที่แสดงข้างต้น ไลบรารี OIDC ส่วนใหญ่ (Keycloak adapter, Spring Security, Passport.js ฯลฯ) จะทำสิ่งนี้ให้โดยอัตโนมัติเมื่อตั้งค่าแล้ว คุณไม่ควรเชื่อ token โดยไม่ตรวจสอบ signature เด็ดขาด
+
+ตัวอย่าง: ในแอปพลิเคชัน Node.js ที่ใช้ JWT payload ดิบหลังการตรวจสอบ:
+
+```javascript
+// After jwt.verify() succeeds:
+const realmRoles = token.realm_access?.roles ?? [];
+const clientRoles = token.resource_access?.['my-app-backend']?.roles ?? [];
+
+if (realmRoles.includes('app-admin')) {
+  // grant admin access
+}
+```
+
+## role ที่มีมาในตัวของ Keycloak
+
+ทุก realm และทุก client มาพร้อม role ที่มีในตัวบางส่วนซึ่งคุณจะเห็นใน token:
+
+| Role | ที่อยู่ | จุดประสงค์ |
+|---|---|---|
+| `offline_access` | Realm | อนุญาตให้ขอ offline token (refresh token ที่มีอายุยาว) |
+| `uma_authorization` | Realm | ให้สิทธิ์เข้าถึง UMA authorisation API |
+| `manage-account` | `account` client | ให้ user จัดการบัญชีของตัวเองได้ |
+| `view-profile` | `account` client | ให้ user ดูโปรไฟล์ของตัวเองได้ |
+
+คุณไม่จำเป็นต้องกำหนด `uma_authorization` หรือ `offline_access` ให้ user ด้วยตนเอง; พวกมันถูกให้สิทธิ์โดยค่าเริ่มต้นผ่าน composite role ชื่อ `default-roles-{realm}`
+
+<Callout title="ใช้ composite role เพื่อรวมสิทธิ์เข้าด้วยกัน">
+แทนที่จะกำหนด role แยกกันหลายตัวให้แต่ละ user ให้สร้าง composite role ที่รวมสิทธิ์สำหรับ persona หนึ่ง ๆ ไว้ (เช่น `editor`, `viewer`, `admin`) การกำหนด composite role เพียงตัวเดียวจัดการและตรวจสอบได้ง่ายกว่าการกำหนด role แยกกันสิบตัวต่อ user
+</Callout>
+
+export const quizRoles = [
+  {
+    q: 'ความแตกต่างระหว่าง realm role กับ client role คืออะไร?',
+    options: [
+      'realm role ปรากฏใน token; client role ไม่ปรากฏ',
+      'realm role ถูกกำหนดที่ระดับ realm และใช้ได้กับทุก client; client role จำกัดขอบเขตอยู่ที่ client เฉพาะตัว',
+      'client role กำหนดให้ได้เฉพาะกับ service account เท่านั้น',
+      'ไม่มีความแตกต่างเชิงการทำงาน',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'ใน JWT ที่ถอดรหัสแล้ว claim ใดที่มี realm-level role ของ user?',
+    options: [
+      'resource_access.roles',
+      'roles',
+      'realm_access.roles',
+      'scope',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'composite role คืออะไร?',
+    options: [
+      'role ที่กำหนดให้ได้เฉพาะกับ admin user เท่านั้น',
+      'role ที่ถูกกำหนดทั้งใน realm และใน client พร้อมกัน',
+      'role ที่ให้สิทธิ์ทุก role ที่มันบรรจุอยู่โดยอัตโนมัติ',
+      'role ที่สร้างขึ้นจากการรวมสอง realm เข้าด้วยกัน',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'หากคุณกำหนด role ใหม่ให้ user มันจะมีผลกับ session ที่มีอยู่เดิมเมื่อใด?',
+    options: [
+      'ทันที — token ที่มีอยู่เดิมจะถูกอัปเดตแบบเรียลไทม์',
+      'หลังจาก user ยืนยันตัวตนใหม่หรือ token ของพวกเขาถูก refresh',
+      'หลังจากรีสตาร์ท Keycloak server',
+      'ไม่มีวัน — คุณต้อง revoke แล้วออก session ใหม่ด้วยตนเอง',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="realms-clients-roles/roles" questions={quizRoles} />
+
+<ProgressTracker client:visible id="realms-clients-roles/roles" />

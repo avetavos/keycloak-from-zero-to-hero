@@ -1,0 +1,103 @@
+---
+title: 'Keycloak คืออะไร?'
+description: 'ความสามารถหลักของ Keycloak: SSO, OIDC/OAuth2/SAML, การจัดการผู้ใช้, identity brokering, user federation และ admin console'
+sidebar:
+  order: 2
+---
+
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+Keycloak เป็น open-source IAM server ที่ดูแลโดย Red Hat ทำงานในฐานะ standalone server (Quarkus distribution) และแอปพลิเคชันของคุณ integrate ผ่าน standard protocols แอปของคุณไม่เห็น password เลย — พวกมัน redirect ผู้ใช้ไปยัง Keycloak และรับ signed token กลับมา
+
+## ความสามารถหลัก
+
+### Single Sign-On (SSO)
+
+เมื่อผู้ใช้ authenticate กับ Keycloak แล้ว แอปพลิเคชันอื่นใน realm เดียวกันสามารถรับ token ที่ valid ได้โดยไม่ต้องให้ผู้ใช้ login ซ้ำ session อยู่ที่ Keycloak ไม่ใช่ในแอปของคุณ
+
+### Standard protocols
+
+Keycloak ใช้ OpenID Connect (OIDC) และ OAuth2 เป็น primary protocols นอกจากนี้ยังรองรับ SAML 2.0 สำหรับการ integrate กับระบบ enterprise เดิม แอปพลิเคชันที่ compliant ทุกตัว ไม่ว่าจะเป็นภาษาหรือ framework ใดก็ตาม สามารถ integrate ได้โดยไม่ต้องเขียน auth code เอง
+
+### การจัดการผู้ใช้
+
+admin console และ REST API ช่วยให้คุณสร้าง, อัปเดต, ปิดใช้งาน และค้นหาผู้ใช้ได้ ผู้ใช้สามารถ reset password, ยืนยัน email, ตั้งค่า TOTP และจัดการ session ได้ทั้งหมดผ่าน Keycloak ไม่ใช่ผ่านแอปของคุณ
+
+### Identity brokering และ social login
+
+Keycloak สามารถ delegate authentication ไปยัง identity provider ภายนอกได้ ไม่ว่าจะเป็น Google, GitHub, Microsoft, Facebook หรือ IdP ที่ compatible กับ OIDC/SAML ผู้ใช้กดปุ่ม "Sign in with Google" บนหน้า login ของ realm คุณ แล้ว Keycloak จะจัดการ federation ให้
+
+### User federation
+
+หากองค์กรของคุณมีผู้ใช้อยู่ใน LDAP หรือ Active Directory แล้ว Keycloak สามารถเชื่อมต่อโดยตรงได้ ผู้ใช้ authenticate กับ directory ที่มีอยู่ของพวกเขา และ Keycloak จะ synchronise attributes และจัดการ session
+
+### Admin console และ REST API
+
+ทุก operation ที่ทำได้ใน admin console ก็สามารถทำได้ผ่าน REST API เช่นกัน คุณสามารถ automate การตั้งค่า realm, การลงทะเบียน client และการสร้างผู้ใช้ได้ด้วย API หรือ Keycloak Terraform provider
+
+## ตำแหน่งของ Keycloak ในสถาปัตยกรรม
+
+Keycloak อยู่ระหว่างผู้ใช้กับแอปพลิเคชันของคุณ ผู้ใช้ authenticate ครั้งเดียวกับ Keycloak และรับ signed token มา แอปของคุณ validate token เหล่านั้นในเครื่องโดยไม่ต้องเรียก Keycloak ทุก request
+
+```
+Users
+  │
+  ▼
+Keycloak (auth server)
+  │   issues signed tokens
+  ▼
+Your Apps
+```
+
+<Callout title="ประเด็นสำคัญ">
+Keycloak รองรับ OIDC/OAuth2 และ SAML — แอปพลิเคชันที่ compliant ทุกตัวสามารถ integrate ได้โดยไม่ต้องเขียน auth code เอง
+</Callout>
+
+export const quizWhatIs = [
+  {
+    q: 'SSO ในบริบทของ Keycloak หมายความว่าอย่างไร?',
+    options: [
+      'แต่ละแอปมีหน้า login ของตัวเอง',
+      'เมื่อ authenticate แล้ว ผู้ใช้เข้าถึงหลาย app ได้โดยไม่ต้อง login ซ้ำ',
+      'ผู้ใช้ใช้ password เดียวกันสำหรับทุก app',
+      'Keycloak เก็บ password ให้ทุก app',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'ระบบ directory ใดที่ Keycloak สามารถ federate ได้?',
+    options: [
+      'MySQL และ PostgreSQL',
+      'Redis และ Memcached',
+      'LDAP และ Active Directory',
+      'S3 และ GCS',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Identity brokering คืออะไร?',
+    options: [
+      'การเก็บ password ในที่เข้ารหัส',
+      'การ delegate authentication ไปยัง identity provider ภายนอกเช่น Google หรือ GitHub',
+      'การ sync ผู้ใช้ระหว่าง Keycloak realm สองอัน',
+      'การสร้าง machine-to-machine token',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Keycloak distribution ใดที่แนะนำสำหรับการ deploy สมัยใหม่?',
+    options: [
+      'WildFly distribution',
+      'Quarkus distribution',
+      'Tomcat distribution',
+      'Spring Boot embedded distribution',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="intro-setup/what-is-keycloak" questions={quizWhatIs} />
+
+<ProgressTracker client:visible id="intro-setup/what-is-keycloak" />

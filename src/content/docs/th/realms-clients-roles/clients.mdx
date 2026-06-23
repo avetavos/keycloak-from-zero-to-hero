@@ -1,0 +1,138 @@
+---
+title: Clients
+description: 'เรียนรู้ว่า Keycloak client คืออะไร ลงทะเบียนได้อย่างไร และการตั้งค่าสำคัญที่ควบคุมวิธีที่แอปพลิเคชันของคุณโต้ตอบกับ Keycloak'
+sidebar:
+  order: 3
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## client คืออะไร?
+
+**client** คือแอปพลิเคชันใด ๆ ที่มอบหมายงานการยืนยันตัวตน (authentication) และการให้สิทธิ์ (authorisation) ให้ Keycloak จัดการ เมื่อ user ต้องการ sign in เข้าแอปของคุณ แอปของคุณจะ redirect พวกเขาไปยัง Keycloak Keycloak จะยืนยันตัวตน user แล้ว redirect กลับมายังแอปของคุณพร้อมกับ code หรือ token การ redirect ไปมาแบบนี้คือ Authorization Code flow ของ OAuth2 / OIDC และ "client" ก็คือฝ่ายที่แอปของคุณลงทะเบียนตัวเองเอาไว้
+
+ตัวอย่างของ client:
+
+- React SPA ที่เรียก REST API แทน user ที่ log in อยู่
+- แอปพลิเคชันเว็บ Spring Boot ที่แสดง dashboard หลัง login
+- mobile app ที่ให้ user จัดการบัญชีของตัวเอง
+- backend microservice ที่เรียก service อื่นโดยใช้ token แบบ machine-to-machine
+
+client ทุกตัวอยู่ภายใน realm หนึ่งเดียวเท่านั้น หากคุณมีแอปพลิเคชันที่ต่างกันสองตัว ให้ลงทะเบียน client สองตัว — แม้ว่าพวกมันจะใช้ user ร่วมกันก็ตาม
+
+## การสร้าง client
+
+1. ใน admin console ตรวจสอบให้แน่ใจว่าคุณอยู่ใน realm ที่ถูกต้อง (เช็กที่ drop-down มุมบนซ้าย)
+2. คลิก **Clients** ในแถบด้านซ้าย
+3. คลิก **Create client** (มุมบนขวาของรายการ client)
+4. ที่ขั้นตอน **General Settings**:
+   - **Client type** — ปล่อยไว้เป็น **OpenID Connect** (มาตรฐานสมัยใหม่; ใช้ SAML เฉพาะเมื่อระบบ legacy บังคับให้ใช้เท่านั้น)
+   - **Client ID** — ใส่ identifier ที่สั้น เป็นตัวพิมพ์เล็ก และคั่นด้วยขีดกลาง (เช่น `my-app-frontend`) นี่คือ `client_id` ที่แอปพลิเคชันของคุณส่งไปในคำขอ token
+   - **Name** — display name ที่อ่านง่ายสำหรับคนทั่วไป (ไม่บังคับ) ที่แสดงใน admin console
+   - **Description** — บันทึกข้อความอิสระ (ไม่บังคับ)
+   - คลิก **Next**
+5. ที่ขั้นตอน **Capability config**:
+   - **Client authentication** — ปล่อยไว้เป็น **Off** สำหรับ public client (SPA, mobile); เปิดเป็น **On** สำหรับ confidential client (แอปฝั่ง server) ดูรายละเอียดในบทเรียน [Client Types](./client-types)
+   - **Authorization** — ปล่อยไว้เป็น **Off** เว้นแต่คุณต้องใช้ authorisation policy แบบละเอียดของ Keycloak
+   - คลิก **Next**
+6. ที่ขั้นตอน **Login settings** — นี่คือจุดที่การตั้งค่า redirect ซึ่งสำคัญต่อความปลอดภัยอยู่:
+   - **Root URL** — base URL ของแอปพลิเคชันของคุณ (เช่น `http://localhost:3000`) Keycloak จะนำมาต่อหน้า URI แบบ relative
+   - **Valid redirect URIs** — URI ที่แน่นอนซึ่ง Keycloak ได้รับอนุญาตให้ redirect กลับไปหลัง login ใส่อย่างน้อยหนึ่งรายการ (เช่น `http://localhost:3000/*`) อนุญาตให้ใช้ wildcard ได้ แต่ควรเจาะจงให้มากที่สุดเท่าที่จะทำได้ใน production
+   - **Valid post logout redirect URIs** — URI ที่อนุญาตหลัง logout ใส่ `+` เพื่อใช้รายการเดียวกับ valid redirect URIs ซ้ำ หรือระบุอย่างชัดเจน
+   - **Web origins** — origin ที่อนุญาตให้ส่งคำขอแบบ cross-origin (CORS) ใส่ `+` เพื่อให้มาจาก valid redirect URIs หรือระบุเป็นรายการอย่างชัดเจน (เช่น `http://localhost:3000`)
+   - คลิก **Save**
+
+ตอนนี้ client ของคุณลงทะเบียนเรียบร้อยแล้ว คุณจะไปอยู่ที่แท็บ **Settings** ของ client
+
+## รายการ client
+
+หน้า **Clients** (แถบด้านซ้าย) จะแสดง client ทุกตัวที่ลงทะเบียนอยู่ใน realm ของคุณ รายการประกอบด้วย:
+
+- **Client ID** — identifier ที่แอปของคุณใช้
+- **Enabled** — client ทำงานอยู่หรือไม่
+- **Type** — OpenID Connect หรือ SAML
+- **Description** — บันทึกของคุณ (ไม่บังคับ)
+
+คลิกที่ client ID ใดก็ได้เพื่อเปิดการตั้งค่าและแท็บต่าง ๆ ของมัน (Settings, Credentials, Roles, Client scopes, Advanced ฯลฯ)
+
+## การตั้งค่าสำคัญหลังจากสร้าง
+
+### Valid redirect URIs
+
+หลังจาก user ยืนยันตัวตน Keycloak จะ redirect พวกเขากลับไปยัง URI ตัวใดตัวหนึ่งในรายการนี้ หาก redirect URI ในคำขอไม่ตรงกับรายการใดเลย Keycloak จะปฏิเสธคำขอด้วย error นี่คือการควบคุมด้านความปลอดภัยที่สำคัญ: มันป้องกันการโจมตีแบบ authorisation-code interception ที่ผู้โจมตีหลอก Keycloak ให้ redirect code ไปยังเว็บไซต์ที่พวกเขาควบคุมอยู่
+
+ให้ redirect URI เจาะจงมากที่สุดเท่าที่จะทำได้ ในระหว่างพัฒนา `http://localhost:3000/*` ถือว่ายอมรับได้ แต่ใน production ให้ระบุเฉพาะ callback path ที่แน่นอนเท่านั้น:
+
+```
+https://app.example.com/auth/callback
+```
+
+### Web origins
+
+รายการ Web origins ควบคุมว่า origin ใดบ้างที่ browser อนุญาตให้เรียก Keycloak token endpoint โดยตรง (สำหรับ CORS preflight) หาก SPA ของคุณรันอยู่ที่ `https://app.example.com` และเรียก `https://auth.example.com/realms/my-app/protocol/openid-connect/token` origin นั้นต้องอยู่ในรายการนี้
+
+การตั้งค่า Web origins เป็น `+` คือทางลัดที่สะดวก ซึ่งบอก Keycloak ให้อนุญาตทุก origin ที่ปรากฏในรายการ Valid redirect URIs ของคุณ
+
+### curl เพื่อตรวจสอบ OIDC discovery document ของ client คุณ
+
+ทุก realm จะเปิดเผย OpenID Connect discovery document คุณสามารถใช้มันเพื่อตรวจสอบ issuer, token endpoint และ JWKS URI ของ client คุณได้:
+
+export const discoveryCode = `curl https://localhost:8080/realms/my-app/.well-known/openid-configuration | jq .`;
+
+<CopyCode client:visible code={discoveryCode} label="Copy curl" />
+
+แทนที่ `my-app` ด้วยชื่อ realm ของคุณ ส่วน `jq .` จะ pretty-print JSON response ออกมา
+
+<Callout title="redirect URI คือการควบคุมด้านความปลอดภัย">
+เฉพาะ URI ที่อยู่ในรายการ Valid redirect URIs เท่านั้นที่สามารถรับ token หลัง login ได้ wildcard อย่าง `*` จะรับ redirect ใด ๆ ก็ได้ — รวมถึง server ของผู้โจมตีด้วย ให้ redirect URI เจาะจงมากที่สุดเท่าที่จะทำได้ โดยเฉพาะใน production
+</Callout>
+
+export const quizClients = [
+  {
+    q: 'Keycloak client คืออะไร?',
+    options: [
+      'บัญชี user ใน realm',
+      'แอปพลิเคชันที่ลงทะเบียนไว้เพื่อใช้ Keycloak สำหรับการยืนยันตัวตน',
+      'ผู้ดูแลระบบ (administrator) ของ Keycloak',
+      'role ที่ระดับ realm',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'ทำไม Valid redirect URIs จึงเป็นการควบคุมด้านความปลอดภัย?',
+    options: [
+      'มันเข้ารหัส authorization code',
+      'มันจำกัดว่า Keycloak จะ redirect ไปยัง URI ใดได้บ้างหลัง login เพื่อป้องกันการโจมตีแบบ code interception',
+      'มันกำหนดว่า user ใดสามารถ log in เข้า client ได้',
+      'มันควบคุมอายุของ token',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'การตั้งค่า Web origins เป็น "+" หมายความว่าอย่างไร?',
+    options: [
+      'อนุญาตทุก origin ทั่วทั้งระบบ',
+      'อนุญาตเฉพาะ origin ที่เป็น localhost',
+      'นำ origin ที่อนุญาตมาจากรายการ Valid redirect URIs',
+      'ปิดใช้งาน CORS ทั้งหมด',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'เมื่อสร้าง client ขั้นตอนใดที่ให้คุณตั้งค่า Valid redirect URIs?',
+    options: [
+      'General Settings',
+      'Capability config',
+      'Login settings',
+      'Advanced',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="realms-clients-roles/clients" questions={quizClients} />
+
+<ProgressTracker client:visible id="realms-clients-roles/clients" />

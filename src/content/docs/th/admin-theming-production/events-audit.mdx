@@ -1,0 +1,127 @@
+---
+title: Events & Audit
+description: 'เรียนรู้วิธีเปิดใช้งาน login event และ admin event ของ Keycloak, ตั้งค่าอายุ event, ดู event ใน admin console และขยายด้วย event listener'
+sidebar:
+  order: 4
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Event สองประเภท
+
+Keycloak บันทึก event สองหมวดหมู่ที่แตกต่างกัน:
+
+- **Login event** — การกระทำที่ดำเนินการโดย end-user: การ login สำเร็จ, การพยายาม login ที่ล้มเหลว, การ refresh token, การ logout, การรีเซ็ตรหัสผ่าน และอื่นๆ สิ่งเหล่านี้เก็บไว้ต่อ realm และเป็น audit trail หลักสำหรับกิจกรรมของผู้ใช้
+- **Admin event** — การกระทำที่ดำเนินการโดย administrator ใน admin console หรือผ่าน Admin REST API: การสร้าง realm, การลงทะเบียน client, การอัปเดตผู้ใช้, การกำหนด role และอื่นๆ
+
+ทั้งสองประเภทถูกปิดใช้งานโดยค่าเริ่มต้น คุณต้องเปิดใช้งานอย่างชัดเจน
+
+## การเปิดใช้งาน event ใน admin console
+
+### เปิดใช้งาน login event
+
+1. เปิด admin console และเลือก realm ของคุณ
+2. คลิก **Realm settings** ใน sidebar ซ้าย
+3. คลิกแท็บ **Events**
+4. ใต้ **User events settings** สลับ **Save events** เป็น **On**
+5. ตั้งค่า **Expiration** (เช่น `7` วัน) เพื่อป้องกันการเติบโตอย่างไม่จำกัดใน database
+6. หรือขยาย **Saved types** เพื่อจำกัดว่าจะเก็บ event type ใดบ้าง
+7. คลิก **Save**
+
+### เปิดใช้งาน admin event
+
+1. บนแท็บ **Events** เดียวกัน เลื่อนลงไปที่ **Admin events settings**
+2. สลับ **Save events** เป็น **On**
+3. หรือเปิดใช้ **Include representation** เพื่อเก็บ JSON payload เต็มรูปแบบของแต่ละการเปลี่ยนแปลง (มีประโยชน์สำหรับ audit โดยละเอียด แต่เพิ่มการใช้งาน storage)
+4. คลิก **Save**
+
+## การดู event
+
+หลังจากเปิดใช้งาน event แล้ว จะสะสมแบบ real time
+
+**Login event:** ใน sidebar ซ้าย คลิก **Events** แท็บ **User events** แสดงรายการ login event แบบแบ่งหน้า พร้อม timestamp, ผู้ใช้, IP address และ event type ใช้ search filter เพื่อกรองตาม event type (เช่น `LOGIN_ERROR`) หรือช่วงวันที่
+
+**Admin event:** คลิกแท็บ **Admin events** แต่ละรายการแสดง operation type (CREATE, UPDATE, DELETE), resource type (เช่น `USER`, `CLIENT`) และ representation ก่อน/หลังตามต้องการ
+
+## การ query event ผ่าน Admin REST API
+
+คุณยังสามารถ fetch event แบบ programmatic:
+
+export const loginEventsCode = `curl -s "https://localhost:8080/admin/realms/my-app/events?type=LOGIN_ERROR&max=20" \\
+  -H "Authorization: Bearer \${TOKEN}" \\
+  | jq .`;
+
+<CopyCode client:visible code={loginEventsCode} label="Copy curl" />
+
+แทนที่ `my-app` ด้วยชื่อ realm และ `\${TOKEN}` ด้วย admin token ที่ valid
+
+## Event listener
+
+นอกจากการเก็บ event ใน database แล้ว Keycloak ยังรองรับ **event listener** — plugin ที่ตอบสนองต่อ event แบบ real time event listener ที่มีมาให้สองตัวที่มีประโยชน์ทันที:
+
+| Listener | สิ่งที่ทำ |
+|---|---|
+| `jboss-logging` | Log event ไปยัง Keycloak server log (เปิดใช้งานโดยค่าเริ่มต้น) |
+| `email` | ส่ง email ไปยังผู้ใช้เมื่อเกิด event เช่น `LOGIN_ERROR` |
+
+วิธีเปิดใช้งาน listener:
+
+1. ไปที่ **Realm settings > Events > Event listeners**
+2. เพิ่มชื่อ listener จาก drop-down
+3. คลิก **Save**
+
+สำหรับ integration แบบกำหนดเอง (เช่น การส่ง event ไปยัง webhook หรือ message queue) คุณสามารถ implement Keycloak SPI (`EventListenerProvider`) และ deploy เป็น provider JAR
+
+<Callout title="เปิดใช้งาน event ก่อนเกิดเหตุ ไม่ใช่หลัง">
+เปิดใช้งาน login event และ admin event ก่อน go live — มันคือ audit trail ของคุณ การเปิดใช้งานหลังเกิดเหตุหมายความว่าคุณสูญเสียข้อมูลที่ต้องการสำหรับการสืบสวนไปแล้ว ตั้งค่าอายุที่เหมาะสม (7–30 วัน) เพื่อควบคุม storage
+</Callout>
+
+export const quizEvents = [
+  {
+    q: 'What is the difference between login events and admin events in Keycloak?',
+    options: [
+      'Login events are for admins; admin events are for end-users',
+      'Login events record end-user actions; admin events record administrator actions',
+      'There is no difference — they are stored in the same log',
+      'Login events are permanent; admin events expire automatically',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Where in the admin console do you enable event storage?',
+    options: [
+      'Clients > Sessions',
+      'Realm settings > Events',
+      'Users > Attributes',
+      'Authentication > Flows',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What does enabling "Include representation" for admin events do?',
+    options: [
+      'It shows the UI screenshots of each admin action',
+      'It stores the full JSON payload of each admin change for detailed auditing',
+      'It sends admin events to an external webhook automatically',
+      'It enables GDPR anonymisation of event data',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which built-in event listener sends an email to the user on login errors?',
+    options: [
+      'jboss-logging',
+      'webhook',
+      'email',
+      'syslog',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="admin-theming-production/events-audit" questions={quizEvents} />
+
+<ProgressTracker client:visible id="admin-theming-production/events-audit" />

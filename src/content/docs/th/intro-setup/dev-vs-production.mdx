@@ -1,0 +1,108 @@
+---
+title: 'Dev vs Production Mode'
+description: 'เข้าใจความแตกต่างระหว่าง start-dev กับ start, กำหนดค่า KC_DB, KC_HOSTNAME และ KC_PROXY และดูคำสั่ง production-mode เบื้องต้น'
+sidebar:
+  order: 5
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+Keycloak มีสองโหมดการเริ่มต้น: `start-dev` สำหรับ development และ `start` สำหรับ production ทั้งสองใช้แทนกันไม่ได้ — `start-dev` มีการประนีประนอมหลายอย่างที่ไม่ปลอดภัยสำหรับสภาพแวดล้อมจริง การเข้าใจความแตกต่างนี้สำคัญก่อนที่คุณจะก้าวข้ามการเรียนรู้บน local
+
+## start-dev: development mode
+
+`start-dev` ถูกออกแบบมาเพื่อให้เริ่มต้นได้รวดเร็ว โดยใช้ embedded H2 in-memory database (ข้อมูลจะหายเมื่อ restart), เปิดใช้ HTTP (ไม่มี TLS), ปิดการตรวจสอบ hostname และผ่อนปรน security checks หลายอย่าง ใช้โหมดนี้เฉพาะบน localhost ตอนเรียนรู้ Keycloak เท่านั้น
+
+```bash
+docker run --name keycloak -p 8080:8080 \
+  -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \
+  -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin \
+  quay.io/keycloak/keycloak:latest start-dev
+```
+
+## start: production mode
+
+`start` คือคำสั่งสำหรับ production ซึ่งต้องการ external database, hostname ที่แน่นอน และ HTTPS (หรือ reverse proxy ที่กำหนดค่าไว้) Keycloak จะปฏิเสธการ start ใน production mode หากไม่มีการกำหนดค่า hostname และ TLS ที่ถูกต้อง environment variable ที่สำคัญมีดังนี้:
+
+| Environment variable | Purpose | Example |
+|---|---|---|
+| `KC_DB` | vendor ของ database | `postgres` |
+| `KC_DB_URL` | JDBC connection URL | `jdbc:postgresql://db:5432/keycloak` |
+| `KC_DB_USERNAME` | ชื่อผู้ใช้ DB | `keycloak` |
+| `KC_DB_PASSWORD` | รหัสผ่าน DB | `changeme` |
+| `KC_HOSTNAME` | hostname สาธารณะของ Keycloak | `auth.example.com` |
+| `KC_PROXY_HEADERS` | ไว้วางใจ proxy headers (`xforwarded` หรือ `forwarded`) | `xforwarded` |
+| `KC_HTTP_ENABLED` | อนุญาต HTTP (จำเป็นเมื่อ proxy ทำ TLS termination) | `true` |
+
+export const productionStartCode = `docker run --name keycloak -p 8080:8080 \\\n  -e KC_DB=postgres \\\n  -e KC_DB_URL=jdbc:postgresql://db:5432/keycloak \\\n  -e KC_DB_USERNAME=keycloak \\\n  -e KC_DB_PASSWORD=changeme \\\n  -e KC_HOSTNAME=auth.example.com \\\n  -e KC_PROXY_HEADERS=xforwarded \\\n  -e KC_HTTP_ENABLED=true \\\n  quay.io/keycloak/keycloak:latest start`;
+
+<CopyCode client:visible code={productionStartCode} label="Copy production start" />
+
+## Optimized build
+
+สำหรับ production Keycloak แนะนำให้รัน `kc.sh build` (หรือ `kc.bat build`) ภายใน image ก่อนที่จะ start ซึ่งจะ pre-process configuration และลดเวลา startup ลงอย่างมาก Dockerfile สำหรับ production โดยทั่วไปใช้ two-stage build: stage หนึ่งรัน `kc.sh build` และอีก stage คัดลอก distribution ที่ build แล้วมารัน `kc.sh start`
+
+```bash
+# Stage 1: build
+FROM quay.io/keycloak/keycloak:latest AS builder
+RUN /opt/keycloak/bin/kc.sh build --db=postgres
+
+# Stage 2: run
+FROM quay.io/keycloak/keycloak:latest
+COPY --from=builder /opt/keycloak/ /opt/keycloak/
+ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start"]
+```
+
+<Callout title="ห้ามรัน start-dev ใน production">
+production ต้องการ external database, hostname ที่แน่นอน และ HTTPS — ห้ามรัน `start-dev` ใน production เด็ดขาด เพราะใช้ in-memory database, ข้าม hostname check และปิด security features ข้อมูลจะหายไปทุกครั้งที่ container restart
+</Callout>
+
+export const quizDevProd = [
+  {
+    q: 'start-dev ใช้ database อะไร?',
+    options: [
+      'PostgreSQL',
+      'MySQL',
+      'embedded H2 in-memory database',
+      'MongoDB',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'environment variable ใดที่กำหนด public hostname ใน production mode?',
+    options: [
+      'KC_ADMIN_HOSTNAME',
+      'KC_SERVER_NAME',
+      'KC_HOSTNAME',
+      'KC_PUBLIC_HOST',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'จุดประสงค์ของการรัน kc.sh build ก่อน kc.sh start ใน production คืออะไร?',
+    options: [
+      'สร้าง admin user',
+      'pre-process configuration เพื่อลดเวลา startup',
+      'migrate database schema',
+      'สร้าง TLS certificates',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'ควรใช้ค่า KC_PROXY_HEADERS ใดเมื่อ Keycloak อยู่หลัง Nginx หรือ load balancer ที่ set X-Forwarded-* headers?',
+    options: [
+      'none',
+      'forwarded',
+      'xforwarded',
+      'trusted',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="intro-setup/dev-vs-production" questions={quizDevProd} />
+
+<ProgressTracker client:visible id="intro-setup/dev-vs-production" />

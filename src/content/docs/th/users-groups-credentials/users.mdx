@@ -1,0 +1,139 @@
+---
+title: Users
+description: 'เรียนรู้วิธีสร้างและจัดการ user ใน Keycloak — รวมถึง attribute, การยืนยันอีเมล, การเปิดและปิดการใช้งานบัญชี, และการ query user ผ่าน Admin REST API'
+sidebar:
+  order: 2
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## User คืออะไร?
+
+**user** ใน Keycloak คือ record ของ identity ที่จัดเก็บอยู่ภายใน realm หนึ่ง มันเก็บรายละเอียดบัญชี — username, อีเมล, ชื่อ, และ attribute แบบกำหนดเองใด ๆ — พร้อมกับ credential และสถานะวงจรชีวิตของบัญชี
+
+user มีขอบเขตอยู่ภายใน realm (realm-scoped) user ที่สร้างใน realm `my-app` จะไม่มีอยู่ใน realm อื่นโดยอัตโนมัติ ขอบเขตนี้เป็นความตั้งใจ: แต่ละ realm เป็นโดเมน identity อิสระ และการแชร์ user ข้าม realm ต้องใช้ federation ไม่ใช่แค่การนำกลับมาใช้ใหม่อย่างง่าย
+
+คุณสามารถจัดการ user ได้ผ่าน Keycloak admin console, ผ่าน Admin REST API, หรือโดยการ federate ไดเรกทอรีภายนอก (LDAP, Active Directory) บทเรียนนี้จะโฟกัสที่ console และ REST API
+
+## การสร้าง user
+
+1. เปิด Keycloak admin console แล้วเลือก realm ที่ถูกต้องจาก drop-down ที่มุมซ้ายบน
+2. คลิก **Users** ในแถบด้านซ้าย
+3. คลิก **Add user** (มุมขวาบนของรายการ user)
+4. กรอกรายละเอียดของ user:
+   - **Username** — จำเป็น; ต้องไม่ซ้ำกันภายใน realm ใช้ตัวพิมพ์เล็กและหลีกเลี่ยงการเว้นวรรค (เช่น `jane.doe`)
+   - **Email** — เป็นทางเลือกแต่แนะนำอย่างยิ่ง; จำเป็นหากคุณวางแผนจะใช้ flow ที่อิงอีเมล เช่น การรีเซ็ต password
+   - **First name** และ **Last name** — ฟิลด์แสดงผลที่เป็นทางเลือก
+   - **Email verified** — เปิดสวิตช์นี้ **On** หากคุณกำลังสร้างบัญชีในนามของ user ที่รู้จักและเชื่อถือได้ และไม่ต้องการให้ Keycloak ส่งอีเมลยืนยัน ปล่อยไว้ **Off** เพื่อบังคับให้ยืนยันอีเมลในการล็อกอินครั้งแรก
+5. คลิก **Create**
+
+Keycloak จะสร้าง user และเปิดหน้ารายละเอียดของพวกเขา บัญชียังไม่มี password เลย — คุณจะตั้ง credential จากแท็บ **Credentials**
+
+## รายการ user และการค้นหา
+
+หน้า **Users** แสดงรายการ user ทั้งหมดใน realm แบบแบ่งหน้า (paginated) ใช้แถบค้นหาด้านบนเพื่อค้นหา user ตาม:
+
+- **Username** — รองรับการจับคู่บางส่วน (เช่น การค้นหา `jane` จะคืนค่า `jane.doe` และ `jane.smith`)
+- **Email** — จับคู่แบบตรงทั้งหมดหรือบางส่วน
+- **First name** หรือ **Last name**
+
+คลิก username เพื่อเปิดมุมมองรายละเอียดของ user พร้อมแท็บต่าง ๆ: Details, Attributes, Credentials, Role mappings, Groups, Consents, Sessions, และ Admin events
+
+## User attribute
+
+Attribute คือคู่ key-value ที่กำหนดได้อิสระซึ่งแนบไว้กับ user มันมีประโยชน์สำหรับการจัดเก็บ metadata เฉพาะแอปพลิเคชัน — ตัวอย่างเช่น รหัสแผนก, customer ID, หรือ locale ที่ต้องการ — โดยไม่ต้องแก้ไข data model ของ Keycloak
+
+วิธีเพิ่ม attribute:
+
+1. เปิดหน้ารายละเอียดของ user แล้วคลิกแท็บ **Attributes**
+2. คลิก **Add attribute**
+3. ใส่ **Key** (เช่น `department`) และ **Value** (เช่น `engineering`)
+4. คลิก **Save**
+
+Attribute จะถูกคืนค่าใน claim `attributes` ของ token ของ user หากคุณ map มันไปยัง client scope โดยใช้ User Attribute mapper หากไม่มี mapper, attribute จะยังคงอยู่ฝั่ง server เท่านั้น
+
+## การเปิดและปิดการใช้งาน user
+
+user ทุกคนมีสวิตช์ **Enabled** บนแท็บ **Details** ของพวกเขา เมื่อ user ถูกปิดการใช้งาน:
+
+- session ที่ใช้งานอยู่จะถูกยุติ
+- user ไม่สามารถเริ่มการล็อกอินใหม่ได้ ไม่ว่า credential จะถูกต้องหรือไม่
+- record ของบัญชีจะถูกเก็บรักษาไว้ — คุณสามารถเปิดการใช้งาน user กลับได้ทุกเมื่อ
+
+สิ่งนี้มีประโยชน์สำหรับการล็อกบัญชีชั่วคราวโดยไม่ลบมัน หากต้องการเปลี่ยนสถานะ ให้เปิดหน้ารายละเอียดของ user, สลับ **Enabled** เปิดหรือปิด, แล้วคลิก **Save**
+
+## การ query user ผ่าน Admin REST API
+
+Admin REST API ช่วยให้คุณ list, ค้นหา, และจัดการ user ได้แบบ programmatic ก่อนเรียก API ให้ขอ token ของ service-account หรือ admin ที่มี realm role `manage-users` หรือ `view-users`
+
+export const listUsersCode = `curl -s -H "Authorization: Bearer \${TOKEN}" http://localhost:8080/admin/realms/my-app/users | jq .`;
+
+<CopyCode client:visible code={listUsersCode} label="Copy curl" />
+
+แทนที่ `my-app` ด้วยชื่อ realm ของคุณ และ `TOKEN` ด้วย bearer token ที่ถูกต้อง การตอบกลับคือ JSON array ที่แต่ละ element เป็น object ของ user ซึ่งมี `id`, `username`, `email`, `firstName`, `lastName`, `enabled`, `emailVerified`, และ `attributes`
+
+คุณสามารถเพิ่ม query parameter เพื่อกรองผลลัพธ์ได้:
+
+```bash
+# Search by email (partial match)
+curl -s -H "Authorization: Bearer ${TOKEN}" \
+  "http://localhost:8080/admin/realms/my-app/users?email=jane" | jq .
+
+# Paginate: skip first 20, return next 10
+curl -s -H "Authorization: Bearer ${TOKEN}" \
+  "http://localhost:8080/admin/realms/my-app/users?first=20&max=10" | jq .
+```
+
+<Callout title="การยืนยันอีเมลมีความสำคัญ">
+ตั้ง **Email verified** ให้กับ user เมื่อคุณสร้างบัญชี หรือกำหนด required action `verify-email` — user ที่ยังไม่ได้ยืนยันอาจเป็นช่องโหว่ด้านความปลอดภัย หากอีเมลของ user ยังไม่ได้รับการยืนยัน ผู้โจมตีที่เข้าถึงที่อยู่อีเมลนั้นได้อาจรับลิงก์รีเซ็ต password ที่ตั้งใจจะส่งไปยังอีกบัญชีหนึ่ง
+</Callout>
+
+export const quizUsers = [
+  {
+    q: 'ฟิลด์ใดที่จำเป็นต้องกรอกเมื่อสร้าง user ใน Keycloak?',
+    options: [
+      'Email',
+      'First name',
+      'Username',
+      'Last name',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'user attribute ใน Keycloak คืออะไร?',
+    options: [
+      'ฟิลด์ในตัวอย่าง username และ email ที่ไม่สามารถเปลี่ยนแปลงได้',
+      'คู่ key-value ที่กำหนดได้อิสระสำหรับจัดเก็บ metadata แบบกำหนดเองบน user',
+      'role ที่กำหนดให้กับ user โดยตรง',
+      'required action ที่ user ต้องทำให้เสร็จในการล็อกอินครั้งถัดไป',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'เกิดอะไรขึ้นเมื่อคุณปิดการใช้งาน user ใน Keycloak?',
+    options: [
+      'record ของ user จะถูกลบอย่างถาวร',
+      'user ยังคงล็อกอินได้แต่ไม่สามารถเข้าถึง protected resource',
+      'session ที่ใช้งานอยู่จะถูกยุติและ user ไม่สามารถเริ่มการล็อกอินใหม่ได้',
+      'เฉพาะการล็อกอินในอนาคตเท่านั้นที่ถูกบล็อก; session ที่ใช้งานอยู่จะดำเนินต่อไปจนกว่าจะหมดอายุ',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'เหตุใดการปล่อย "Email verified" ไว้เป็นปิดจึงสำคัญต่อความปลอดภัย?',
+    options: [
+      'user ที่ยังไม่ได้ยืนยันจะไม่สามารถถูกกำหนด role ได้',
+      'ผู้โจมตีที่ควบคุมที่อยู่อีเมลอาจรับลิงก์รีเซ็ต password สำหรับบัญชีนั้นได้',
+      'Keycloak จะไม่จัดเก็บ record ของ user จนกว่าอีเมลจะได้รับการยืนยัน',
+      'user ไม่สามารถตั้ง password ได้จนกว่าอีเมลของพวกเขาจะได้รับการยืนยัน',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="users-groups-credentials/users" questions={quizUsers} />
+
+<ProgressTracker client:visible id="users-groups-credentials/users" />

@@ -1,0 +1,124 @@
+---
+title: Identity Brokering
+description: 'Broker authentication with any OIDC or SAML identity provider, and configure the first-login flow to control how brokered users are linked or created.'
+sidebar:
+  order: 3
+---
+
+import Callout from '../../../../components/Callout.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## What is identity brokering?
+
+**Identity brokering** is the general pattern of which social login is just one example. Any time Keycloak redirects a user to an external identity provider and accepts the result, it is acting as a broker. The external provider can be:
+
+- A **social provider** (Google, GitHub, Apple — covered in the previous lesson).
+- Another **Keycloak** realm (org-to-org or environment-to-environment SSO).
+- Any **OIDC-compliant** provider (Azure AD, Okta, Auth0, Ping Identity, etc.).
+- A **SAML 2.0** service (legacy enterprise IdPs, ADFS, etc.).
+
+From your application's perspective, nothing changes — it still gets a Keycloak-issued token. Only Keycloak knows that the authentication was delegated.
+
+## Adding an OIDC identity provider
+
+1. In the admin console, navigate to **Identity providers** in the left sidebar.
+2. Click **Add provider** and select **OpenID Connect v1.0**.
+3. Set the **Alias** — a short identifier used in the broker endpoint URI (e.g., `corporate-idp`).
+4. Set the **Display name** — shown on the login page button (e.g., "Log in with Corporate SSO").
+5. In **Discovery endpoint**, paste the `/.well-known/openid-configuration` URL of the remote IdP. Keycloak will auto-populate the token, authorisation, and JWKS endpoints.
+6. Paste the **Client ID** and **Client secret** issued by the remote IdP (you registered Keycloak's broker endpoint with that IdP just as you would for social login).
+7. Click **Save**.
+
+The broker endpoint to register with the remote IdP is:
+
+export const oidcBrokerEndpointCode = `https://<keycloak-host>/realms/<realm>/broker/<alias>/endpoint`;
+
+<CopyCode client:visible code={oidcBrokerEndpointCode} label="Copy broker endpoint" />
+
+## Adding a SAML 2.0 identity provider
+
+1. Click **Add provider** and select **SAML v2.0**.
+2. Set the **Alias** and **Display name**.
+3. Paste the **Service provider entity ID** (the SAML entity ID that Keycloak will use when sending AuthnRequests — Keycloak pre-fills a default).
+4. Paste the remote IdP's **SAML entity descriptor URL** (the XML metadata URL) into **Import from URL**, then click **Import**. Keycloak auto-populates the SSO URL, SLO URL, and signing certificate.
+5. Click **Save**.
+
+## The first broker login flow
+
+The first time a user authenticates through a brokered IdP, Keycloak needs to decide what to do with that external identity. Should it:
+
+- **Create a new user** in the realm? (Simple, but creates duplicates if the user already has a local account.)
+- **Link to an existing account** by matching on email? (More practical, but requires trusting the external provider's email claim.)
+
+This decision is made by the **First broker login** authentication flow. You can configure it under **Authentication → Flows → First broker login**. The default flow includes a step that prompts the user to review their profile and optionally link to an existing account.
+
+### Key steps in the default first-login flow
+
+| Step | What it does |
+|---|---|
+| Review profile | Shows the user a form pre-filled with claims from the external IdP. The user can confirm or correct their name and email. |
+| User exists | Checks whether a user with the same email already exists in the realm. |
+| Handle existing account | If a match is found, prompts the user to confirm the link (via password or OTP). |
+| Create user if unique | If no match is found, automatically creates a new user from the brokered claims. |
+
+### Trusting the issuer and configuring sync mode
+
+In the identity provider settings you can set:
+
+- **Trust email** — if enabled, Keycloak marks the user's email as verified when the external IdP provides it. Only enable this if you trust the external provider to have validated the email.
+- **Sync mode** — controls when Keycloak updates the local user's attributes from the IdP token:
+  - `LEGACY` (default) — updates on first login only.
+  - `FORCE` — updates on every login. Use when the IdP is the source of truth for profile data.
+
+<Callout title="The first broker login flow controls account linking">
+The first broker login flow decides whether a brokered user is linked to an existing account or a new one is created — tune it carefully. Automatically linking on email match is convenient but requires trusting the external IdP's email verification. A misconfigured flow can lead to account takeover if an attacker controls an IdP that returns a victim's email address.
+</Callout>
+
+export const quizBrokering = [
+  {
+    q: 'Which of these is NOT a valid identity brokering source in Keycloak?',
+    options: [
+      'Another Keycloak realm',
+      'An OIDC-compliant provider like Okta',
+      'A SAML 2.0 IdP like ADFS',
+      'A MySQL database of users',
+    ],
+    answer: 3,
+  },
+  {
+    q: 'What does the "First broker login" flow control?',
+    options: [
+      'The display theme shown on the login page',
+      'Whether the IdP uses OIDC or SAML',
+      'How a newly brokered user is linked to an existing account or created fresh',
+      'The token lifespan for brokered sessions',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'What does "Sync mode: FORCE" mean for a brokered IdP?',
+    options: [
+      'The IdP is forced to use PKCE',
+      'Keycloak updates the local user\'s attributes from the IdP token on every login',
+      'The user is forced to re-authenticate every session',
+      'Keycloak forces the IdP to use RS256 signing',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What is the risk of enabling "Trust email" on a brokered IdP?',
+    options: [
+      'Emails will not be sent to users',
+      'Token expiry times will be ignored',
+      'An attacker controlling the IdP could supply a victim\'s email and take over their account',
+      'The Review profile step will be skipped permanently',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="federation-social/identity-brokering" questions={quizBrokering} />
+
+<ProgressTracker client:visible id="federation-social/identity-brokering" />

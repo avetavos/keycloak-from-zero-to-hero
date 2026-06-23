@@ -1,0 +1,100 @@
+---
+title: 'แนะนำและการตั้งค่า'
+description: 'ภาพรวมของคอร์ส Keycloak และวิธีรัน Keycloak บนเครื่องด้วย Docker'
+sidebar:
+  order: 1
+---
+
+import RunKeycloak from '../../../../components/RunKeycloak.astro';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+<RunKeycloak />
+
+## Keycloak คืออะไร?
+
+Keycloak เป็น open-source Identity and Access Management (IAM) server ที่จัดการ authentication, Single Sign-On (SSO) และ authorization ให้กับแอปพลิเคชันของคุณด้วย standard protocols ได้แก่ OpenID Connect (OIDC), OAuth2 และ SAML แทนที่จะสร้าง login form, password hashing, token handling และ MFA ในทุก app คุณเพียงแค่ delegate งานเหล่านี้ให้กับ Keycloak
+
+## เนื้อหาที่คอร์สนี้ครอบคลุม
+
+- **Intro & Setup** (module นี้)
+- **Realms, Clients & Roles**
+- **Users, Groups & Credentials**
+- **OIDC & OAuth2 Flows**
+- **Securing Apps**
+- **Tokens, Scopes & Mappers**
+- **Identity Federation & Social Login**
+- **Admin, Theming & Production**
+
+## วงจรหลัก
+
+ทุก workflow ใน Keycloak ทำตาม loop สี่ขั้นตอนเดียวกัน:
+
+1. รัน Keycloak ด้วย Docker
+2. เปิด admin console
+3. สร้าง realm และลงทะเบียน client
+4. Secure แอปของคุณด้วย OIDC
+
+```
+Docker run Keycloak
+        │
+        ▼
+  Admin console
+        │
+        ▼
+  Create realm + client
+        │
+        ▼
+  Secure your app (OIDC)
+```
+
+## บทเรียนใน module นี้
+
+| บทเรียน | สิ่งที่คุณจะได้เรียนรู้ |
+|---|---|
+| Keycloak คืออะไร? | แนวคิดหลัก, protocols และตำแหน่งของ Keycloak ในสถาปัตยกรรมของคุณ |
+| รันด้วย Docker | เริ่มต้น Keycloak บนเครื่องและ login เข้า admin console |
+| Admin Console Tour | นำทางใน realm, clients, users และ roles บน UI |
+| Dev vs Production | ความแตกต่างระหว่าง `start-dev` และ production mode |
+
+<Callout title="ประเด็นสำคัญ">
+Keycloak รวมศูนย์การ login ไว้ที่เดียว แอปพลิเคชันของคุณไม่จำเป็นต้องเก็บ password — พวกมัน delegate ไปให้ Keycloak ผ่าน OIDC
+</Callout>
+
+export const quizIndex = [
+  {
+    q: 'Keycloak คืออะไร?',
+    options: [
+      'บริการฐานข้อมูลบนคลาวด์',
+      'เซิร์ฟเวอร์ Identity and Access Management แบบ open-source',
+      'reverse proxy สำหรับ microservices',
+      'เครื่องมือจัดการ container',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Keycloak รองรับ standard protocols ใดสำหรับ authentication?',
+    options: [
+      'REST และ GraphQL',
+      'SMTP และ FTP',
+      'OpenID Connect, OAuth2 และ SAML',
+      'SSH และ TLS',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'ประโยชน์ของการใช้ Keycloak แทนการสร้าง auth เองคืออะไร?',
+    options: [
+      'ทำให้แอปเร็วขึ้น',
+      'ไม่จำเป็นต้องใช้ฐานข้อมูล',
+      'แอปพลิเคชัน delegate identity ให้ Keycloak แทนการเก็บ password เอง',
+      'deploy แอปขึ้นคลาวด์โดยอัตโนมัติ',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="intro-setup/index" questions={quizIndex} />
+
+<ProgressTracker client:visible id="intro-setup/index" />
