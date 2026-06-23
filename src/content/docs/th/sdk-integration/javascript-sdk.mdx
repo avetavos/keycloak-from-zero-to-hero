@@ -1,0 +1,137 @@
+---
+title: "JavaScript SDK"
+description: "ติดตั้งและใช้งาน GrowthBook SDK แบบ vanilla ใน browser หรือ Node.js"
+sidebar:
+  order: 2
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## JavaScript SDK คืออะไร
+
+`@growthbook/growthbook` คือ foundation package หรือ core SDK ที่ทำงานได้ในทุก **JavaScript environment** — browser, Node.js, Deno และ edge workers (Cloudflare Workers, Vercel Edge และอื่น ๆ) React SDK และ framework wrappers อื่น ๆ ถูกสร้างขึ้นบน package นี้
+
+## การติดตั้ง
+
+export const installCode = `npm install @growthbook/growthbook`;
+
+<CopyCode client:visible code={installCode} label="Install" />
+
+## การเริ่มต้น (Initialization)
+
+สร้าง instance ด้วย `new GrowthBook({ apiHost, clientKey })` จากนั้นเรียก `await gb.init({ timeout: 2000 })` เพื่อดึง feature definitions จาก GrowthBook CDN และ cache ไว้ภายใน instance ค่า `timeout` (หน่วยเป็น millisecond) ที่เป็น optional จะป้องกันแอปค้างหาก network ช้า — SDK จะ fallback ไปใช้ค่า default หากการดึงข้อมูลไม่เสร็จทันเวลา
+
+```js
+import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-abc123',
+});
+
+await gb.init({ timeout: 2000 });
+```
+
+## การตั้ง Attributes
+
+เรียก `gb.setAttributes({ ... })` พร้อม context ของผู้ใช้ เช่น id, ประเทศ และ tier ข้อมูล attributes เหล่านี้ใช้สำหรับ targeting rules — ตัวอย่างเช่น "แสดง flag นี้เฉพาะผู้ใช้ที่ `country` เป็น `'US'`" หรือ "เฉพาะบัญชี premium เท่านั้น" ส่ง key-value pairs ใด ๆ ที่ rules ของคุณอ้างอิง
+
+```js
+gb.setAttributes({
+  id: 'user-abc',
+  country: 'US',
+  premium: true,
+});
+```
+
+ควรเรียก `setAttributes` ก่อนประเมิน flag เสมอ เพื่อให้ targeting rules มี user context ที่ต้องการ
+
+## การประเมิน Flag
+
+`gb.isOn('flag-key')` คืนค่า boolean — `true` หากเปิดใช้ flag สำหรับ attributes ปัจจุบัน, `false` หากปิด
+
+`gb.getFeatureValue('flag-key', fallback)` คืนค่าที่มี type argument ที่สองคือ **safe fallback** ที่จะถูกคืนเมื่อ flag ปิด, key ไม่มีอยู่ หรือ type ไม่ตรง
+
+## ตัวอย่างสมบูรณ์สำหรับ browser / vanilla
+
+export const jsSdkCode = `import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-abc123',
+});
+
+// Fetch and cache feature definitions
+await gb.init({ timeout: 2000 });
+
+// Set user attributes for targeting
+gb.setAttributes({
+  id: 'user-abc',
+  country: 'US',
+  premium: true,
+});
+
+// Boolean flag
+if (gb.isOn('dark-mode')) {
+  document.body.classList.add('dark');
+}
+
+// Typed value with fallback
+const theme = gb.getFeatureValue('ui-theme', 'light');
+console.log('Theme:', theme);`;
+
+<CopyCode client:visible code={jsSdkCode} />
+
+<Callout title='ตั้ง attributes ก่อนประเมิน'>
+เรียก `setAttributes` ก่อน `isOn` หรือ `getFeatureValue` เสมอ เพื่อให้ targeting rules มี user context ที่ต้องการ
+</Callout>
+
+export const quizJsSdk = [
+  {
+    q: 'npm package ใดที่ให้ vanilla GrowthBook JS SDK?',
+    options: [
+      '@growthbook/react',
+      '@growthbook/growthbook',
+      'growthbook-sdk',
+      'gb-js',
+    ],
+    answer: 1,
+  },
+  {
+    q: '`gb.init()` ทำอะไร?',
+    options: [
+      'สร้างโปรเจกต์ GrowthBook',
+      'ดึง feature definitions จาก API และ cache ไว้แบบ local',
+      'เริ่ม A/B test',
+      'ล็อกอินผู้ใช้',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'method ใดคืนค่าที่มี type พร้อม explicit fallback?',
+    options: [
+      'gb.isOn()',
+      'gb.getFeatureValue()',
+      'gb.init()',
+      'gb.setAttributes()',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'ทำไมต้องเรียก setAttributes ก่อนประเมิน flag?',
+    options: [
+      'API กำหนดให้ทำ',
+      'targeting rules ต้องการ user context เพื่อตัดสินใจว่าจะคืนค่าใด',
+      'ช่วยเพิ่มความเร็วของ network request',
+      'ต้องเรียกเพื่อปลดล็อก premium features',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="sdk-integration/javascript-sdk" questions={quizJsSdk} />
+
+<ProgressTracker client:visible id="sdk-integration/javascript-sdk" />

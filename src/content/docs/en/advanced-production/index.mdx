@@ -1,0 +1,83 @@
+---
+title: 'Advanced & Production'
+description: 'Take GrowthBook to production: namespaces, prerequisites, the REST API, webhooks, and self-host operations.'
+sidebar:
+  order: 1
+---
+
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## From playground to production
+
+Running GrowthBook locally is easy. Running it in production — where real users, real revenue, and real engineering workflows depend on it — requires a higher standard of care.
+
+This module covers the five pillars that separate a proof-of-concept GrowthBook install from a production-grade one:
+
+| Pillar | What you will learn |
+|---|---|
+| **Namespaces & holdouts** | Keep overlapping experiments from contaminating each other; measure long-term impact |
+| **Prerequisites** | Gate one flag on the value of another to build safe dependency chains |
+| **REST API & webhooks** | Automate flag changes from CI/CD; invalidate SDK caches on change |
+| **Environments & secrets** | Secure your self-hosted stack with strong secrets, per-env SDK connections, and MongoDB backups |
+
+### Treating flags as code-adjacent infrastructure
+
+A feature flag that no one reviews is a liability. A flag that no one audits has unknown blast radius. An experiment that no one monitors could silently corrupt your metrics.
+
+In production, GrowthBook flags and experiments deserve the same discipline as the code they gate:
+
+- **Review** — flag changes should go through a lightweight approval process (GrowthBook has comment threads and audit logs built in).
+- **Audit** — use the built-in audit log (Settings → Audit Log) to track who changed what and when.
+- **Automate** — the REST API and webhooks let you wire flag changes into your CI/CD pipeline so deployments can activate or deactivate flags without a human in the loop.
+
+### Module structure
+
+Work through the lessons in order — each one builds on the last:
+
+1. **Namespaces & holdouts** — prevent experiment overlap at the bucket level.
+2. **Prerequisites** — chain flags so that a dependent feature only activates when its dependency is on.
+3. **REST API & webhooks** — programmatic control and real-time change propagation.
+4. **Environments & secrets** — lock down the self-hosted stack before you go live.
+
+<Callout title="Production mindset">
+In production, treat flags and experiments as code-adjacent infrastructure — review, audit, and automate them with the same rigour you apply to database migrations or API contracts.
+</Callout>
+
+export const quizAdvancedIndex = [
+  {
+    q: 'Which GrowthBook feature prevents two overlapping experiments from assigning the same user to both?',
+    options: [
+      'Prerequisites',
+      'Namespaces',
+      'Environments',
+      'Webhooks',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Where in the GrowthBook UI can you review who changed a flag and when?',
+    options: [
+      'Features → Override Rules',
+      'Settings → Audit Log',
+      'Experiments → Results',
+      'SDK Connections → Logs',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What is the primary benefit of wiring GrowthBook webhooks into your CI/CD pipeline?',
+    options: [
+      'It automatically runs A/B test analysis',
+      'It lets flag changes propagate without a human in the loop',
+      'It replaces the need for SDK keys',
+      'It backs up MongoDB on every deploy',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="advanced-production/index" questions={quizAdvancedIndex} />
+
+<ProgressTracker client:visible id="advanced-production/index" />

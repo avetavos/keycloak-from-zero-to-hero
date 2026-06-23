@@ -1,0 +1,96 @@
+---
+title: 'Metrics & Data Sources: ภาพรวม'
+description: 'ทำไม metrics และ data sources จึงสำคัญใน GrowthBook และ analysis pipeline ทำงานอย่างไรตั้งแต่ต้นจนจบ'
+sidebar:
+  order: 1
+---
+
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## ทำไม metrics และข้อมูลจึงสำคัญ
+
+Feature flags ช่วยให้คุณควบคุมสิ่งที่ผู้ใช้เห็น แต่เพื่อจะรู้ว่าการเปลี่ยนแปลงนั้นดีขึ้นจริงหรือเปล่า คุณต้องการข้อมูล แนวคิดหลักของ GrowthBook คือ ข้อมูลของคุณอยู่ใน warehouse ของคุณเอง และ GrowthBook จะเข้าไปวิเคราะห์โดยตรง — ไม่มีการคัดลอกหรือเก็บข้อมูลไว้ใน GrowthBook เอง
+
+## Pipeline ตั้งแต่ต้นจนจบ
+
+| ขั้นตอน | สิ่งที่เกิดขึ้น |
+|---|---|
+| **Data Source** | เชื่อมต่อ GrowthBook กับ warehouse ของคุณ (BigQuery, Postgres, Snowflake, ClickHouse ฯลฯ) |
+| **Experiment assignment** | Query บอก GrowthBook ว่าผู้ใช้คนไหนเห็น variation ไหน และเมื่อไหร่ |
+| **Fact Tables** | คุณกำหนด event tables ที่เก็บ raw metric signals |
+| **Metrics** | คุณสร้าง metrics (proportion, mean, ratio) บน Fact Tables |
+| **Experiment Results** | GrowthBook รัน stats engine กับ warehouse และแสดงค่า metric แยกตาม variation |
+
+## GrowthBook ใน stack ของคุณ
+
+```
+แอปของคุณ
+  └─ SDK ส่ง experiment_viewed(userId, variation)
+       └─ Warehouse (BigQuery / Snowflake / ...)
+            └─ GrowthBook query เมื่อต้องการ
+                 └─ แสดงผลใน GrowthBook UI
+```
+
+GrowthBook ไม่เคย ingest raw events โดยตรง มันเชื่อมต่อกับ warehouse ของคุณด้วย read-only credentials และรัน SQL queries เมื่อคุณกด **Update Data** ใน UI หรือตั้งเวลา refresh
+
+<Callout title="Bring your own data">
+GrowthBook เป็น platform แบบ "bring your own data" — มัน query warehouse ของคุณโดยตรง raw events และข้อมูลผู้ใช้ไม่เคยออกจาก infrastructure ของคุณ คุณยังคงเป็นเจ้าของและควบคุมข้อมูลได้อย่างเต็มที่
+</Callout>
+
+## สิ่งที่ module นี้ครอบคลุม
+
+| บทเรียน | สิ่งที่คุณจะได้เรียนรู้ |
+|---|---|
+| Data Sources | วิธีเชื่อมต่อ data source และเขียน experiment assignment query |
+| Defining Metrics | Fact Tables, ประเภท metric, metric windows และ metric definitions ที่ใช้ซ้ำได้ |
+| Experiment Results | วิธีอ่านตาราง results, uplift, confidence intervals และ guardrail metrics |
+| Stats Engine | Bayesian vs Frequentist, CUPED variance reduction และ sequential testing |
+
+export const quizMetricsIndex = [
+  {
+    q: 'GrowthBook เก็บ raw experiment events ของคุณไว้ที่ไหน?',
+    options: [
+      'ใน GrowthBook Cloud',
+      'ใน data warehouse ของคุณเอง — GrowthBook แค่ query เท่านั้น',
+      'ใน S3 bucket ที่ GrowthBook จัดการ',
+      'ใน GrowthBook Postgres database',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'experiment assignment query มีหน้าที่อะไร?',
+    options: [
+      'มันเพิ่มผู้ใช้ใหม่เข้าสู่ experiment',
+      'มันบอก GrowthBook ว่าผู้ใช้คนไหนเห็น variation ไหน และเมื่อไหร่',
+      'มันกำหนดว่า metrics ใดที่ต้องติดตาม',
+      'มัน deploy feature flag ไปยัง production',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'ขั้นตอนใดมาหลังจากเชื่อมต่อ Data Source ทันที?',
+    options: [
+      'ดู experiment results',
+      'เลือก stats engine',
+      'กำหนด Fact Tables และเขียน assignment query',
+      'สร้าง feature flag',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'GrowthBook รัน SQL กับ warehouse ของคุณเมื่อไหร่?',
+    options: [
+      'ต่อเนื่องแบบ real time',
+      'เฉพาะเมื่อคุณกด Update Data หรือมี scheduled refresh รัน',
+      'ทุกครั้งที่ SDK ส่ง event',
+      'เฉพาะตอน setup experiment wizard เท่านั้น',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="metrics-data/index" questions={quizMetricsIndex} />
+
+<ProgressTracker client:visible id="metrics-data/index" />

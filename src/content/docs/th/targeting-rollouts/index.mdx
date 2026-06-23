@@ -1,0 +1,116 @@
+---
+title: 'Targeting & Rollouts'
+description: 'ภาพรวม — GrowthBook ตัดสินค่าของ flag ต่อผู้ใช้แต่ละคนผ่าน targeting attribute และ rule อย่างไร โดย rule แรกที่ match จะชนะ'
+sidebar:
+  order: 1
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## GrowthBook ประเมินค่าของ Flag อย่างไร
+
+ทุก Feature ใน GrowthBook จะมีชุดของ **Rules** แยกตาม environment (เช่น dev, production) เมื่อ SDK เรียก `isOn()` หรือ `getFeatureValue()` GrowthBook จะไล่ดู rule เหล่านั้นจากบนลงล่าง rule แรกที่ targeting condition ตรงกับ attribute ของผู้ใช้คนปัจจุบันจะถูกนำมาใช้ และคืนค่าของ rule นั้น หากไม่มี rule ใด match เลย ระบบจะคืน **default value** ของ Feature นั้น
+
+โมเดลแบบบนลงล่างและเลือกตัวที่ match ตัวแรกนี้ให้คุณควบคุมได้อย่างแม่นยำ คุณสามารถบังคับค่าให้ผู้ใช้ภายในองค์กร แล้วทำ percentage rollout ให้ผู้ใช้ที่เหลือ โดยที่ rule ทั้งสองจะไม่รบกวนกัน
+
+### บทเรียนในโมดูลนี้
+
+| # | บทเรียน | สิ่งที่คุณจะได้เรียนรู้ |
+|---|--------|---------------------|
+| 1 | ภาพรวม (หน้านี้) | การประเมิน rule ทำงานอย่างไรตั้งแต่ต้นจนจบ |
+| 2 | Targeting Attributes | การกำหนดและส่ง attribute ของผู้ใช้ให้ SDK |
+| 3 | Targeting Conditions | การกรองผู้ใช้ตามค่าของ attribute ใน rule |
+| 4 | Percentage Rollouts | การค่อย ๆ ปล่อย flag ให้ผู้ใช้ทีละเปอร์เซ็นต์ |
+| 5 | Forced Values & Saved Groups | การบังคับค่าเฉพาะและการนำกลุ่มผู้ใช้กลับมาใช้ซ้ำ |
+
+```js
+import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-YOUR_DEV_KEY',
+});
+
+await gb.init({ timeout: 2000 });
+
+// Tell GrowthBook who the current user is
+gb.setAttributes({
+  id: 'user-123',
+  country: 'TH',
+  plan: 'pro',
+});
+
+// Boolean flag
+const showBanner = gb.isOn('promo-banner');
+
+// Flag with a typed default
+const checkoutVersion = gb.getFeatureValue('checkout-version', 'v1');
+```
+
+export const overviewCode = `import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-YOUR_DEV_KEY',
+});
+
+await gb.init({ timeout: 2000 });
+
+// Tell GrowthBook who the current user is
+gb.setAttributes({
+  id: 'user-123',
+  country: 'TH',
+  plan: 'pro',
+});
+
+// Boolean flag
+const showBanner = gb.isOn('promo-banner');
+
+// Flag with a typed default
+const checkoutVersion = gb.getFeatureValue('checkout-version', 'v1');`;
+
+<CopyCode client:visible code={overviewCode} label="Copy SDK snippet" />
+
+<Callout title="Rules are evaluated top-down">
+rule แรกที่ match จะเป็นตัวตัดสินค่า หากคุณมี rule แบบ forced-value สำหรับผู้ใช้ beta และมี rollout 50% อยู่ด้านล่าง ผู้ใช้ beta จะไม่เข้าสู่ rollout เลย เพราะ rule ของพวกเขา match ไปแล้ว
+</Callout>
+
+export const quizTargetingIndex = [
+  {
+    q: 'GrowthBook มี rule สองตัวบน flag หนึ่ง: rule A (เจาะกลุ่มผู้ใช้ beta) และ rule B (rollout 50%) อยู่ด้านล่าง เมื่อผู้ใช้ beta เข้ามา rule ไหนจะถูกนำมาใช้?',
+    options: [
+      'Rule A — rule แรกที่ match จะชนะ',
+      'Rule B — rule แบบ rollout มีลำดับความสำคัญเหนือกว่าเสมอ',
+      'ทั้งสอง rule — GrowthBook จะรวมทั้งคู่เข้าด้วยกัน',
+      'ไม่มีตัวไหนเลย — ระบบจะใช้ default value',
+    ],
+    answer: 0,
+  },
+  {
+    q: 'GrowthBook คืนค่าอะไรเมื่อไม่มี rule ใดบน feature ที่ match กับผู้ใช้คนปัจจุบัน?',
+    options: [
+      'null',
+      'default value ของ feature นั้น',
+      'false สำหรับ boolean flag, 0 สำหรับตัวเลข',
+      'ระบบจะ throw error ออกมา',
+    ],
+    answer: 1,
+  },
+  {
+    q: '`gb.setAttributes(...)` ทำหน้าที่อะไร?',
+    options: [
+      'สร้าง feature flag ใหม่ใน GrowthBook UI',
+      'บอก SDK ว่าผู้ใช้คนปัจจุบันคือใคร เพื่อให้ประเมิน rule ได้',
+      'เขียนทับ config ของ feature จาก remote ด้วยค่าในเครื่อง',
+      'ส่งข้อมูลผู้ใช้เข้าสู่ analytics pipeline ของ GrowthBook',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="targeting-rollouts/index" questions={quizTargetingIndex} />
+
+<ProgressTracker client:visible id="targeting-rollouts/index" />

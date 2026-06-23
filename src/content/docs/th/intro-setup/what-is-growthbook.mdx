@@ -1,0 +1,121 @@
+---
+title: "GrowthBook คืออะไร?"
+description: 'ภาพรวมของ GrowthBook — feature flagging, A/B testing และ analytics ที่ทำงานบน warehouse ของคุณเอง'
+sidebar:
+  order: 2
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+GrowthBook คือแพลตฟอร์ม feature-flagging และ experimentation แบบ open-source ที่สร้างขึ้นรอบสามเสาหลัก
+
+## สามเสาหลัก
+
+### 1. Feature Flagging
+
+ควบคุมการมองเห็นฟีเจอร์ได้โดยไม่ต้อง deploy ใหม่ ครอบโค้ดทุกเส้นทางไว้หลัง flag แล้วเปิดหรือปิดมันได้ — แยกตาม environment, แยกตาม audience segment หรือทยอยปล่อยเป็นเปอร์เซ็นต์ — ได้โดยตรงจาก UI ของ GrowthBook
+
+### 2. A/B Testing / Experimentation
+
+รัน experiment แบบควบคุมเพื่อวัดผลกระทบจริงของการเปลี่ยนแปลงของคุณ GrowthBook จะจัดผู้ใช้เข้า variant ต่าง ๆ, ติดตามการได้รับ exposure ผ่าน SDK ของคุณ จากนั้นจึง query data warehouse ของคุณเพื่อคำนวณผลทางสถิติ — รวมถึงการวิเคราะห์แบบ Bayesian และ frequentist
+
+### 3. Analytics บน data warehouse ของคุณเอง
+
+GrowthBook เชื่อมต่อโดยตรงกับ warehouse **ของคุณ** — Snowflake, BigQuery, Redshift, ClickHouse และอื่น ๆ มันจะ query event tables ที่คุณมีอยู่แล้วและคำนวณ metrics แบบทันที โดย raw event data ของคุณจะไม่เคยออกจาก infrastructure ของคุณเลย
+
+## Self-host เทียบกับ GrowthBook Cloud
+
+| | Self-Host | GrowthBook Cloud |
+|---|---|---|
+| **ค่าใช้จ่าย** | ฟรี | มีแพ็กเกจฟรี แล้วค่อยจ่ายเงิน |
+| **การควบคุมข้อมูล** | เต็มที่ | แบบ managed |
+| **การติดตั้ง** | Docker Compose | สมัครใช้งาน |
+| **URL** | `localhost:3000` | `app.growthbook.io` |
+
+## แนวคิดสำคัญ
+
+| แนวคิด | คำนิยาม |
+|---|---|
+| **Feature** | flag ที่ตั้งชื่อใน GrowthBook ซึ่ง map ไปยังค่าในโค้ดของคุณ |
+| **Environment** | บริบทของการ deploy — `dev`, `staging` หรือ `production` แต่ละ feature สามารถมีกฎต่างกันได้ในแต่ละ environment |
+| **SDK Connection** | คู่ของ `apiHost` + `clientKey` ที่ระบุตัวตนของแอปคุณต่อ CDN ของ GrowthBook |
+| **Experiment** | การทดสอบ A/B หรือ multivariate แบบควบคุมที่ผูกกับ Feature หนึ่งตัวหรือมากกว่า |
+| **Metric** | ผลลัพธ์ที่วัดได้ (conversion, revenue, latency) ซึ่งนิยามไว้กับ tables ใน warehouse ของคุณ |
+
+## การอ่านค่า JSON flag
+
+GrowthBook รองรับมากกว่าแค่ boolean ใช้ `getFeatureValue` เพื่ออ่านค่า JSON flag พร้อม fallback แบบมี type:
+
+```js
+import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-YOUR_DEV_KEY',
+});
+
+await gb.init({ timeout: 2000 });
+
+// JSON flag — returns the object or the fallback
+const config = gb.getFeatureValue('checkout-config', { maxItems: 10, theme: 'light' });
+console.log(config.theme); // 'dark' if the flag is on, 'light' otherwise
+```
+
+export const jsonFlagCode = `import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-YOUR_DEV_KEY',
+});
+
+await gb.init({ timeout: 2000 });
+
+// JSON flag — returns the object or the fallback
+const config = gb.getFeatureValue('checkout-config', { maxItems: 10, theme: 'light' });
+console.log(config.theme); // 'dark' if the flag is on, 'light' otherwise`;
+
+<CopyCode client:visible code={jsonFlagCode} label="Copy JSON flag snippet" />
+
+<Callout title="Key point">
+GrowthBook รัน experiment บน data warehouse ของคุณเอง — มันไม่เคยดึงเข้าหรือเก็บ raw event data ของคุณเลย
+</Callout>
+
+export const quizWhatIs = [
+  {
+    q: 'GrowthBook มีเสาหลักกี่เสา?',
+    options: ['1', '3', '5', '7'],
+    answer: 1,
+  },
+  {
+    q: 'SDK Connection ให้อะไรกับเรา?',
+    options: [
+      'username และ password',
+      'database URL',
+      'apiHost และ clientKey',
+      'experiment ID',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'GrowthBook เก็บข้อมูล experiment ไว้ที่ไหน?',
+    options: [
+      'ใน data warehouse ของคุณเอง',
+      'บน server ของ GrowthBook',
+      'ใน MongoDB เท่านั้น',
+      'ใน localStorage',
+    ],
+    answer: 0,
+  },
+  {
+    q: 'GrowthBook เรียก feature flag ในระบบของตัวเองว่าอะไร?',
+    options: ['Toggle', 'Feature', 'Experiment', 'Segment'],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="intro-setup/what-is-growthbook" questions={quizWhatIs} />
+
+<ProgressTracker client:visible id="intro-setup/what-is-growthbook" />

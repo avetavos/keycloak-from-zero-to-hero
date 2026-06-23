@@ -1,0 +1,156 @@
+---
+title: 'Default Values'
+description: 'ค่าที่ SDK คืนกลับมาเมื่อไม่มี rule ตรงเงื่อนไข และทำไม fallback ที่ปลอดภัยใน getFeatureValue จึงสำคัญ'
+sidebar:
+  order: 5
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## default value กับ override rules
+
+ทุก Feature ใน GrowthBook มีการ resolve ค่าสองชั้น:
+
+1. **Override rules** — เงื่อนไข, percentage rollout หรือการกำหนด experiment ที่คุณตั้งค่าต่อ environment เมื่อ rule ตรงกับ context ของผู้ใช้ปัจจุบัน rule นั้นจะชนะ
+2. **Default value** — ค่าที่คืนกลับมาเมื่อ **ไม่มี rule ตรงเงื่อนไข** นี่คือพื้นที่ปลอดภัยของคุณ
+
+เมื่อ GrowthBook เข้าถึงไม่ได้เลย (network error, CDN ล่ม) SDK จะตกลงไปใช้ **argument สำหรับ fallback** ที่คุณส่งโดยตรงในโค้ดของคุณ — มันไม่เคยคืน `null` หรือ throw
+
+## fallback สามชั้น
+
+```
+SDK call
+  └─ GrowthBook loaded?
+       ├─ YES → evaluate rules → match found? → return rule value
+       │                       └─ no match  → return Feature default value
+       └─ NO  → return the fallback argument from your code
+```
+
+## ส่ง fallback ที่สมเหตุสมผลเสมอ
+
+```js
+// BAD — if GrowthBook is unreachable, getFeatureValue returns undefined
+const text = gb.getFeatureValue('banner-text');
+
+// GOOD — safe fallback keeps the app working
+const text = gb.getFeatureValue('banner-text', 'Welcome');
+```
+
+argument สำหรับ fallback คือแนวป้องกันด่านสุดท้าย มันควรแทนประสบการณ์ที่คุณต้องการให้ผู้ใช้ได้รับหาก GrowthBook ล่ม — โดยปกติคือพฤติกรรมปัจจุบันที่เสถียร
+
+## ตั้งค่า default value ใน GrowthBook
+
+1. เปิด Feature ใน GrowthBook UI
+2. คลิก **Edit** ข้าง ๆ ฟิลด์ **Default Value**
+3. ใส่ค่า เช่น `Welcome` สำหรับ flag แบบ string
+4. คลิก **Save**
+
+default value จะมีผลทันทีสำหรับทุก environment ที่ไม่มี override rule ใดให้ผลลัพธ์ที่ตรงเงื่อนไข
+
+## เปลี่ยน default value
+
+ในการอัปเดต default value โดยไม่เพิ่ม rule:
+
+1. เปิด Feature
+2. คลิก **Edit** บน Default Value
+3. เปลี่ยนค่าแล้วคลิก **Save**
+
+การเปลี่ยนแปลงจะถูกนำไปใช้ทั่วทุก environment ที่ไม่มี rule แบบ override โดยไม่ต้อง deploy
+
+## ตัวอย่างใช้งานจริง — banner text
+
+```js
+import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: process.env.GROWTHBOOK_CLIENT_KEY,
+  attributes: {
+    id: 'user-123',
+    country: 'TH',
+  },
+});
+
+await gb.init({ timeout: 2000 });
+
+// Returns the GrowthBook default value when no rule matches,
+// or 'Welcome' when GrowthBook cannot be reached.
+const bannerText = gb.getFeatureValue('banner-text', 'Welcome');
+
+document.getElementById('banner').textContent = bannerText;
+```
+
+export const defaultValueCode = `import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: process.env.GROWTHBOOK_CLIENT_KEY,
+  attributes: {
+    id: 'user-123',
+    country: 'TH',
+  },
+});
+
+await gb.init({ timeout: 2000 });
+
+// Safe fallback: 'Welcome' is used only if GrowthBook
+// cannot be reached at all.
+const bannerText = gb.getFeatureValue('banner-text', 'Welcome');
+
+document.getElementById('banner').textContent = bannerText;`;
+
+<CopyCode client:visible code={defaultValueCode} label="Copy banner-text snippet" />
+
+<Callout title="จุดสำคัญ">
+ส่ง fallback ที่สมเหตุสมผลให้ `getFeatureValue` เสมอ เพื่อให้แอปของคุณทำงานได้ถูกต้องหาก GrowthBook เข้าถึงไม่ได้ fallback ควรแทนประสบการณ์ผู้ใช้ที่เสถียรและปลอดภัย — โดยปกติคือพฤติกรรมที่แอปของคุณมีอยู่ก่อนที่จะมี flag นี้
+</Callout>
+
+export const quizDefaultValues = [
+  {
+    q: 'SDK คืนค่าอะไรเมื่อ Feature มีอยู่ใน GrowthBook แต่ไม่มี override rule ตรงเงื่อนไข?',
+    options: [
+      'null',
+      'undefined',
+      'argument สำหรับ fallback ที่ส่งให้ getFeatureValue',
+      'default value ของ Feature ที่ตั้งค่าไว้ใน GrowthBook',
+    ],
+    answer: 3,
+  },
+  {
+    q: 'SDK คืนค่าอะไรเมื่อเข้าถึง GrowthBook ไม่ได้เลย?',
+    options: [
+      'default value ของ Feature ที่ตั้งค่าไว้ใน GrowthBook',
+      'argument สำหรับ fallback ที่ส่งให้ getFeatureValue ในโค้ดของคุณ',
+      'true สำหรับ boolean, สตริงว่างสำหรับ string',
+      'มัน throw network error',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'การเรียก SDK ตัวไหนที่ขาด fallback ที่ปลอดภัยและอาจคืนค่า undefined?',
+    options: [
+      'gb.getFeatureValue("flag", "default")',
+      'gb.isOn("flag")',
+      'gb.getFeatureValue("flag")',
+      'gb.init({ timeout: 2000 })',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'argument สำหรับ fallback ควรแทนอะไร?',
+    options: [
+      'พฤติกรรมใหม่ที่ทดลองที่สุด',
+      'ค่าว่างเพื่อส่งสัญญาณว่า GrowthBook ล่ม',
+      'พฤติกรรมที่เสถียรและปลอดภัยที่แอปของคุณมีอยู่ก่อนที่จะมี flag นี้',
+      'ค่าที่ใช้เฉพาะตอนทำ A/B test เท่านั้น',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="feature-flags/default-values" questions={quizDefaultValues} />
+
+<ProgressTracker client:visible id="feature-flags/default-values" />

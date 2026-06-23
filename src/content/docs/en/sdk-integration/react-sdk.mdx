@@ -1,0 +1,122 @@
+---
+title: 'React SDK'
+description: 'Add GrowthBook to a React app with GrowthBookProvider and hooks.'
+sidebar:
+  order: 3
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+The React SDK wraps the core JS SDK and adds a React context plus hooks, so you can evaluate feature flags anywhere in your component tree without prop-drilling.
+
+## Install
+
+```bash
+npm install @growthbook/growthbook-react
+```
+
+The `@growthbook/growthbook-react` package re-exports everything from `@growthbook/growthbook`, so you only need one install.
+
+## Setup
+
+Create a `GrowthBook` instance exactly as you would in a vanilla JS project, then wrap your app root with `<GrowthBookProvider growthbook={gb}>`. Every component inside that tree can then read flags through hooks or declarative components.
+
+## Hooks
+
+- `useFeatureIsOn('flag-key')` — returns a `boolean`. The simplest way to gate a component; renders nothing extra and re-renders when the flag changes.
+- `useFeatureValue('flag-key', fallback)` — returns the feature's value cast to the type of your fallback. Pass a typed default and TypeScript will infer the return type automatically.
+
+## Declarative rendering
+
+`<IfFeatureEnabled feature="flag-key">` renders its children only when the flag evaluates to `true`. It is a thin wrapper around `useFeatureIsOn` and keeps JSX templates readable without extra ternaries.
+
+export const reactSdkCode = `import { GrowthBook } from '@growthbook/growthbook';
+import { GrowthBookProvider, useFeatureIsOn, useFeatureValue, IfFeatureEnabled } from '@growthbook/growthbook-react';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-abc123',
+});
+
+await gb.init({ timeout: 2000 });
+gb.setAttributes({ id: 'user-abc' });
+
+// Wrap your app once
+export function App() {
+  return (
+    <GrowthBookProvider growthbook={gb}>
+      <HomePage />
+    </GrowthBookProvider>
+  );
+}
+
+// Use hooks anywhere inside the tree
+function HomePage() {
+  const darkMode = useFeatureIsOn('dark-mode');
+  const theme = useFeatureValue('ui-theme', 'light');
+
+  return (
+    <div className={darkMode ? 'dark' : 'light'}>
+      <p>Theme: {theme}</p>
+      <IfFeatureEnabled feature="new-dashboard">
+        <NewDashboard />
+      </IfFeatureEnabled>
+    </div>
+  );
+}`;
+
+<CopyCode client:visible code={reactSdkCode} label="React SDK — full example" />
+
+<Callout title="Wrap once, read anywhere">
+  Add `<GrowthBookProvider>` once at your app root, then call hooks like `useFeatureIsOn` in any component without prop-drilling.
+</Callout>
+
+export const quizReactSdk = [
+  {
+    q: 'Which package provides the React-specific GrowthBook hooks?',
+    options: [
+      '@growthbook/growthbook',
+      '@growthbook/growthbook-react',
+      'growthbook-hooks',
+      'react-feature-flags',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What does `useFeatureIsOn` return?',
+    options: [
+      'A string value',
+      'A boolean',
+      'A Promise',
+      'An object with value and loading',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which component renders its children only when a flag is enabled?',
+    options: [
+      '<FeatureGate>',
+      '<IfFeatureEnabled>',
+      '<ShowWhenOn>',
+      '<FlagProvider>',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Where should you place `<GrowthBookProvider>`?',
+    options: [
+      'Inside every component that reads a flag',
+      'Once at the app root so all children can access flags',
+      'In a useEffect hook',
+      'Inside each Route component',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="sdk-integration/react-sdk" questions={quizReactSdk} />
+
+<ProgressTracker client:visible id="sdk-integration/react-sdk" />

@@ -1,0 +1,113 @@
+---
+title: 'Forced Values, Saved Groups, and Prerequisites'
+description: 'บังคับค่า flag เฉพาะให้ผู้ใช้กลุ่มเป้าหมาย นำ audience กลับมาใช้ซ้ำด้วย Saved Groups และกั้น flag ด้วย prerequisite feature'
+sidebar:
+  order: 5
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Forced Values, Saved Groups, and Prerequisites
+
+บางครั้งคุณจำเป็นต้องบังคับค่าเฉพาะให้ผู้ใช้หรือกลุ่มผู้ใช้ โดยข้าม percentage rollout ไปทั้งหมด GrowthBook มีเครื่องมือสามอย่างสำหรับเรื่องนี้: forced-value rule, Saved Group และ prerequisite feature
+
+### Forced-value rules
+
+rule แบบ Forced Value จะคืนค่าตายตัวให้ผู้ใช้ทุกคนที่ match targeting condition ของ rule นั้น มีประโยชน์สำหรับ: ผู้ทดสอบ QA ภายในที่ต้องได้ `true` เสมอ, ผู้ใช้ VIP ที่ต้องได้ค่า string แบบ premium เสมอ, หรือผู้ใช้ที่ถูกแบนซึ่งต้องได้ `false` เสมอ
+
+การสร้าง forced-value rule:
+
+1. ในหน้ารายละเอียดของ Feature คลิก **Add Rule**
+2. เลือก **Force Value** เป็นประเภทของ rule
+3. ตั้งค่า **Value** ที่จะคืน (เช่น `true`)
+4. เพิ่ม **Targeting Condition** เพื่อระบุ audience (เช่น `email` อยู่ใน list `[qa@example.com, cto@example.com]`)
+5. คลิก **Save Rule**
+6. ลาก rule นี้ไว้เหนือ rollout rule ใด ๆ เพื่อให้ถูกประเมินก่อน
+
+### Saved Groups
+
+Saved Group คือนิยาม audience ที่นำกลับมาใช้ซ้ำได้ ซึ่งคุณสร้างครั้งเดียวแล้วอ้างอิงในหลาย rule แทนที่จะต้องทำ email list หรือ condition เดิมซ้ำในสิบ feature ที่ต่างกัน ให้นิยามครั้งเดียวเป็น Saved Group แล้วใช้ได้ทุกที่
+
+การสร้างและใช้ Saved Group:
+
+1. ไปที่ **Settings → Saved Groups**
+2. คลิก **Create Saved Group**
+3. ตั้งชื่อ (เช่น `beta-testers`)
+4. เพิ่มสมาชิก (ตามค่า attribute) หรือนิยาม condition
+5. คลิก **Save**
+6. เมื่อสร้าง rule บน Feature ใด ๆ ให้เลือก **"In Saved Group"** เป็น operator แล้วเลือก `beta-testers`
+
+ฝั่ง SDK สิ่งที่คุณต้องทำคือส่ง attribute ที่ถูกต้องเท่านั้น — logic ของ Saved Group ทำงานฝั่ง server ใน GrowthBook:
+
+```js
+gb.setAttributes({
+  id: 'user-456',
+  email: 'tester@example.com',
+});
+// GrowthBook evaluates whether this user is in the beta-testers Saved Group
+const showBeta = gb.isOn('new-checkout');
+```
+
+export const savedGroupsCode = `gb.setAttributes({
+  id: 'user-456',
+  email: 'tester@example.com',
+});
+// GrowthBook evaluates whether this user is in the beta-testers Saved Group
+const showBeta = gb.isOn('new-checkout');`;
+
+<CopyCode client:visible code={savedGroupsCode} label="Copy saved groups snippet" />
+
+### Prerequisite features
+
+prerequisite (หรือที่เรียกว่า feature dependency) ให้คุณกั้น flag หนึ่งโดยขึ้นกับอีก flag หนึ่ง ตัวอย่างเช่น คุณอาจกำหนดให้ `platform-v2` ต้องเปิดอยู่ก่อน จึงจะอนุญาตให้ `new-checkout` ทำงานได้ วิธีนี้ป้องกันไม่ให้ rollout ที่ทำเพียงบางส่วนสร้างสถานะ UI ที่ไม่สอดคล้องกัน
+
+การเพิ่ม prerequisite:
+
+1. ในหน้ารายละเอียดของ Feature คลิก **Add Prerequisite**
+2. เลือก parent feature (เช่น `platform-v2`)
+3. ตั้งค่าที่ต้องการ (เช่น `true`)
+4. คลิก **Save** ตอนนี้ `new-checkout` จะถูกประเมินก็ต่อเมื่อ `platform-v2` เปิดอยู่สำหรับผู้ใช้คนปัจจุบันเท่านั้น
+
+<Callout title="Saved Groups let you reuse an audience across many features">
+นิยาม `beta-testers` ครั้งเดียว แล้วอ้างอิงในทุก feature ที่ควร rollout ให้ผู้ใช้ beta ก่อน การอัปเดตสมาชิกของกลุ่มในที่เดียวจะอัปเดตทุก rule ที่ใช้มัน
+</Callout>
+
+export const quizForcedSavedGroups = [
+  {
+    q: 'rule แบบ forced-value ทำอะไร?',
+    options: [
+      'ค่อย ๆ เพิ่มเปอร์เซ็นต์ของผู้ใช้ที่เห็น flag',
+      'คืนค่าตายตัวให้ผู้ใช้ทุกคนที่ match targeting condition ของ rule',
+      'ปิด flag สำหรับผู้ใช้ทุกคนใน Saved Group',
+      'สร้าง dependency ระหว่าง feature flag สองตัว',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Saved Group ถูกจัดการที่ไหนใน GrowthBook?',
+    options: [
+      'ในหน้ารายละเอียดของ Feature ภายใต้ "Add Rule"',
+      'ภายใต้ Experiments → Audiences',
+      'ภายใต้ Settings → Saved Groups',
+      'ภายใต้ SDK Connections → Groups',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'prerequisite feature ทำอะไร?',
+    options: [
+      'บังคับให้ flag เปิดสำหรับผู้ใช้ทุกคนโดยไม่สนใจ rule อื่น',
+      'กั้น flag หนึ่งโดยขึ้นกับค่าของอีก flag หนึ่งสำหรับผู้ใช้คนปัจจุบัน',
+      'บันทึกนิยาม audience ที่นำกลับมาใช้ซ้ำได้ข้าม feature',
+      'ตั้งค่า default value ของ flag เมื่อไม่มี rule ใด match',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="targeting-rollouts/forced-saved-groups" questions={quizForcedSavedGroups} />
+
+<ProgressTracker client:visible id="targeting-rollouts/forced-saved-groups" />

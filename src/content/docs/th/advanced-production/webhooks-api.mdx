@@ -1,0 +1,151 @@
+---
+title: 'REST API & Webhooks'
+description: 'ใช้ GrowthBook REST API จัดการ flags ด้วยโปรแกรม และใช้ webhooks เผยแพร่การเปลี่ยนแปลงแบบ real-time'
+sidebar:
+  order: 4
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## GrowthBook REST API
+
+GrowthBook เปิดเผย REST API ที่ให้คุณอ่านและจัดการ features, experiments, metrics และอื่นๆ ด้วยโปรแกรม นี่คือพื้นฐานของการ automate CI/CD: deployment pipeline ของคุณสามารถ toggle flags, ตรวจสอบสถานะ experiment หรือสร้าง features ใหม่ โดยไม่ต้องให้ใครเปิด UI
+
+base URL สำหรับ self-hosted คือ GrowthBook app URL ของคุณ เช่น `http://localhost:3100/api/v1`
+
+### Step 1 — สร้าง API key
+
+1. ใน GrowthBook ไปที่ **Settings → API Keys**
+2. คลิก **Add API Key**
+3. เลือก **Secret Key** (สิทธิ์อ่าน/เขียนเต็ม) หรือ **Read-only Key** (ปลอดภัยสำหรับ dashboard)
+4. ตั้งคำอธิบาย เช่น `ci-pipeline`
+5. คลิก **Create** และคัดลอก key — แสดงเพียงครั้งเดียว
+
+### Step 2 — ดึงรายการ features ผ่าน curl
+
+export const listFeaturesCode = `curl -s \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  http://localhost:3100/api/v1/features | \\
+  jq '.features[] | {id, defaultValue}'`;
+
+<CopyCode client:visible code={listFeaturesCode} label="Copy list-features curl" />
+
+response คือ JSON object โดย array `.features` มี feature ทุกอันพร้อม key, environments และ rules
+
+### Step 3 — Toggle feature เปิด/ปิดผ่าน curl
+
+export const toggleFeatureCode = `# Enable 'checkout-v2' in the production environment
+curl -s -X POST \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"environments": {"production": true}}' \\
+  http://localhost:3100/api/v1/features/checkout-v2/toggles`;
+
+<CopyCode client:visible code={toggleFeatureCode} label="Copy toggle-feature curl" />
+
+แทนที่ `YOUR_API_KEY` ด้วย secret key ที่สร้างใน Step 1 และ `checkout-v2` ด้วย feature key ของคุณ
+
+## SDK Webhooks
+
+Webhooks คือ HTTP call ขาออกที่ GrowthBook ส่งออกไปทุกครั้งที่ feature หรือ experiment เปลี่ยนแปลง กรณีใช้งานหลักคือ **SDK cache invalidation**: CDN หรือ application server ของคุณรับ webhook และดึง GrowthBook feature payload ใหม่ทันที ทำให้ผู้ใช้ได้รับ flag state ล่าสุดโดยไม่ต้องรอ poll cycle ถัดไป
+
+### การสร้าง SDK webhook
+
+1. ไปที่ **Settings → SDK Connections** และเปิด SDK connection ที่ต้องการ hook
+2. คลิก **Webhooks** → **Add Webhook**
+3. ใส่ **Endpoint URL** — URL HTTPS ที่ server หรือ CDN ของคุณรับฟัง
+4. (ไม่บังคับ) ตั้ง **Signing Secret** เพื่อให้ server ของคุณยืนยันว่า payload มาจาก GrowthBook จริง
+5. คลิก **Save** GrowthBook ส่ง test ping ทันที
+
+### การยืนยัน webhook signature
+
+GrowthBook เซ็น webhook body ด้วย HMAC-SHA256 บน server ของคุณ:
+
+```js
+import crypto from 'node:crypto';
+
+function verifyWebhook(body, signature, secret) {
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(body)
+    .digest('hex');
+  return crypto.timingSafeEqual(
+    Buffer.from(expected),
+    Buffer.from(signature)
+  );
+}
+```
+
+header `X-GrowthBook-Signature` มี hex digest
+
+## Event webhooks
+
+นอกจาก SDK cache invalidation แล้ว GrowthBook ยังรองรับ **event webhooks** — การแจ้งเตือนสำหรับ event ระดับสูงกว่า เช่น experiment started, experiment stopped หรือ feature saved ตั้งค่าได้ที่ **Settings → Event Webhooks**
+
+export const eventWebhookPayload = `// Example GrowthBook event webhook payload (feature.updated)
+{
+  "event": "feature.updated",
+  "data": {
+    "id": "checkout-v2",
+    "environments": {
+      "production": { "enabled": true }
+    }
+  },
+  "timestamp": "2025-09-01T12:00:00Z"
+}`;
+
+<CopyCode client:visible code={eventWebhookPayload} label="Copy example webhook payload" />
+
+<Callout title="ประเด็นสำคัญ">
+ใช้ REST API และ webhooks ร่วมกันเพื่อ automate การเปลี่ยนแปลง flag จาก CI/CD — API toggle flag และ webhook บอกให้ server ของคุณ invalidate SDK cache ทันที
+</Callout>
+
+export const quizWebhooksApi = [
+  {
+    q: 'คุณสร้าง API key ได้ที่ไหนใน GrowthBook?',
+    options: [
+      'Features → Add Feature',
+      'Settings → API Keys',
+      'Experiments → Metrics',
+      'SDK Connections → Webhooks',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'GrowthBook toggle endpoint ใช้ HTTP method อะไร?',
+    options: [
+      'GET',
+      'POST',
+      'PUT',
+      'PATCH',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'กรณีใช้งานหลักของ SDK webhook คืออะไร?',
+    options: [
+      'เพื่อรัน statistical analysis บนผลลัพธ์ experiment',
+      'เพื่อ invalidate SDK feature payload cache เมื่อ flags เปลี่ยนแปลง',
+      'เพื่อสร้าง features ใหม่โดยอัตโนมัติ',
+      'เพื่อยืนยัน SDK connections',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'GrowthBook ใช้ HTTP header อะไรส่ง HMAC-SHA256 webhook signature?',
+    options: [
+      'X-GrowthBook-Token',
+      'X-GrowthBook-Signature',
+      'Authorization',
+      'X-Webhook-Secret',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="advanced-production/webhooks-api" questions={quizWebhooksApi} />
+
+<ProgressTracker client:visible id="advanced-production/webhooks-api" />

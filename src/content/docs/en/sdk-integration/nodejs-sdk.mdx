@@ -1,0 +1,115 @@
+---
+title: 'Node.js SDK'
+description: 'Evaluate feature flags server-side in Node.js — per-request scoping and payload caching.'
+sidebar:
+  order: 4
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+The same `@growthbook/growthbook` package that runs in the browser also works in Node.js, so there is no separate server SDK to install. The key difference is the lifecycle model: on the server, flag evaluation happens inside request handlers rather than once at app startup.
+
+## Server-side evaluation
+
+In a browser app you typically create one `GrowthBook` instance for the lifetime of the page. On the server, each HTTP request may represent a completely different user, so you need **per-request scoping** — create (or clone) a fresh instance for every request and set user-specific attributes on it.
+
+## Caching the feature payload
+
+Fetching feature definitions from GrowthBook on every request would add latency and burn bandwidth. Instead, fetch the payload once at startup, store it in memory, then pass it to each per-request instance via `gb.init({ payload: cachedPayload })`. This skips the network call entirely while keeping flag evaluation accurate.
+
+You can retrieve the payload from the loader instance with `gb.getPayload()` and later hand it to a fresh instance with `gb.setPayload(payload)` or by passing it directly to `init`.
+
+## Why per-request scoping matters
+
+If you shared a single `GrowthBook` instance across requests and called `gb.setAttributes(...)` in each handler, concurrent requests would overwrite each other's user context — leading to incorrect flag evaluations and hard-to-reproduce bugs. A fresh instance per request eliminates this race condition entirely.
+
+export const nodeSdkCode = `import { GrowthBook, setPolyfills } from '@growthbook/growthbook';
+
+// --- App startup: fetch and cache the payload once ---
+let cachedPayload = null;
+
+const loader = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-abc123',
+});
+await loader.init({ timeout: 3000 });
+cachedPayload = loader.getPayload();
+
+// --- Per-request handler ---
+async function handleRequest(req, res) {
+  // Fresh instance per request — no shared mutable state
+  const gb = new GrowthBook({
+    apiHost: 'https://cdn.growthbook.io',
+    clientKey: 'sdk-abc123',
+  });
+
+  // Reuse the cached payload — no extra network call
+  await gb.init({ payload: cachedPayload });
+
+  // Scope attributes to this request's user
+  gb.setAttributes({
+    id: req.user.id,
+    country: req.headers['cf-ipcountry'] ?? 'US',
+  });
+
+  const useBetaUI = gb.isOn('beta-ui');
+  res.json({ useBetaUI });
+
+  gb.destroy(); // free listeners
+}`;
+
+<CopyCode client:visible code={nodeSdkCode} label="Node.js SDK — per-request scoping with payload cache" />
+
+<Callout title="Scope attributes per request">
+  On the server, always create a fresh GrowthBook instance (or clone) per request. Sharing one instance with mutable attributes causes concurrent requests to overwrite each other's user context.
+</Callout>
+
+export const quizNodeSdk = [
+  {
+    q: 'Why should you create a fresh GrowthBook instance per request on the server?',
+    options: [
+      'To avoid hitting the rate limit',
+      'So each request sets its own user attributes without overwriting others',
+      'The SDK only allows one init per process',
+      'Node.js does not support class instances',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What does `gb.getPayload()` return?',
+    options: [
+      'The current user attributes',
+      'The cached feature definitions fetched from GrowthBook',
+      'The experiment assignment log',
+      'An access token',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'How do you reuse a cached payload without a new network call?',
+    options: [
+      'gb.refresh()',
+      'gb.init({ payload: cachedPayload })',
+      'gb.load(url)',
+      'gb.setAttributes(cachedPayload)',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What should you call after you are done with a server-side GrowthBook instance?',
+    options: [
+      'gb.close()',
+      'gb.destroy()',
+      'gb.reset()',
+      'gb.disconnect()',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="sdk-integration/nodejs-sdk" questions={quizNodeSdk} />
+
+<ProgressTracker client:visible id="sdk-integration/nodejs-sdk" />

@@ -1,0 +1,124 @@
+---
+title: "React SDK"
+description: "เพิ่ม GrowthBook ใน React app ด้วย GrowthBookProvider และ hooks"
+sidebar:
+  order: 3
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## React SDK คืออะไร
+
+React SDK เป็น wrapper บน core JS SDK ที่มี React context และ hooks มาให้พร้อมใช้งาน ทำให้คุณสามารถประเมิน feature flags ได้ทุกที่ใน component tree โดยไม่ต้อง prop-drilling ใช้ package `@growthbook/growthbook-react`
+
+## การติดตั้ง
+
+```bash
+npm install @growthbook/growthbook-react
+```
+
+package `@growthbook/growthbook-react` re-export ทุกอย่างจาก `@growthbook/growthbook` ด้วย จึงต้องติดตั้งแค่ครั้งเดียว
+
+## การตั้งค่า Provider
+
+สร้าง `GrowthBook` instance เหมือนกับโปรเจกต์ vanilla JS แล้ว wrap app root ด้วย `<GrowthBookProvider growthbook={gb}>` จากนั้น component ทุกตัวใน tree สามารถอ่าน flag ผ่าน hooks หรือ declarative component ได้เลย
+
+## Hooks ที่ใช้งาน
+
+- `useFeatureIsOn('flag-key')` คืนค่า `boolean` — วิธีที่ง่ายที่สุดในการ gate component โดยไม่ render อะไรเพิ่มและ re-render เมื่อ flag เปลี่ยน
+- `useFeatureValue('flag-key', fallback)` คืนค่า feature value พร้อม type-safe fallback — ส่ง typed default แล้ว TypeScript จะ infer return type ให้อัตโนมัติ
+
+## แบบ Declarative ด้วย IfFeatureEnabled
+
+`<IfFeatureEnabled feature="flag-key">` render children เฉพาะเมื่อ flag ประเมินเป็น `true` เท่านั้น เป็น wrapper บาง ๆ รอบ `useFeatureIsOn` ที่ช่วยให้ JSX template อ่านง่ายโดยไม่ต้องใช้ ternary เพิ่มเติม
+
+export const reactSdkCode = `import { GrowthBook } from '@growthbook/growthbook';
+import { GrowthBookProvider, useFeatureIsOn, useFeatureValue, IfFeatureEnabled } from '@growthbook/growthbook-react';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-abc123',
+});
+
+await gb.init({ timeout: 2000 });
+gb.setAttributes({ id: 'user-abc' });
+
+// Wrap your app once
+export function App() {
+  return (
+    <GrowthBookProvider growthbook={gb}>
+      <HomePage />
+    </GrowthBookProvider>
+  );
+}
+
+// Use hooks anywhere inside the tree
+function HomePage() {
+  const darkMode = useFeatureIsOn('dark-mode');
+  const theme = useFeatureValue('ui-theme', 'light');
+
+  return (
+    <div className={darkMode ? 'dark' : 'light'}>
+      <p>Theme: {theme}</p>
+      <IfFeatureEnabled feature="new-dashboard">
+        <NewDashboard />
+      </IfFeatureEnabled>
+    </div>
+  );
+}`;
+
+<CopyCode client:visible code={reactSdkCode} label="React SDK — full example" />
+
+<Callout title="Wrap ครั้งเดียว อ่านได้ทุกที่">
+  เพิ่ม `<GrowthBookProvider>` ครั้งเดียวที่ root ของ app จากนั้นเรียก hook อย่าง `useFeatureIsOn` ในทุก component ได้เลยโดยไม่ต้อง prop-drilling
+</Callout>
+
+export const quizReactSdk = [
+  {
+    q: 'package ใดที่ให้ React-specific GrowthBook hooks?',
+    options: [
+      '@growthbook/growthbook',
+      '@growthbook/growthbook-react',
+      'growthbook-hooks',
+      'react-feature-flags',
+    ],
+    answer: 1,
+  },
+  {
+    q: '`useFeatureIsOn` คืนค่าอะไร?',
+    options: [
+      'string value',
+      'boolean',
+      'Promise',
+      'object ที่มี value และ loading',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'component ใด render children เฉพาะเมื่อ flag เปิดอยู่?',
+    options: [
+      '<FeatureGate>',
+      '<IfFeatureEnabled>',
+      '<ShowWhenOn>',
+      '<FlagProvider>',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'ควรวาง `<GrowthBookProvider>` ไว้ที่ไหน?',
+    options: [
+      'ใน component ทุกตัวที่อ่าน flag',
+      'ครั้งเดียวที่ root ของ app เพื่อให้ children ทั้งหมดเข้าถึง flag ได้',
+      'ใน useEffect hook',
+      'ใน Route component แต่ละตัว',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="sdk-integration/react-sdk" questions={quizReactSdk} />
+
+<ProgressTracker client:visible id="sdk-integration/react-sdk" />

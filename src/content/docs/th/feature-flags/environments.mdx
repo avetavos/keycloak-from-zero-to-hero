@@ -1,0 +1,130 @@
+---
+title: Environments
+description: 'environment แบบ Dev, staging และ production ใน GrowthBook — สถานะ flag และ SDK connection ที่แยกอิสระจากกัน'
+sidebar:
+  order: 4
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## environment คืออะไร?
+
+GrowthBook มาพร้อมกับ environment ในตัวสามแบบ: **development**, **staging** และ **production** environment คือ context ที่มีชื่อกำกับ ซึ่ง:
+
+- เก็บ **สถานะ flag** ของตัวเอง (enabled/disabled, override rules)
+- มี **SDK Connection** ของตัวเองพร้อม `clientKey` ที่ไม่ซ้ำกัน
+
+นั่นหมายความว่า flag หนึ่งสามารถเปิดอยู่ใน development และปิดอยู่ใน production ได้ในเวลาเดียวกัน — โดยไม่ต้อง deploy เพื่อย้ายมันระหว่าง stage
+
+ผู้ดูแลระบบยังเพิ่ม environment ที่กำหนดเองได้ด้วย (เช่น `qa`, `canary`) จาก **Settings → Environments**
+
+## toggle flag ต่อ environment
+
+ทุก Feature มี toggle ในระดับ environment:
+
+1. เปิด Feature ใน GrowthBook
+2. เลื่อนไปที่ส่วน **Environments** คุณจะเห็นแถวสำหรับแต่ละ environment
+3. คลิก toggle ข้าง ๆ **production** เพื่อเปิดใช้งาน flag ที่นั่น
+4. สถานะ flag ใน development และ staging ยังคงไม่เปลี่ยนแปลง
+
+override rule (การบังคับค่า, การรัน experiment, การทำ percentage rollout) ก็แยกตาม environment เช่นกัน — rule ใน development ไม่ส่งผลกระทบต่อ production
+
+## SDK Connections — หนึ่ง clientKey ต่อหนึ่ง environment
+
+ไปที่ **Settings → SDK Connections** เพื่อดู connection หนึ่งตัวต่อหนึ่ง environment แต่ละ connection มี `clientKey` ที่ไม่ซ้ำกัน ใช้ key ที่ถูกต้องในแต่ละ context ของการ deploy:
+
+```js
+// Development app
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-dev-abc123',
+});
+
+// Production app
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-prod-xyz789',
+});
+```
+
+โดยทั่วไปคุณจะเก็บ clientKey ไว้ใน environment variable แล้ว inject มันตอน build/runtime:
+
+```js
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: process.env.GROWTHBOOK_CLIENT_KEY,
+});
+```
+
+export const envKeysCode = `// .env.development
+// GROWTHBOOK_CLIENT_KEY=sdk-dev-abc123
+
+// .env.production
+// GROWTHBOOK_CLIENT_KEY=sdk-prod-xyz789
+
+import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: process.env.GROWTHBOOK_CLIENT_KEY,
+});
+
+await gb.init({ timeout: 2000 });
+
+// Same flag key works across all environments.
+// The value returned depends on which environment
+// the clientKey belongs to.
+const isOn = gb.isOn('my-flag');`;
+
+<CopyCode client:visible code={envKeysCode} label="Copy env-key pattern" />
+
+## สร้าง SDK Connection เพิ่ม
+
+1. ไปที่ **Settings → SDK Connections**
+2. คลิก **Add SDK Connection**
+3. ตั้งชื่อมัน (เช่น `Production Node`), เลือก environment เป็น **production** และเลือกภาษาของ SDK
+4. คัดลอก `clientKey` ที่ถูกสร้างขึ้นมา แล้วเก็บไว้อย่างปลอดภัยเป็น environment variable ใน production deployment ของคุณ
+
+<Callout title="จุดสำคัญ">
+แต่ละ environment มี SDK Connection (clientKey) ของตัวเอง และสถานะ flag ที่อิสระจากกันโดยสมบูรณ์ การเปิด flag ใน development ไม่เคยไปแตะต้อง production เลย เก็บ clientKey ไว้ใน environment variable เสมอ — อย่าฮาร์ดโค้ดมันลงใน source
+</Callout>
+
+export const quizEnvironments = [
+  {
+    q: 'โปรเจกต์ GrowthBook ทั่วไปมี SDK Connection กี่ตัวสำหรับสาม environment?',
+    options: [
+      'connection เดียวที่แชร์กันทุก environment',
+      'หนึ่ง connection ต่อหนึ่ง environment (รวมสามตัว)',
+      'หนึ่ง connection ต่อหนึ่ง feature flag',
+      'สองตัว: ตัวหนึ่งสำหรับ server และอีกตัวสำหรับ client',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'จะเกิดอะไรขึ้นกับสถานะ flag ใน production เมื่อคุณเปิด flag ใน development?',
+    options: [
+      'production ก็จะถูกเปิดโดยอัตโนมัติด้วย',
+      'production ยังคงไม่เปลี่ยนแปลง',
+      'production ถูกปิดเพื่อความปลอดภัย',
+      'GrowthBook จะถามคุณเพื่อยืนยันการเปลี่ยนแปลงใน production',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'ใน GrowthBook คุณหา clientKey สำหรับ environment ที่ระบุได้ที่ไหน?',
+    options: [
+      'Features → หน้ารายละเอียดของ Feature',
+      'Metrics → Data Sources',
+      'Settings → SDK Connections',
+      'Experiments → Results',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="feature-flags/environments" questions={quizEnvironments} />
+
+<ProgressTracker client:visible id="feature-flags/environments" />

@@ -1,0 +1,156 @@
+---
+title: 'Default Values'
+description: 'What the SDK returns when no rule matches, and why a safe fallback to getFeatureValue matters.'
+sidebar:
+  order: 5
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Default value vs override rules
+
+Every GrowthBook Feature has two layers of value resolution:
+
+1. **Override rules** — conditions, percentage rollouts, or experiment assignments you configure per environment. When a rule matches the current user context, it wins.
+2. **Default value** — the value returned when **no rule matches**. This is your safe floor.
+
+When GrowthBook is completely unreachable (network error, CDN outage), the SDK falls back to the **fallback argument** you pass directly in your code — it never returns `null` or throws.
+
+## The three fallback layers
+
+```
+SDK call
+  └─ GrowthBook loaded?
+       ├─ YES → evaluate rules → match found? → return rule value
+       │                       └─ no match  → return Feature default value
+       └─ NO  → return the fallback argument from your code
+```
+
+## Always pass a sensible fallback
+
+```js
+// BAD — if GrowthBook is unreachable, getFeatureValue returns undefined
+const text = gb.getFeatureValue('banner-text');
+
+// GOOD — safe fallback keeps the app working
+const text = gb.getFeatureValue('banner-text', 'Welcome');
+```
+
+The fallback argument is the last line of defence. It should represent the experience you want users to have if GrowthBook is down — usually the current, stable behaviour.
+
+## Setting the default value in GrowthBook
+
+1. Open a Feature in the GrowthBook UI.
+2. Click **Edit** next to the **Default Value** field.
+3. Enter the value, e.g. `Welcome` for a string flag.
+4. Click **Save**.
+
+The default value takes effect immediately for all environments where no override rule produces a match.
+
+## Changing the default value
+
+To update a default value without adding a rule:
+
+1. Open the Feature.
+2. Click **Edit** on the Default Value.
+3. Change the value and click **Save**.
+
+The change is applied globally across every environment that does not have an overriding rule. No deploy required.
+
+## Worked example — banner text
+
+```js
+import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: process.env.GROWTHBOOK_CLIENT_KEY,
+  attributes: {
+    id: 'user-123',
+    country: 'TH',
+  },
+});
+
+await gb.init({ timeout: 2000 });
+
+// Returns the GrowthBook default value when no rule matches,
+// or 'Welcome' when GrowthBook cannot be reached.
+const bannerText = gb.getFeatureValue('banner-text', 'Welcome');
+
+document.getElementById('banner').textContent = bannerText;
+```
+
+export const defaultValueCode = `import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: process.env.GROWTHBOOK_CLIENT_KEY,
+  attributes: {
+    id: 'user-123',
+    country: 'TH',
+  },
+});
+
+await gb.init({ timeout: 2000 });
+
+// Safe fallback: 'Welcome' is used only if GrowthBook
+// cannot be reached at all.
+const bannerText = gb.getFeatureValue('banner-text', 'Welcome');
+
+document.getElementById('banner').textContent = bannerText;`;
+
+<CopyCode client:visible code={defaultValueCode} label="Copy banner-text snippet" />
+
+<Callout title="Key point">
+Always pass a sensible fallback to `getFeatureValue` so your app behaves correctly if GrowthBook is unreachable. The fallback should represent the stable, safe user experience — usually the behaviour your app had before the flag was introduced.
+</Callout>
+
+export const quizDefaultValues = [
+  {
+    q: 'What value does the SDK return when a Feature exists in GrowthBook but no override rule matches?',
+    options: [
+      'null',
+      'undefined',
+      'The fallback argument passed to getFeatureValue',
+      'The Feature\'s default value configured in GrowthBook',
+    ],
+    answer: 3,
+  },
+  {
+    q: 'What value does the SDK return when GrowthBook cannot be reached at all?',
+    options: [
+      'The Feature\'s default value configured in GrowthBook',
+      'The fallback argument passed to getFeatureValue in your code',
+      'true for booleans, empty string for strings',
+      'It throws a network error',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which SDK call is MISSING a safe fallback and could return undefined?',
+    options: [
+      'gb.getFeatureValue("flag", "default")',
+      'gb.isOn("flag")',
+      'gb.getFeatureValue("flag")',
+      'gb.init({ timeout: 2000 })',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'What should the fallback argument represent?',
+    options: [
+      'The most experimental new behaviour',
+      'An empty value to signal GrowthBook is down',
+      'The stable, safe behaviour your app had before the flag was introduced',
+      'The value used only during A/B tests',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="feature-flags/default-values" questions={quizDefaultValues} />
+
+<ProgressTracker client:visible id="feature-flags/default-values" />

@@ -1,0 +1,130 @@
+---
+title: Environments
+description: 'Dev, staging, and production environments in GrowthBook — independent flag states and SDK connections.'
+sidebar:
+  order: 4
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## What are environments?
+
+GrowthBook ships with three built-in environments: **development**, **staging**, and **production**. An environment is a named context that:
+
+- Holds its own **flag state** (enabled/disabled, override rules).
+- Has its own **SDK Connection** with a unique `clientKey`.
+
+This means a flag can be on in development and off in production at the same time — no deploys needed to move it between stages.
+
+Admins can also add custom environments (e.g. `qa`, `canary`) from **Settings → Environments**.
+
+## Per-environment flag toggles
+
+Every Feature has an environment-level toggle:
+
+1. Open a Feature in GrowthBook.
+2. Scroll to the **Environments** section. You will see rows for each environment.
+3. Click the toggle next to **production** to enable the flag there.
+4. The flag state in development and staging is unchanged.
+
+Override rules (forcing a value, running an experiment, doing a percentage rollout) are also per-environment — a rule in development does not affect production.
+
+## SDK Connections — one clientKey per environment
+
+Navigate to **Settings → SDK Connections** to see one connection per environment. Each connection has a unique `clientKey`. Use the right key in each deployment context:
+
+```js
+// Development app
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-dev-abc123',
+});
+
+// Production app
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-prod-xyz789',
+});
+```
+
+Typically you store the clientKey in an environment variable and inject it at build/runtime:
+
+```js
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: process.env.GROWTHBOOK_CLIENT_KEY,
+});
+```
+
+export const envKeysCode = `// .env.development
+// GROWTHBOOK_CLIENT_KEY=sdk-dev-abc123
+
+// .env.production
+// GROWTHBOOK_CLIENT_KEY=sdk-prod-xyz789
+
+import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: process.env.GROWTHBOOK_CLIENT_KEY,
+});
+
+await gb.init({ timeout: 2000 });
+
+// Same flag key works across all environments.
+// The value returned depends on which environment
+// the clientKey belongs to.
+const isOn = gb.isOn('my-flag');`;
+
+<CopyCode client:visible code={envKeysCode} label="Copy env-key pattern" />
+
+## Creating an additional SDK Connection
+
+1. Go to **Settings → SDK Connections**.
+2. Click **Add SDK Connection**.
+3. Give it a name (e.g. `Production Node`), select the **production** environment, and choose the SDK language.
+4. Copy the generated `clientKey` and store it securely as an environment variable in your production deployment.
+
+<Callout title="Key point">
+Each environment has its own SDK Connection (clientKey) and completely independent flag states. Enabling a flag in development never touches production. Always store clientKeys in environment variables — never hard-code them in source.
+</Callout>
+
+export const quizEnvironments = [
+  {
+    q: 'How many SDK Connections does a typical GrowthBook project have for three environments?',
+    options: [
+      'One shared connection for all environments',
+      'One connection per environment (three total)',
+      'One connection per feature flag',
+      'Two: one for server and one for client',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What happens to the production flag state when you enable a flag in development?',
+    options: [
+      'Production is also enabled automatically',
+      'Production remains unchanged',
+      'Production is disabled as a safety measure',
+      'GrowthBook asks you to confirm the production change',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Where in GrowthBook do you find the clientKey for a specific environment?',
+    options: [
+      'Features → Feature detail page',
+      'Metrics → Data Sources',
+      'Settings → SDK Connections',
+      'Experiments → Results',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="feature-flags/environments" questions={quizEnvironments} />
+
+<ProgressTracker client:visible id="feature-flags/environments" />

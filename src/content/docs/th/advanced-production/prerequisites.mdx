@@ -1,0 +1,134 @@
+---
+title: Prerequisites
+description: 'Gate flag หนึ่งด้วยค่าของอีก flag หนึ่ง เพื่อสร้าง dependency chain ที่ปลอดภัยใน GrowthBook'
+sidebar:
+  order: 3
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Prerequisite คืออะไร?
+
+**prerequisite** คือเงื่อนไขที่คุณแนบไปกับ feature flag ที่บอกว่า: "ประเมิน flag นี้ก็ต่อเมื่อ flag อื่นเปิดอยู่ (หรือมีค่าเฉพาะ)"
+
+ทำให้คุณสร้าง dependency chain ได้:
+
+- `checkout-v2` เปิดใช้งานได้ก็ต่อเมื่อ `new-payment-provider` เปิดอยู่
+- `ai-search-results` เปิดใช้งานได้ก็ต่อเมื่อ `search-redesign` เปิดอยู่ และ `beta-features` เปิดอยู่
+
+หากไม่มี prerequisites คุณต้องจัดการ dependency เหล่านี้ด้วยตัวเองในโค้ดของแอป — เพิ่ม `if (flagA && flagB)` guard ทุกที่ prerequisite ย้าย logic นั้นเข้าไปใน GrowthBook ทำให้โค้ดสะอาดขึ้นและ dependency มองเห็นได้ใน UI
+
+## เมื่อใดควรใช้ prerequisites
+
+prerequisites มีประโยชน์สูงสุดเมื่อ:
+
+- **Staged rollout chains** — flag ระดับ surface ขึ้นอยู่กับ infrastructure flag ที่ rollout เต็มที่แล้ว
+- **Kill switches พร้อม dependencies** — การปิด `new-payment-provider` ควรปิดทุกอย่างที่ depend บนมันโดยอัตโนมัติ โดยไม่ต้อง deploy ใหม่
+- **Beta gate stacking** — ฟีเจอร์เข้าถึงได้เฉพาะเมื่อ user อยู่ใน `beta` cohort ทั่วไป AND อยู่ใน sub-experiment เฉพาะ
+
+## การสร้าง prerequisite ใน GrowthBook UI
+
+1. ไปที่ **Features** และเปิด feature ที่คุณต้องการเพิ่ม prerequisite (flag **dependent**)
+2. บนหน้า feature detail คลิก **Edit** ถัดจาก **Default Value & Rules**
+3. เลื่อนลงไปที่ส่วน **Prerequisites** และคลิก **Add Prerequisite**
+4. ใน dropdown ค้นหาและเลือก flag **parent** (อันที่ต้องเปิดก่อน)
+5. ตั้ง **Required Value** — สำหรับ boolean flag เลือก `true`
+6. คลิก **Save**
+
+ตอนนี้เมื่อ SDK ประเมิน flag dependent:
+
+- หาก parent flag เป็น `false` (หรือ override rules คืนค่า `false`) flag dependent จะคืนค่า **off value** โดยไม่คำนึงถึง rules ของตัวเอง
+- หาก parent flag เป็น `true` flag dependent จะประเมินตามปกติ
+
+> **สำคัญ:** Circular prerequisites (A ต้องการ B, B ต้องการ A) จะถูก GrowthBook ตรวจพบและบล็อกตั้งแต่ save time
+
+## ตัวอย่าง dependency chain
+
+ลองนึกถึงสาม feature ตามลำดับ:
+
+```
+new-payment-provider  (infrastructure flag)
+        ↓  prerequisite
+  checkout-v2         (UI flag)
+        ↓  prerequisite
+  express-checkout    (premium surface flag)
+```
+
+การปิด `new-payment-provider` จะ cascade — ทั้ง `checkout-v2` และ `express-checkout` ดับอัตโนมัติ แม้ว่า rules ของพวกมันจะบอกว่า ON ทำให้คุณมี kill switch เดียวสำหรับทั้ง chain
+
+export const prereqCode = `import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-YOUR_DEV_KEY',
+  attributes: { id: 'user-123' },
+});
+
+await gb.init({ timeout: 2000 });
+
+// Prerequisites are evaluated server-side in GrowthBook
+// and baked into the feature payload the SDK downloads.
+// No extra client code is needed — isOn() already
+// respects the prerequisite chain.
+
+const paymentOn = gb.isOn('new-payment-provider');
+const checkoutOn = gb.isOn('checkout-v2');       // false if paymentOn is false
+const expressOn  = gb.isOn('express-checkout');  // false if checkoutOn is false
+
+console.log({ paymentOn, checkoutOn, expressOn });`;
+
+<CopyCode client:visible code={prereqCode} label="Copy prerequisite SDK example" />
+
+<Callout title="ประเด็นสำคัญ">
+Prerequisites ทำให้ flag ขึ้นอยู่กับ flag อื่น — มีประโยชน์สำหรับ staged dependencies ที่การปิด parent flag ควรปิด children ทั้งหมดโดยเงียบๆ โดยไม่ต้อง deploy โค้ด
+</Callout>
+
+export const quizPrerequisites = [
+  {
+    q: 'เกิดอะไรขึ้นกับ dependent flag เมื่อ prerequisite parent flag ปิดอยู่?',
+    options: [
+      'dependent flag ถูกประเมินตามปกติ',
+      'dependent flag คืนค่า off value โดยไม่คำนึงถึง rules ของตัวเอง',
+      'GrowthBook โยน error',
+      'SDK ดึง payload ใหม่โดยอัตโนมัติ',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'คุณเพิ่ม prerequisite ให้กับ feature ได้ที่ไหนใน GrowthBook UI?',
+    options: [
+      'Experiments → Targeting',
+      'Features → Edit → ส่วน Prerequisites',
+      'Settings → Namespaces',
+      'SDK Connections → Rules',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'SDK ต้องการโค้ดเพิ่มเติมเพื่อรองรับ prerequisites หรือไม่?',
+    options: [
+      'ใช่ คุณต้องตรวจสอบ parent flag ด้วยตนเองในโค้ดก่อน',
+      'ไม่ SDK ประเมิน prerequisites โดยอัตโนมัติจาก feature payload',
+      'เฉพาะเมื่อใช้ REST API',
+      'เฉพาะใน server-side SDK',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'GrowthBook ทำอะไรเมื่อคุณพยายามสร้าง circular prerequisite (A ต้องการ B, B ต้องการ A)?',
+    options: [
+      'มันเงียบๆ ละเว้น prerequisite ที่สอง',
+      'มันตรวจพบและบล็อก circular dependency ตั้งแต่ save time',
+      'มันอนุญาตแต่ log คำเตือน',
+      'มันทำลาย namespace ของ feature ทั้งหมด',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="advanced-production/prerequisites" questions={quizPrerequisites} />
+
+<ProgressTracker client:visible id="advanced-production/prerequisites" />

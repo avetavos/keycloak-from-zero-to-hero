@@ -1,0 +1,121 @@
+---
+title: 'Data Sources'
+description: 'How to connect GrowthBook to your data warehouse and write the experiment assignment query.'
+sidebar:
+  order: 2
+---
+
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## What is a Data Source?
+
+A Data Source is a read-only connection from GrowthBook to your warehouse or database. GrowthBook uses this connection to run analysis queries on demand — it never writes data back. Supported engines include BigQuery, Snowflake, Postgres, MySQL, ClickHouse, Redshift, Databricks, Athena, PrestoDB, and more.
+
+## Connecting a data source
+
+### Step 1 — Open Data Sources
+
+1. Log in to GrowthBook.
+2. In the left sidebar, navigate to **Analysis** then click **Data Sources**.
+3. Click **Add Data Source**.
+
+### Step 2 — Choose a connection type
+
+1. Select your warehouse type (e.g. **BigQuery**, **Snowflake**, or **Postgres**).
+2. Enter the connection details your warehouse requires:
+   - **BigQuery:** paste a service account JSON key and choose the default project.
+   - **Snowflake:** enter account, warehouse, database, schema, username, and password.
+   - **Postgres / MySQL:** enter host, port, database name, username, and password.
+3. Click **Test Connection** to verify GrowthBook can reach your warehouse.
+4. Click **Save**.
+
+### Step 3 — Write the experiment assignment query
+
+The assignment query is the most important query in GrowthBook. It answers the question: _"Which user saw which experiment variation, and when?"_
+
+A typical assignment query selects four columns:
+
+| Column | What it contains |
+|---|---|
+| `experiment_id` | The GrowthBook experiment key (e.g. `checkout-redesign`) |
+| `variation_id` | The variation index the user was assigned to (0 = control, 1 = variation A, …) |
+| `user_id` | A stable user identifier (user UUID, anonymous ID, etc.) |
+| `timestamp` | When the assignment happened (UTC) |
+
+Example for a BigQuery events table:
+
+```sql
+SELECT
+  experiment_id,
+  variation_id,
+  user_id,
+  timestamp
+FROM
+  `myproject.analytics.experiment_viewed`
+WHERE
+  timestamp >= '{{ startDate }}'
+  AND timestamp <= '{{ endDate }}'
+```
+
+GrowthBook substitutes `{{ startDate }}` and `{{ endDate }}` automatically when it runs the analysis.
+
+### Step 4 — (Optional) Add identifier joins
+
+If your warehouse uses different ID types (anonymous cookie ID vs logged-in user ID), add **Identifier Joins** so GrowthBook can stitch them together across the assignment and metric tables.
+
+## No warehouse? No problem
+
+If you are just getting started and don't have a data warehouse, GrowthBook can work without one for basic feature flags and targeting. You can add a data source later when you are ready to run statistical experiments. GrowthBook also supports uploading CSV data for lightweight experimentation.
+
+<Callout title="The assignment query is the foundation">
+The experiment assignment query tells GrowthBook who saw which variation and when. Every metric and statistical result flows from this query — if it is wrong or incomplete, all downstream analysis will be wrong. Verify it with a direct SQL preview before saving.
+</Callout>
+
+export const quizDataSources = [
+  {
+    q: 'What does GrowthBook do with the data in your warehouse?',
+    options: [
+      'It copies events into its own database for faster queries',
+      'It runs read-only SQL queries against your warehouse on demand',
+      'It streams events in real time via a webhook',
+      'It stores raw events in GrowthBook Cloud',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which four columns must the experiment assignment query return?',
+    options: [
+      'user_id, feature_key, value, timestamp',
+      'experiment_id, variation_id, user_id, timestamp',
+      'session_id, event_name, properties, timestamp',
+      'cohort_id, bucket, user_id, created_at',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What are {{ startDate }} and {{ endDate }} in the assignment SQL?',
+    options: [
+      'JavaScript template literals that must be escaped',
+      'GrowthBook template variables substituted automatically at query time',
+      'SQL comments that are stripped before execution',
+      'Column names in your events table',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What should you do before saving a new Data Source connection?',
+    options: [
+      'Create at least one metric',
+      'Click Test Connection to verify GrowthBook can reach the warehouse',
+      'Run a full experiment first',
+      'Export the schema to a CSV',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="metrics-data/data-sources" questions={quizDataSources} />
+
+<ProgressTracker client:visible id="metrics-data/data-sources" />

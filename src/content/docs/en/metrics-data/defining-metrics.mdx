@@ -1,0 +1,138 @@
+---
+title: 'Defining Metrics'
+description: 'How to create Fact Tables and define proportion, mean, and ratio metrics in GrowthBook.'
+sidebar:
+  order: 3
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Fact Tables and Metrics
+
+GrowthBook uses a two-layer model:
+
+1. **Fact Table** — a thin wrapper around a raw event table in your warehouse. It defines which SQL query surfaces the raw events and which columns represent the user ID, timestamp, and numeric value.
+2. **Metric** — a statistical definition built on top of a Fact Table. It says _how_ to aggregate the raw events into a number per user per experiment.
+
+This separation means you define your data shape once (Fact Table) and can compose many different metrics from it without duplicating SQL.
+
+## Metric types
+
+| Type | Definition | Example |
+|---|---|---|
+| **Proportion** | Percentage of users who did the event at least once | Conversion rate, click-through rate |
+| **Mean** | Average numeric value per user | Average order value, average session duration |
+| **Ratio** | Numerator metric divided by denominator metric | Revenue per session, pages per visit |
+
+## Step 1 — Create a Fact Table
+
+1. In the left sidebar, go to **Analysis** then **Fact Tables**.
+2. Click **Add Fact Table**.
+3. Give it a name (e.g. `Orders`).
+4. Select your Data Source.
+5. Write the SQL query that surfaces the raw events. The query must return at minimum:
+   - A user identifier column
+   - A timestamp column
+   - (For mean/ratio metrics) a numeric value column
+
+Example Fact Table SQL for an orders table:
+
+```sql
+SELECT
+  user_id,
+  timestamp,
+  revenue_usd
+FROM
+  `myproject.analytics.orders`
+WHERE
+  timestamp >= '{{ startDate }}'
+  AND timestamp <= '{{ endDate }}'
+```
+
+6. Map the **User ID column** and **Timestamp column** in the Fact Table settings.
+7. Click **Save**.
+
+## Step 2 — Define a Metric
+
+1. In the left sidebar, go to **Analysis** then **Metrics**.
+2. Click **Add Metric**.
+3. Choose the metric type: **Proportion**, **Mean**, or **Ratio**.
+4. Select the Fact Table you just created.
+5. For a **Mean** metric, choose the numeric value column (e.g. `revenue_usd`).
+6. Set the **Metric Window** — the time window after assignment in which to count events (e.g. 14 days). This prevents long-tail events from polluting the analysis.
+7. Optionally set:
+   - **Minimum sample size** — GrowthBook will not show results until this threshold is reached.
+   - **Maximum percentage change** — alerts you if uplift looks suspiciously large.
+8. Click **Save Metric**.
+
+## Sample metric SQL (direct SQL metric)
+
+For cases where a Fact Table is not the right abstraction, GrowthBook also supports defining a metric with raw SQL directly. Here is a proportion metric that counts users who placed at least one order:
+
+export const proportionMetricCode = `-- Proportion metric: "Purchased"
+-- Returns one row per user who placed an order.
+-- GrowthBook computes the conversion rate: ordered_users / assigned_users.
+SELECT
+  user_id,
+  timestamp
+FROM
+  \`myproject.analytics.orders\`
+WHERE
+  timestamp >= '{{ startDate }}'
+  AND timestamp <= '{{ endDate }}'`;
+
+<CopyCode client:visible code={proportionMetricCode} label="Copy metric SQL" />
+
+<Callout title="Define once, reuse everywhere">
+Fact Table metrics are defined once and can be attached to any experiment as a goal or guardrail metric. You never need to re-write the same SQL for each experiment. This also makes your metric definitions auditable and version-controllable if you export them via the GrowthBook API.
+</Callout>
+
+export const quizDefiningMetrics = [
+  {
+    q: 'What is the purpose of a Fact Table in GrowthBook?',
+    options: [
+      'It stores the experiment assignment data',
+      'It is a thin SQL wrapper around a raw event table that metrics are built on top of',
+      'It is where GrowthBook caches query results',
+      'It defines the A/B test traffic split',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which metric type calculates the percentage of users who triggered an event at least once?',
+    options: [
+      'Mean',
+      'Ratio',
+      'Proportion',
+      'Count',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'What does the Metric Window setting control?',
+    options: [
+      'How long GrowthBook waits before starting the experiment',
+      'The time window after assignment in which events are counted for a user',
+      'The date range for the assignment query',
+      'The minimum percentage uplift required to declare a winner',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Why is separating Fact Tables from Metrics useful?',
+    options: [
+      'It lets you define your data shape once and compose many metrics without duplicating SQL',
+      'It makes GrowthBook run queries faster',
+      'It is required for BigQuery but not Snowflake',
+      'It prevents users from seeing raw event data',
+    ],
+    answer: 0,
+  },
+];
+
+<Quiz client:visible id="metrics-data/defining-metrics" questions={quizDefiningMetrics} />
+
+<ProgressTracker client:visible id="metrics-data/defining-metrics" />

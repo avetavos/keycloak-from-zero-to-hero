@@ -1,0 +1,109 @@
+---
+title: 'SDK Connection'
+description: 'An SDK Connection is how you authorize your application to fetch feature flags from GrowthBook. Each connection is scoped to an environment and a language/framework.'
+sidebar:
+  order: 5
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+An SDK Connection is how you authorize your application to fetch feature flags from GrowthBook. Each connection is scoped to an environment and a language/framework.
+
+## Creating an SDK Connection
+
+1. In the GrowthBook UI, go to **Settings** in the left sidebar.
+2. Click **SDK Connections**.
+3. Click **Add SDK Connection**.
+4. Give it a name (e.g., "Node.js Dev").
+5. Select the **Environment** (e.g., `development`).
+6. Select the **Language / Framework** (e.g., JavaScript/Node.js).
+7. Click **Save**. GrowthBook shows you two values:
+   - **apiHost** — for self-hosted: `http://localhost:3100`; for Cloud: `https://cdn.growthbook.io`.
+   - **clientKey** — a string starting with `sdk-...`.
+8. Copy both values. You will use them to initialize the SDK.
+
+```js
+import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'http://localhost:3100',   // self-hosted SDK API
+  clientKey: 'sdk-YOUR_CLIENT_KEY',
+});
+
+await gb.init({ timeout: 2000 });
+
+// Check a boolean flag
+if (gb.isOn('my-feature')) {
+  console.log('Feature is enabled');
+}
+```
+
+export const sdkInitCode = `import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'http://localhost:3100',   // self-hosted SDK API
+  clientKey: 'sdk-YOUR_CLIENT_KEY',
+});
+
+await gb.init({ timeout: 2000 });
+
+// Check a boolean flag
+if (gb.isOn('my-feature')) {
+  console.log('Feature is enabled');
+}`;
+
+<CopyCode client:visible code={sdkInitCode} label="Copy SDK init" />
+
+<Callout title="Key point">
+An SDK Connection scopes a clientKey to a specific environment. Use a separate SDK Connection (and thus separate clientKey) for development vs production to keep flag states isolated.
+</Callout>
+
+export const quizSdkConn = [
+  {
+    q: 'What is the apiHost for a self-hosted GrowthBook SDK?',
+    options: [
+      'http://localhost:3000',
+      'http://localhost:3100',
+      'https://cdn.growthbook.io',
+      'http://localhost:8080',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What does a clientKey look like?',
+    options: [
+      'A UUID starting with org-',
+      'A string starting with sdk-',
+      'A base64-encoded JWT',
+      'A MongoDB ObjectId',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Where do you create an SDK Connection in the GrowthBook UI?',
+    options: [
+      'Features → Add Feature',
+      'Experiments → Settings',
+      'Settings → SDK Connections',
+      'Metrics → Sources',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'Why use separate SDK Connections for development and production?',
+    options: [
+      'To keep flag states and clientKeys isolated per environment',
+      'Because GrowthBook requires it for billing',
+      'To reduce MongoDB storage',
+      'There is no reason; one connection works for all environments',
+    ],
+    answer: 0,
+  },
+];
+
+<Quiz client:visible id="intro-setup/sdk-connection" questions={quizSdkConn} />
+
+<ProgressTracker client:visible id="intro-setup/sdk-connection" />

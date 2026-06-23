@@ -1,0 +1,144 @@
+---
+title: 'ชนิดของ Flag'
+description: 'value type ทั้งสี่แบบของ GrowthBook — boolean, string, number และ JSON — และควรใช้แบบไหนเมื่อไร'
+sidebar:
+  order: 3
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## value type ทั้งสี่แบบ
+
+เมื่อคุณสร้าง Feature ใน GrowthBook คุณจะเลือก **value type** หนึ่งในสี่แบบ ชนิดนี้เป็นแบบถาวร — คุณไม่สามารถเปลี่ยนมันได้หลังจากสร้างไปแล้ว ดังนั้นเลือกอย่างตั้งใจ
+
+### Boolean
+
+ชนิดที่ง่ายที่สุด: `true` หรือ `false`
+
+ใช้เมื่อคุณต้องการประตูเปิด/ปิดแบบง่าย ๆ — แสดง UI ใหม่, เปิดใช้วิธีการชำระเงิน, ปลดล็อกฟีเจอร์ beta
+
+```js
+if (gb.isOn('dark-mode')) {
+  enableDarkMode();
+}
+
+// or with explicit fallback:
+const isDark = gb.getFeatureValue('dark-mode', false);
+```
+
+### String
+
+ค่าข้อความที่ SDK คืนกลับมาตามเดิม
+
+ใช้เมื่อคุณต้องการปรับเปลี่ยนข้อความ, เลือกชื่อ variant หรือคืนค่าสตริงสำหรับ configuration
+
+```js
+const buttonLabel = gb.getFeatureValue('cta-text', 'Get started');
+// returns 'Get started', 'Try for free', 'Sign up now', etc.
+```
+
+### Number
+
+ค่าตัวเลข (จำนวนเต็มหรือทศนิยม)
+
+ใช้เมื่อคุณต้องการปรับ threshold, ราคา, limit หรือเปอร์เซ็นต์ โดยไม่ต้อง deploy โค้ด
+
+```js
+const maxItems = gb.getFeatureValue('cart-max-items', 10);
+// returns 10, 20, 50, etc.
+```
+
+### JSON
+
+ออบเจกต์หรืออาร์เรย์ JSON ตามที่ต้องการ
+
+ใช้เมื่อคุณต้องการส่งก้อน configuration ทั้งก้อน — สีของปุ่ม, ระดับราคา, ตัวเลือกการจัด layout ของ UI — เป็น flag เดียว
+
+```js
+const theme = gb.getFeatureValue('ui-theme', { color: 'blue', size: 'md' });
+// theme.color, theme.size come from GrowthBook
+```
+
+argument สำหรับ fallback ของ `getFeatureValue` ต้องเป็นออบเจกต์ JS ที่ถูกต้องและตรงกับรูปร่างที่คุณคาดหวังจาก GrowthBook ถ้า GrowthBook เข้าถึงไม่ได้ แอปของคุณก็ยังทำงานได้ด้วย fallback
+
+## เปรียบเทียบชนิดต่าง ๆ แบบรวดเร็ว
+
+| ชนิด | ค่าที่ SDK คืน | เหมาะกับ |
+|---|---|---|
+| Boolean | `true` / `false` | feature gate, kill switch |
+| String | สตริงใด ๆ | ปรับเปลี่ยนข้อความ, ชื่อ layout |
+| Number | ตัวเลขใด ๆ | threshold, limit, ราคา |
+| JSON | ออบเจกต์หรืออาร์เรย์ใด ๆ | ชุด config, การตั้งค่าหลายคุณสมบัติ |
+
+## Hoisted SDK snippet — JSON flag
+
+export const jsonFlagCode = `import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-YOUR_DEV_KEY',
+});
+
+await gb.init({ timeout: 2000 });
+
+// JSON flag — always pass a complete fallback object
+const config = gb.getFeatureValue('ui-theme', { color: 'blue', size: 'md' });
+
+console.log(config.color); // 'blue' or whatever GrowthBook returns
+console.log(config.size);  // 'md' or whatever GrowthBook returns`;
+
+<CopyCode client:visible code={jsonFlagCode} label="Copy JSON flag snippet" />
+
+<Callout title="จุดสำคัญ">
+JSON flag ช่วยให้คุณส่ง configuration ได้ ไม่ใช่แค่สวิตช์เปิด/ปิด แทนที่จะ deploy flag แยกกันห้าตัวสำหรับการออกแบบหน้า pricing ใหม่ ให้ใส่ตัวเลือกทั้งหมดไว้ใน JSON flag เดียวแล้วเปลี่ยนมันแบบ atomic ใน GrowthBook
+</Callout>
+
+export const quizFlagTypes = [
+  {
+    q: 'value type แบบไหนที่คุณควรใช้สำหรับ feature gate แบบง่าย (แสดง/ซ่อนองค์ประกอบ UI)?',
+    options: [
+      'String',
+      'Number',
+      'Boolean',
+      'JSON',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'gb.getFeatureValue("cart-max-items", 10) คืนค่าอะไรเมื่อเข้าถึง GrowthBook ไม่ได้?',
+    options: [
+      'null',
+      'undefined',
+      '0',
+      '10',
+    ],
+    answer: 3,
+  },
+  {
+    q: 'คุณสามารถเปลี่ยน value type ของ Feature ได้ไหมหลังจากที่มันถูกสร้างใน GrowthBook แล้ว?',
+    options: [
+      'ได้ ทุกเมื่อจากหน้า settings ของ Feature',
+      'ไม่ได้ value type เป็นแบบถาวร',
+      'ได้ แต่เฉพาะจาก boolean เป็น string เท่านั้น',
+      'ได้ แต่เฉพาะใน environment ที่เป็น development เท่านั้น',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'value type แบบไหนเหมาะที่สุดสำหรับการส่ง configuration ที่มีหลายคุณสมบัติ (เช่น สี, ขนาด, layout)?',
+    options: [
+      'String',
+      'Boolean',
+      'Number',
+      'JSON',
+    ],
+    answer: 3,
+  },
+];
+
+<Quiz client:visible id="feature-flags/flag-types" questions={quizFlagTypes} />
+
+<ProgressTracker client:visible id="feature-flags/flag-types" />

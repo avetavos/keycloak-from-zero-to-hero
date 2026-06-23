@@ -1,0 +1,140 @@
+---
+title: 'Create a Flag'
+description: 'Step-by-step: create a Feature in the GrowthBook UI and evaluate it via the SDK.'
+sidebar:
+  order: 2
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Creating your first Feature in GrowthBook
+
+A Feature in GrowthBook maps directly to a feature flag in your code. Here is how to create one from scratch.
+
+### Step 1 — Open the Features list
+
+1. Log in to GrowthBook at `http://localhost:3000` (or your Cloud URL).
+2. In the left sidebar, click **Features**.
+3. Click the **Add Feature** button in the top-right corner.
+
+### Step 2 — Fill in the Feature details
+
+1. **Feature Key** — enter a lowercase, hyphen-separated identifier, e.g. `my-flag`. This is the string your code will use forever — choose carefully.
+2. **Value Type** — select **Boolean** for a simple on/off flag.
+3. **Default Value** — set it to `false` (off by default everywhere).
+4. Click **Create Feature**.
+
+### Step 3 — Enable the flag in an environment
+
+By default, your flag exists but is disabled in all environments.
+
+1. On the Feature detail page, find the **Environments** section. You will see rows for **development**, **staging**, and **production**.
+2. Click the toggle next to **development** to switch it from **Disabled** to **Enabled**.
+3. Because there are no override rules, every user will receive the default value of `true` in development.
+
+> **Tip:** You can set a per-environment default that is different from the global default. This lets you ship `true` in development while keeping `false` in production until you are ready.
+
+## Reading the flag in your code
+
+Once the feature exists in GrowthBook, use the SDK to evaluate it:
+
+### Boolean check with isOn
+
+```js
+import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-YOUR_DEV_KEY',
+});
+
+await gb.init({ timeout: 2000 });
+
+if (gb.isOn('my-flag')) {
+  console.log('Flag is ON');
+} else {
+  console.log('Flag is OFF');
+}
+```
+
+### Reading a value with getFeatureValue
+
+For boolean flags you can also use `getFeatureValue`, which requires an explicit fallback:
+
+```js
+const flagValue = gb.getFeatureValue('my-flag', false);
+// returns true or false, never throws
+```
+
+export const isOnCode = `import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-YOUR_DEV_KEY',
+});
+
+await gb.init({ timeout: 2000 });
+
+// boolean shorthand
+if (gb.isOn('my-flag')) {
+  console.log('Flag is ON');
+}
+
+// explicit value with fallback
+const flagValue = gb.getFeatureValue('my-flag', false);`;
+
+<CopyCode client:visible code={isOnCode} label="Copy SDK snippet" />
+
+<Callout title="Key point">
+The feature **key** is the contract between GrowthBook and your code — keep it stable. Renaming a key in GrowthBook after you deploy breaks every SDK call that still uses the old name.
+</Callout>
+
+export const quizCreateFlag = [
+  {
+    q: 'Where in the GrowthBook UI do you create a new Feature?',
+    options: [
+      'Experiments → Add Experiment',
+      'Features → Add Feature',
+      'Settings → SDK Connections',
+      'Metrics → Add Metric',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What is the purpose of the Default Value on a Feature?',
+    options: [
+      'It sets which user segment sees the feature',
+      'It is the value returned when no override rule matches',
+      'It is only used during A/B tests',
+      'It controls the SDK timeout',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which SDK method requires an explicit fallback argument?',
+    options: [
+      'gb.isOn()',
+      'gb.getFeatureValue()',
+      'gb.init()',
+      'gb.destroy()',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What happens if you rename a Feature key in GrowthBook after deploying?',
+    options: [
+      'GrowthBook automatically migrates all SDK calls',
+      'SDK calls using the old key will stop finding the flag and fall back to the default',
+      'The old key is aliased permanently',
+      'The build fails',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="feature-flags/create-a-flag" questions={quizCreateFlag} />
+
+<ProgressTracker client:visible id="feature-flags/create-a-flag" />

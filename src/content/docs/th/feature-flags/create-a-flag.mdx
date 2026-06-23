@@ -1,0 +1,140 @@
+---
+title: 'สร้าง Flag'
+description: 'ทีละขั้นตอน: สร้าง Feature ใน GrowthBook UI และประเมินค่ามันผ่าน SDK'
+sidebar:
+  order: 2
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## สร้าง Feature แรกของคุณใน GrowthBook
+
+Feature ใน GrowthBook แมปตรงกับ feature flag ในโค้ดของคุณ ต่อไปนี้คือวิธีสร้างมันขึ้นมาตั้งแต่ต้น
+
+### ขั้นที่ 1 — เปิดรายการ Features
+
+1. ล็อกอินเข้า GrowthBook ที่ `http://localhost:3000` (หรือ Cloud URL ของคุณ)
+2. ในแถบด้านซ้าย คลิก **Features**
+3. คลิกปุ่ม **Add Feature** ที่มุมขวาบน
+
+### ขั้นที่ 2 — กรอกรายละเอียดของ Feature
+
+1. **Feature Key** — ใส่ identifier ที่เป็นตัวพิมพ์เล็กและคั่นด้วยขีดกลาง เช่น `my-flag` นี่คือสตริงที่โค้ดของคุณจะใช้ตลอดไป — เลือกอย่างรอบคอบ
+2. **Value Type** — เลือก **Boolean** สำหรับ flag เปิด/ปิดแบบง่าย ๆ
+3. **Default Value** — ตั้งเป็น `false` (ปิดเป็นค่าเริ่มต้นในทุกที่)
+4. คลิก **Create Feature**
+
+### ขั้นที่ 3 — เปิดใช้งาน flag ใน environment
+
+โดยค่าเริ่มต้น flag ของคุณมีอยู่แต่ถูกปิดใช้งานในทุก environment
+
+1. ในหน้ารายละเอียดของ Feature ให้หาส่วน **Environments** คุณจะเห็นแถวสำหรับ **development**, **staging** และ **production**
+2. คลิก toggle ข้าง ๆ **development** เพื่อสลับจาก **Disabled** เป็น **Enabled**
+3. เนื่องจากยังไม่มี override rule ใด ๆ ผู้ใช้ทุกคนจะได้รับ default value เป็น `true` ใน development
+
+> **เคล็ดลับ:** คุณสามารถตั้ง default value เฉพาะแต่ละ environment ให้ต่างจาก default ส่วนกลางได้ ทำให้คุณปล่อย `true` ใน development ได้ในขณะที่ยังคงเป็น `false` ใน production จนกว่าคุณจะพร้อม
+
+## อ่านค่า flag ในโค้ดของคุณ
+
+เมื่อ feature มีอยู่ใน GrowthBook แล้ว ให้ใช้ SDK ในการประเมินค่ามัน:
+
+### ตรวจค่า boolean ด้วย isOn
+
+```js
+import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-YOUR_DEV_KEY',
+});
+
+await gb.init({ timeout: 2000 });
+
+if (gb.isOn('my-flag')) {
+  console.log('Flag is ON');
+} else {
+  console.log('Flag is OFF');
+}
+```
+
+### อ่านค่าด้วย getFeatureValue
+
+สำหรับ boolean flag คุณก็ใช้ `getFeatureValue` ได้เช่นกัน ซึ่งต้องระบุ fallback อย่างชัดเจน:
+
+```js
+const flagValue = gb.getFeatureValue('my-flag', false);
+// returns true or false, never throws
+```
+
+export const isOnCode = `import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-YOUR_DEV_KEY',
+});
+
+await gb.init({ timeout: 2000 });
+
+// boolean shorthand
+if (gb.isOn('my-flag')) {
+  console.log('Flag is ON');
+}
+
+// explicit value with fallback
+const flagValue = gb.getFeatureValue('my-flag', false);`;
+
+<CopyCode client:visible code={isOnCode} label="Copy SDK snippet" />
+
+<Callout title="จุดสำคัญ">
+**key** ของ feature คือสัญญาระหว่าง GrowthBook กับโค้ดของคุณ — ต้องรักษาให้คงที่ การเปลี่ยนชื่อ key ใน GrowthBook หลังจากที่คุณ deploy ไปแล้วจะทำให้ทุกการเรียก SDK ที่ยังใช้ชื่อเก่าพังหมด
+</Callout>
+
+export const quizCreateFlag = [
+  {
+    q: 'ในส่วนไหนของ GrowthBook UI ที่คุณใช้สร้าง Feature ใหม่?',
+    options: [
+      'Experiments → Add Experiment',
+      'Features → Add Feature',
+      'Settings → SDK Connections',
+      'Metrics → Add Metric',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Default Value บน Feature มีไว้เพื่ออะไร?',
+    options: [
+      'ใช้กำหนดว่า user segment ไหนจะเห็นฟีเจอร์',
+      'เป็นค่าที่คืนกลับมาเมื่อไม่มี override rule ตรงเงื่อนไข',
+      'ใช้เฉพาะตอนทำ A/B test เท่านั้น',
+      'ใช้ควบคุม timeout ของ SDK',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'เมธอด SDK ตัวไหนที่ต้องระบุ argument สำหรับ fallback อย่างชัดเจน?',
+    options: [
+      'gb.isOn()',
+      'gb.getFeatureValue()',
+      'gb.init()',
+      'gb.destroy()',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'จะเกิดอะไรขึ้นถ้าคุณเปลี่ยนชื่อ Feature key ใน GrowthBook หลังจาก deploy ไปแล้ว?',
+    options: [
+      'GrowthBook จะย้ายทุกการเรียก SDK ให้โดยอัตโนมัติ',
+      'การเรียก SDK ที่ใช้ key เก่าจะหา flag ไม่เจอและตกลงไปใช้ค่า default',
+      'key เก่าจะถูกตั้งเป็น alias อย่างถาวร',
+      'การ build จะล้มเหลว',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="feature-flags/create-a-flag" questions={quizCreateFlag} />
+
+<ProgressTracker client:visible id="feature-flags/create-a-flag" />

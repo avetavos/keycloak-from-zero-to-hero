@@ -1,0 +1,115 @@
+---
+title: 'Experiment Results'
+description: 'How to read the GrowthBook experiment results table: uplift, confidence intervals, guardrail metrics, and dimensions.'
+sidebar:
+  order: 4
+---
+
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## The Experiment Results table
+
+Once your experiment is running and your data source is connected, GrowthBook can compute statistical results. Navigate to your experiment and click the **Results** tab.
+
+### What the table shows
+
+Each row in the results table is one metric. Each column after the first is a variation. The cells show:
+
+| Column | What it means |
+|---|---|
+| **Users** | Number of unique users assigned to this variation |
+| **Value** | The raw metric value for this variation (e.g. conversion rate, average order value) |
+| **Chance to Win** | (Bayesian) Probability this variation is better than the baseline |
+| **Uplift** | Relative change vs the control, e.g. `+3.2%` |
+| **Confidence Interval** | The range of plausible true uplift values at the configured confidence level |
+
+### Reading the result: a worked example
+
+Suppose your experiment has two variations — Control (0) and New Checkout (1) — and you are tracking **Purchase Rate** (a proportion metric):
+
+- Control: 4.8% purchase rate, 10,000 users
+- New Checkout: 5.2% purchase rate, 10,050 users
+- Uplift: +8.3%
+- Chance to Win: 87%
+- 95% CI: +1.1% to +15.8%
+
+This means: if you ran this experiment many times, 87% of the time the New Checkout would beat the Control. The true effect is most likely between +1.1% and +15.8%. This is promising but not conclusive — most teams wait for chance to win above 95% before shipping.
+
+## Refreshing results
+
+GrowthBook does not poll your warehouse continuously. To see updated numbers:
+
+1. Click **Update Data** in the top-right of the Results tab.
+2. GrowthBook runs the analysis queries against your warehouse and updates the table.
+3. You can also schedule automatic refreshes in the Data Source settings.
+
+## Guardrail metrics
+
+In addition to your primary goal metrics, you should configure **guardrail metrics** on every experiment. Guardrail metrics are metrics that must not regress — for example, page load time or revenue per user.
+
+1. In the experiment settings, scroll to **Metrics**.
+2. Add the metric under **Guardrails** instead of **Goals**.
+3. If a guardrail metric shows a statistically significant negative change, GrowthBook flags it in red — even if your goal metric is positive.
+
+## Dimensions
+
+GrowthBook can slice results by a **dimension** — a categorical attribute of your users (e.g. country, device type, plan tier). To use dimensions:
+
+1. Define a dimension SQL in the Data Source settings. The query must return `user_id` and the dimension value column.
+2. In the Results tab, select the dimension from the **Dimension** dropdown.
+3. GrowthBook re-runs the analysis segmented by each dimension value.
+
+Dimensions are useful for detecting heterogeneous treatment effects — for example, your new checkout may help mobile users but hurt desktop users.
+
+<Callout title="Wait for sufficient sample size before trusting results">
+Looking at results early and making decisions when sample sizes are small is called "peeking" — it inflates the false positive rate significantly. Let your experiment run to the planned sample size or duration before drawing conclusions. Use GrowthBook's sequential testing option if you need to peek safely.
+</Callout>
+
+export const quizExperimentResults = [
+  {
+    q: 'What does "Chance to Win" mean in GrowthBook\'s Bayesian results?',
+    options: [
+      'The p-value of the experiment',
+      'The probability this variation is better than the baseline, given the observed data',
+      'The percentage of users who converted in this variation',
+      'The confidence interval width',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'How do you refresh the experiment results with the latest warehouse data?',
+    options: [
+      'Reload the browser page',
+      'Click Update Data in the Results tab',
+      'Re-run the experiment assignment query manually',
+      'Reconnect the data source',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What is the purpose of a guardrail metric?',
+    options: [
+      'It is the primary goal the experiment is optimizing for',
+      'It is a metric that must not regress — it flags regressions even when goal metrics look positive',
+      'It controls the traffic split between variations',
+      'It sets the minimum experiment duration',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What is "peeking" in the context of A/B testing?',
+    options: [
+      'Looking at results early and making decisions before the planned sample size is reached',
+      'Viewing the assignment query SQL before running the experiment',
+      'Using dimensions to segment results',
+      'Checking guardrail metrics after the experiment ends',
+    ],
+    answer: 0,
+  },
+];
+
+<Quiz client:visible id="metrics-data/experiment-results" questions={quizExperimentResults} />
+
+<ProgressTracker client:visible id="metrics-data/experiment-results" />

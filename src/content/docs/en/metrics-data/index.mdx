@@ -1,0 +1,96 @@
+---
+title: 'Metrics & Data Sources: Overview'
+description: 'Why metrics and data sources matter in GrowthBook, and how the analysis pipeline works end-to-end.'
+sidebar:
+  order: 1
+---
+
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Why metrics and data matter
+
+Feature flags let you control what users see. But to know whether a change is actually an improvement, you need data. GrowthBook's entire analysis pipeline is built around a simple idea: your data lives in your own warehouse, and GrowthBook reaches in to analyze it — nothing is copied or stored inside GrowthBook itself.
+
+## The end-to-end pipeline
+
+| Step | What happens |
+|---|---|
+| **Data Source** | Connect GrowthBook to your warehouse (BigQuery, Postgres, Snowflake, ClickHouse, etc.) |
+| **Experiment assignment** | A query tells GrowthBook which user saw which variation and when |
+| **Fact Tables** | You define the event tables that contain the raw metric signals |
+| **Metrics** | You compose metrics (proportion, mean, ratio) on top of Fact Tables |
+| **Experiment Results** | GrowthBook runs the stats engine against your warehouse and surfaces per-variation metric values |
+
+## How GrowthBook fits in your stack
+
+```
+Your App
+  └─ SDK fires experiment_viewed(userId, variation)
+       └─ Warehouse (BigQuery / Snowflake / ...)
+            └─ GrowthBook queries on demand
+                 └─ Results shown in GrowthBook UI
+```
+
+GrowthBook never ingests raw events. It connects to your warehouse with read-only credentials and runs SQL queries when you click **Update Data** in the UI or schedule a refresh.
+
+<Callout title="Bring your own data">
+GrowthBook is a "bring your own data" platform. It queries your warehouse directly — your raw events and user data never leave your infrastructure. You retain full ownership and control.
+</Callout>
+
+## What this module covers
+
+| Lesson | What you will learn |
+|---|---|
+| Data Sources | How to connect a data source and write the experiment assignment query |
+| Defining Metrics | Fact Tables, metric types, metric windows, and reusable metric definitions |
+| Experiment Results | How to read the results table, uplift, confidence intervals, and guardrail metrics |
+| Stats Engine | Bayesian vs Frequentist, CUPED variance reduction, and sequential testing |
+
+export const quizMetricsIndex = [
+  {
+    q: 'Where does GrowthBook store your raw experiment events?',
+    options: [
+      'Inside GrowthBook Cloud',
+      'In your own data warehouse — GrowthBook only queries it',
+      'In a GrowthBook-managed S3 bucket',
+      'In the GrowthBook Postgres database',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What is the role of the experiment assignment query?',
+    options: [
+      'It inserts new users into the experiment',
+      'It tells GrowthBook which user saw which variation and when',
+      'It defines what metrics to track',
+      'It deploys the feature flag to production',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which step in the pipeline comes immediately after connecting a Data Source?',
+    options: [
+      'Viewing experiment results',
+      'Choosing a stats engine',
+      'Defining Fact Tables and writing the assignment query',
+      'Creating a feature flag',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'When does GrowthBook run SQL against your warehouse?',
+    options: [
+      'Continuously in real time',
+      'Only when you click Update Data or a scheduled refresh runs',
+      'Every time the SDK fires an event',
+      'Only during the experiment setup wizard',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="metrics-data/index" questions={quizMetricsIndex} />
+
+<ProgressTracker client:visible id="metrics-data/index" />

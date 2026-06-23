@@ -1,0 +1,122 @@
+---
+title: 'Targeting Conditions'
+description: 'Filter which users a rule applies to using attribute conditions — build them visually or in advanced JSON mode.'
+sidebar:
+  order: 3
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Targeting Conditions
+
+A targeting condition is a filter that determines which users a rule applies to. Each rule on a Feature can have zero or more conditions. **All conditions on a rule must be true** for the rule to match the current user. If any condition is false, the user does not match that rule and GrowthBook moves on to the next one.
+
+### Adding a condition in the GrowthBook UI
+
+1. On a Feature's detail page, click **Add Rule** (or click the pencil icon on an existing rule).
+2. In the rule editor, click **Add Condition**.
+3. Select the **Attribute** from the dropdown (e.g. `country`).
+4. Select the **Operator** (equals, not equals, contains, regex, etc.).
+5. Enter the **Value** (e.g. `TH`).
+6. Click **Save Rule**.
+
+You can add as many conditions as you need. Each additional condition narrows the audience further.
+
+### Condition operators
+
+GrowthBook supports a wide range of operators to match different attribute types:
+
+- **equals** / **does not equal** — exact match on string, number, or boolean
+- **contains** / **does not contain** — substring match for strings
+- **matches regex** — test a string against a regular expression
+- **is greater than** / **is less than** — numeric comparisons
+- **is in list** / **is not in list** — check whether a value appears in a comma-separated set
+
+### Advanced JSON mode
+
+For power users, GrowthBook supports a MongoDB-style condition JSON — the same format used internally by the evaluation engine. Click **Advanced** in the rule editor to enter raw JSON instead of using the visual builder.
+
+Match users where `country` is `TH` **and** `plan` is `pro`:
+
+```json
+{
+  "country": "TH",
+  "plan": "pro"
+}
+```
+
+Match users where `email` ends with `@company.com`:
+
+```json
+{
+  "email": { "$regex": "@company\\.com$" }
+}
+```
+
+The advanced editor is useful for complex expressions (nested `$or`, `$and`, `$not`) that the visual builder does not expose.
+
+export const conditionCode = `import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-YOUR_DEV_KEY',
+});
+
+await gb.init({ timeout: 2000 });
+
+gb.setAttributes({
+  id: 'user-456',
+  country: 'TH',
+  email: 'bob@company.com',
+});
+
+// Returns the feature value if the user matches all conditions on a rule,
+// or the default value ('false') if no rule matches.
+const isBetaEnabled = gb.getFeatureValue('beta-feature', false);
+console.log('beta-feature:', isBetaEnabled);`;
+
+<CopyCode client:visible code={conditionCode} label="Copy conditions example" />
+
+<Callout title="Conditions let you ship to a precise audience">
+Combine multiple conditions on a single rule to narrow the audience precisely — e.g. employees in Thailand on the pro plan. Users who do not match all conditions skip the rule and fall through to the next one.
+</Callout>
+
+export const quizTargetingConditions = [
+  {
+    q: 'A rule has two conditions: `country equals TH` and `plan equals pro`. A user has `country: TH` and `plan: free`. Does the rule match?',
+    options: [
+      'Yes — at least one condition matches',
+      'No — all conditions on a rule must be true for the rule to match',
+      'Yes — the first condition takes precedence',
+      'It depends on the rule order in the feature',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'The GrowthBook Advanced JSON condition editor uses which format?',
+    options: [
+      'GraphQL filter syntax',
+      'SQL WHERE clause syntax',
+      'MongoDB-style condition JSON',
+      'JSONPath expression syntax',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'A user does not match any condition on a rule. What happens next?',
+    options: [
+      'GrowthBook throws an evaluation error',
+      'The feature is disabled for that user',
+      'The user skips that rule and GrowthBook evaluates the next rule in order',
+      'GrowthBook returns null',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="targeting-rollouts/targeting-conditions" questions={quizTargetingConditions} />
+
+<ProgressTracker client:visible id="targeting-rollouts/targeting-conditions" />

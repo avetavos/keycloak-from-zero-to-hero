@@ -1,0 +1,101 @@
+---
+title: 'การรัน Experiment ด้วย SDK'
+description: 'รัน inline experiment ด้วย gb.run(), อ่าน result object, และเข้าใจความแตกต่างระหว่าง gb.run() กับ feature-flag experiment'
+sidebar:
+  order: 4
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## การรัน experiment โดยตรงในโค้ด
+
+GrowthBook มีสองวิธีในการรัน A/B experiment:
+
+1. **Feature-flag experiment** — คุณสร้าง Feature ใน GrowthBook UI, ผูก Experiment rule เข้าไป แล้วอ่าน variation ด้วย `gb.getFeatureValue()` โดย logic การ assign จะอยู่ใน GrowthBook
+2. **Inline experiment ด้วย `gb.run()`** — คุณนิยาม experiment ทั้งหมดในโค้ด แล้วส่งให้ SDK โดยไม่จำเป็นต้องมี feature rule ใน UI
+
+`gb.run()` มีประโยชน์เมื่อคุณต้องการทดลองกับสิ่งที่ไม่ได้แมปกับ feature flag โดยตรง หรือเมื่อคุณต้องการ prototype อย่างรวดเร็วโดยไม่ต้องตั้งค่าใน GrowthBook UI ทั้งหมด
+
+### result object
+
+`gb.run()` คืนค่า result object ที่มีสามคุณสมบัติหลัก:
+
+| คุณสมบัติ | ชนิด | คำอธิบาย |
+|---|---|---|
+| `result.value` | string / number / boolean | ค่า variation ที่ assign ให้ผู้ใช้คนนี้ |
+| `result.inExperiment` | boolean | `true` ถ้าผู้ใช้ถูก assign เข้า variation bucket สำเร็จ |
+| `result.variationId` | number | index ของ variation ที่ถูก assign (เริ่มที่ 0) |
+
+เมื่อ `result.inExperiment` เป็น `false` แสดงว่าผู้ใช้อยู่นอก experiment (เช่น traffic coverage น้อยกว่า 100% หรือ experiment หยุดแล้ว) ในกรณีนั้น `result.value` จะเป็นองค์ประกอบแรกใน array `variations` เสมอ — ซึ่งเป็น default ที่ปลอดภัย
+
+### ตัวอย่าง inline experiment
+
+snippet ด้านล่างนี้ initialise SDK แล้วเรียก `gb.run()` เพื่อ assign ผู้ใช้ไปยัง variation ของสีปุ่ม:
+
+export const sdkRunCode = `import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-YOUR_KEY',
+});
+
+await gb.init({ timeout: 2000 });
+
+const result = gb.run({
+  key: 'button-color-test',
+  variations: ['blue', 'green'],
+});
+
+if (result.inExperiment) {
+  console.log('Variation:', result.value);
+  // result.value is 'blue' or 'green'
+} else {
+  // User is not in the experiment — use default
+  console.log('Not in experiment');
+}`;
+
+<CopyCode client:visible code={sdkRunCode} />
+
+<Callout title="จุดสำคัญ">
+`gb.run()` ให้คุณนิยาม experiment โดยตรงในโค้ด เมื่อคุณไม่ต้องการใช้ feature rule
+</Callout>
+
+export const quizSdkExperiments = [
+  {
+    q: 'gb.run() คืนค่าอะไร?',
+    options: [
+      'boolean ที่บอกว่า experiment กำลังรันอยู่หรือไม่',
+      'result object ที่มี property ได้แก่ value, inExperiment และ variationId',
+      'index ของ variation ที่ชนะหลังจากวิเคราะห์ทางสถิติแล้ว',
+      'Promise ที่ resolve เมื่อดึงข้อมูล experiment เสร็จสิ้น',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'ความแตกต่างหลักระหว่าง gb.run() กับ feature-flag experiment คืออะไร?',
+    options: [
+      'gb.run() ต้องการ data source แต่ feature-flag experiment ไม่ต้อง',
+      'gb.run() นิยาม experiment ทั้งหมดในโค้ดโดยไม่ต้องมี feature rule ใน GrowthBook UI ในขณะที่ feature-flag experiment ขับเคลื่อนด้วย rule ที่ตั้งค่าใน UI',
+      'Feature-flag experiment รองรับ variation ได้มากกว่าสอง แต่ gb.run() จำกัดที่สอง',
+      'gb.run() รวม traffic 100% เสมอ แต่ feature-flag experiment สามารถจำกัด coverage ได้',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'result.inExperiment เป็น false หมายความว่าอะไร?',
+    options: [
+      'ไม่พบ experiment key ใน GrowthBook',
+      'ผู้ใช้ไม่ได้ถูก assign เข้า variation bucket ใดเลย เช่น เพราะอยู่นอก traffic coverage',
+      'SDK ยังเริ่มต้นทำงานไม่เสร็จ',
+      'experiment หยุดแล้วและประกาศผู้ชนะเรียบร้อยแล้ว',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="ab-testing/sdk-experiments" questions={quizSdkExperiments} />
+
+<ProgressTracker client:visible id="ab-testing/sdk-experiments" />

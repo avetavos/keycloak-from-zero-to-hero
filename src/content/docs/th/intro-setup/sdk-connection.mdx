@@ -1,0 +1,109 @@
+---
+title: 'SDK Connection'
+description: 'SDK Connection คือวิธีที่คุณอนุญาตให้แอปของคุณดึง feature flags จาก GrowthBook แต่ละ connection ถูกจำกัดขอบเขตไว้ที่ environment หนึ่งและ language/framework หนึ่ง'
+sidebar:
+  order: 5
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+SDK Connection คือวิธีที่คุณอนุญาตให้แอปของคุณดึง feature flags จาก GrowthBook แต่ละ connection ถูกจำกัดขอบเขตไว้ที่ environment หนึ่งและ language/framework หนึ่ง
+
+## การสร้าง SDK Connection
+
+1. ใน GrowthBook UI ไปที่ **Settings** ใน sidebar ด้านซ้าย
+2. คลิก **SDK Connections**
+3. คลิก **Add SDK Connection**
+4. ตั้งชื่อให้มัน (เช่น "Node.js Dev")
+5. เลือก **Environment** (เช่น `development`)
+6. เลือก **Language / Framework** (เช่น JavaScript/Node.js)
+7. คลิก **Save** GrowthBook จะแสดงค่าสองค่าให้คุณ:
+   - **apiHost** — สำหรับ self-hosted: `http://localhost:3100`; สำหรับ Cloud: `https://cdn.growthbook.io`
+   - **clientKey** — string ที่ขึ้นต้นด้วย `sdk-...`
+8. คัดลอกทั้งสองค่า คุณจะใช้มันในการ initialize SDK
+
+```js
+import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'http://localhost:3100',   // self-hosted SDK API
+  clientKey: 'sdk-YOUR_CLIENT_KEY',
+});
+
+await gb.init({ timeout: 2000 });
+
+// Check a boolean flag
+if (gb.isOn('my-feature')) {
+  console.log('Feature is enabled');
+}
+```
+
+export const sdkInitCode = `import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'http://localhost:3100',   // self-hosted SDK API
+  clientKey: 'sdk-YOUR_CLIENT_KEY',
+});
+
+await gb.init({ timeout: 2000 });
+
+// Check a boolean flag
+if (gb.isOn('my-feature')) {
+  console.log('Feature is enabled');
+}`;
+
+<CopyCode client:visible code={sdkInitCode} label="Copy SDK init" />
+
+<Callout title="Key point">
+SDK Connection จะจำกัดขอบเขต clientKey หนึ่งตัวไว้กับ environment ที่เฉพาะเจาะจง ใช้ SDK Connection แยกกัน (และดังนั้นจึงมี clientKey แยกกัน) สำหรับ development กับ production เพื่อให้สถานะของ flag แยกขาดจากกัน
+</Callout>
+
+export const quizSdkConn = [
+  {
+    q: 'apiHost สำหรับ GrowthBook SDK แบบ self-hosted คืออะไร?',
+    options: [
+      'http://localhost:3000',
+      'http://localhost:3100',
+      'https://cdn.growthbook.io',
+      'http://localhost:8080',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'clientKey มีหน้าตาเป็นอย่างไร?',
+    options: [
+      'UUID ที่ขึ้นต้นด้วย org-',
+      'string ที่ขึ้นต้นด้วย sdk-',
+      'JWT ที่เข้ารหัสแบบ base64',
+      'MongoDB ObjectId',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'คุณสร้าง SDK Connection ได้ที่ไหนใน GrowthBook UI?',
+    options: [
+      'Features → Add Feature',
+      'Experiments → Settings',
+      'Settings → SDK Connections',
+      'Metrics → Sources',
+    ],
+    answer: 2,
+  },
+  {
+    q: 'ทำไมต้องใช้ SDK Connection แยกกันสำหรับ development และ production?',
+    options: [
+      'เพื่อให้สถานะของ flag และ clientKeys แยกขาดจากกันในแต่ละ environment',
+      'เพราะ GrowthBook กำหนดให้ต้องทำเพื่อการคิดเงิน',
+      'เพื่อลดพื้นที่จัดเก็บใน MongoDB',
+      'ไม่มีเหตุผล; connection เดียวใช้ได้กับทุก environment',
+    ],
+    answer: 0,
+  },
+];
+
+<Quiz client:visible id="intro-setup/sdk-connection" questions={quizSdkConn} />
+
+<ProgressTracker client:visible id="intro-setup/sdk-connection" />

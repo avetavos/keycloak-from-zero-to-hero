@@ -1,0 +1,100 @@
+---
+title: 'Sticky Bucketing'
+description: 'รักษา variation เดิมให้กับผู้ใช้แม้ traffic split หรือเงื่อนไขจะเปลี่ยนแปลงระหว่าง experiment ด้วย sticky bucket service ของ GrowthBook'
+sidebar:
+  order: 5
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Sticky Bucketing คืออะไร?
+
+เมื่อ GrowthBook กำหนด variation ให้กับผู้ใช้ ระบบจะใช้การแฮชแบบ deterministic จาก user ID ซึ่งหมายความว่าผู้ใช้คนเดิมจะได้รับ bucket เดิมเสมอ — ตราบเท่าที่การตั้งค่า experiment ไม่เปลี่ยนแปลง ปัญหาเกิดขึ้นเมื่อมีการเปลี่ยนแปลง
+
+สมมติว่าคุณเริ่ม experiment ที่ traffic 100% โดยแบ่ง 50/50 ระหว่าง `control` กับ `variant` หนึ่งสัปดาห์ต่อมาคุณลด traffic เหลือ 50% เพื่อจำกัดการเปิดเผย ผู้ใช้ที่เคยอยู่ใน `variant` อาจหลุดออกจาก experiment ทั้งหมด หรือที่แย่กว่านั้นคือถูกย้ายไป `control` โดยที่ไม่รู้ตัว ส่งผลให้ข้อมูลเสียหายและประสบการณ์ของผู้ใช้ไม่สอดคล้องกัน
+
+**Sticky bucketing** แก้ปัญหานี้โดยบันทึก assignment ของ variation แรกที่ผู้ใช้ได้รับ และนำกลับมาใช้ซ้ำในทุกการประเมินครั้งถัดไป ไม่ว่าการตั้งค่า experiment จะเปลี่ยนแปลงอย่างไรก็ตาม
+
+### Sticky bucket service คืออะไร?
+
+GrowthBook เปิดให้ใช้ option `stickyBucketService` ในตัว constructor ของ SDK คุณเพียงระบุ storage backend — SDK มาพร้อมกับ `LocalStorageStickyBucketService` สำหรับ browser — แล้ว SDK จะจัดการอ่านและเขียน assignment ให้โดยอัตโนมัติ
+
+เมื่อผู้ใช้ถูก bucket ครั้งแรก SDK จะบันทึกข้อมูลอย่างเช่น `{ experimentKey: "my-experiment", variationKey: "variant" }` ลงใน store ในการโหลดหน้าครั้งถัดไป SDK จะอ่านข้อมูลนี้และข้ามการคำนวณแฮชทั้งหมด โดยส่งคืน variation ที่บันทึกไว้แทน
+
+### เมื่อไหร่ที่ต้องใช้ sticky bucketing?
+
+Sticky bucketing มีความสำคัญมากที่สุดในสถานการณ์เหล่านี้:
+
+- **Experiment ที่ใช้เวลานาน** — ผู้ใช้กลับมาหลายครั้งในช่วงหลายวันหรือหลายสัปดาห์ หากไม่มี sticky bucketing การแก้ไขการตั้งค่าใดๆ จะสร้างกลุ่มผู้ใช้ที่เคยเห็นทั้งสอง variation
+- **การเปลี่ยน traffic split ระหว่าง experiment** — การลดหรือเพิ่มเปอร์เซ็นต์ผู้ใช้ที่รวมอยู่อาจเปลี่ยนขอบเขต bucket และ re-assign ผู้ใช้เดิม
+- **Gradual rollout ที่ทับซ้อนกับ experiment** — หากคุณค่อยๆ เพิ่ม traffic พร้อมกับการรัน experiment ขอบเขต bucket จะเลื่อนทุกครั้งที่เพิ่ม
+- **User journey ที่ข้ามหลาย session** — เมื่อผู้ใช้เริ่ม funnel ใน session หนึ่งและเสร็จสิ้นใน session อื่น ความสอดคล้องระหว่าง session เป็นสิ่งสำคัญสำหรับการ attribution ที่แม่นยำ
+
+## การเปิดใช้ sticky bucketing ใน SDK
+
+ส่ง instance ของ `stickyBucketService` เมื่อสร้าง `GrowthBook` ตัวอย่างด้านล่างใช้ `LocalStorageStickyBucketService` ซึ่งบันทึก assignment ใน `localStorage` ของ browser
+
+export const stickyCode = `import { GrowthBook, LocalStorageStickyBucketService } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-YOUR_KEY',
+  stickyBucketService: new LocalStorageStickyBucketService(),
+});
+
+await gb.init({ timeout: 2000 });
+
+// Now a user assigned to 'variant' stays in 'variant'
+// even if you later reduce traffic from 100% to 50%.
+const result = gb.run({
+  key: 'my-experiment',
+  variations: ['control', 'variant'],
+});
+
+console.log('Variation:', result.value);`;
+
+<CopyCode client:visible code={stickyCode} />
+
+<Callout title="ประเด็นสำคัญ">
+Sticky bucketing ป้องกันไม่ให้ผู้ใช้สลับ variation ระหว่าง experiment
+</Callout>
+
+export const quizStickyBucketing = [
+  {
+    q: 'Sticky bucketing แก้ปัญหาอะไร?',
+    options: [
+      'เพิ่มความเร็วในการคำนวณแฮชของ SDK',
+      'ป้องกันไม่ให้ผู้ใช้ถูก re-assign ไปยัง variation อื่นเมื่อการตั้งค่า experiment เปลี่ยนแปลง',
+      'รับประกันว่าผู้ใช้ทุกคนจะถูกรวมอยู่ใน experiment ทั้งหมด',
+      'หยุด experiment โดยอัตโนมัติเมื่อ traffic ลดลงต่ำกว่าเกณฑ์',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'คุณต้องให้อะไรกับ GrowthBook SDK เพื่อเปิดใช้ sticky bucketing?',
+    options: [
+      'ฟังก์ชัน trackingCallback แบบกำหนดเอง',
+      'Instance ของ stickyBucketService เช่น LocalStorageStickyBucketService',
+      'รายการ user ID ที่ต้องคงอยู่ใน variation ปัจจุบัน',
+      'Fallback variation key ในนิยาม experiment',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'สถานการณ์ใดที่คุณต้องการ sticky bucketing มากที่สุด?',
+    options: [
+      'Feature toggle แบบครั้งเดียวที่เปิดให้ทุกคนพร้อมกัน',
+      'Experiment ที่ใช้เวลานานซึ่งคุณลด traffic split ระหว่าง experiment',
+      'Experiment ที่รันไม่ถึงหนึ่งชั่วโมงโดยไม่มีการเปลี่ยนแปลงการตั้งค่า',
+      'Feature flag ที่ไม่มี experiment rules แนบอยู่',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="ab-testing/sticky-bucketing" questions={quizStickyBucketing} />
+
+<ProgressTracker client:visible id="ab-testing/sticky-bucketing" />

@@ -1,0 +1,134 @@
+---
+title: Prerequisites
+description: 'Gate one flag on the value of another flag to build safe dependency chains in GrowthBook.'
+sidebar:
+  order: 3
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## What are prerequisites?
+
+A **prerequisite** is a condition you attach to a feature flag that says: "only evaluate this flag if another flag is already ON (or has a specific value)."
+
+This lets you build dependency chains:
+
+- `checkout-v2` only activates if `new-payment-provider` is ON.
+- `ai-search-results` only activates if `search-redesign` is ON and `beta-features` is ON.
+
+Without prerequisites, you have to manage these dependencies manually in your application code — adding `if (flagA && flagB)` guards everywhere. Prerequisites move that logic into GrowthBook, keeping your code clean and making the dependency visible in the UI.
+
+## When to use prerequisites
+
+Prerequisites are most useful when:
+
+- **Staged rollout chains** — a surface-level flag depends on an infrastructure flag being fully rolled out first.
+- **Kill switches with dependencies** — turning off `new-payment-provider` should automatically deactivate everything that depends on it, without an engineering deploy.
+- **Beta gate stacking** — a feature is only accessible if the user is in both a general `beta` cohort AND a specific sub-experiment.
+
+## Creating a prerequisite in the GrowthBook UI
+
+1. Navigate to **Features** and open the feature you want to add a prerequisite to (the **dependent** flag).
+2. On the feature detail page, click **Edit** next to **Default Value & Rules**.
+3. Scroll to the **Prerequisites** section and click **Add Prerequisite**.
+4. In the dropdown, search for and select the **parent** flag (the one that must be ON first).
+5. Set the **Required Value** — for a boolean flag, choose `true`.
+6. Click **Save**.
+
+Now, when the SDK evaluates the dependent flag:
+
+- If the parent flag is `false` (or its override rules return `false`), the dependent flag returns its **off value** regardless of its own rules.
+- If the parent flag is `true`, the dependent flag evaluates normally.
+
+> **Important:** Circular prerequisites (A requires B, B requires A) are detected and blocked by GrowthBook at save time.
+
+## Dependency chain example
+
+Imagine three features in sequence:
+
+```
+new-payment-provider  (infrastructure flag)
+        ↓  prerequisite
+  checkout-v2         (UI flag)
+        ↓  prerequisite
+  express-checkout    (premium surface flag)
+```
+
+Turning off `new-payment-provider` cascades — both `checkout-v2` and `express-checkout` go dark automatically, even if their own rules say ON. This gives you a single kill switch for the entire chain.
+
+export const prereqCode = `import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-YOUR_DEV_KEY',
+  attributes: { id: 'user-123' },
+});
+
+await gb.init({ timeout: 2000 });
+
+// Prerequisites are evaluated server-side in GrowthBook
+// and baked into the feature payload the SDK downloads.
+// No extra client code is needed — isOn() already
+// respects the prerequisite chain.
+
+const paymentOn = gb.isOn('new-payment-provider');
+const checkoutOn = gb.isOn('checkout-v2');       // false if paymentOn is false
+const expressOn  = gb.isOn('express-checkout');  // false if checkoutOn is false
+
+console.log({ paymentOn, checkoutOn, expressOn });`;
+
+<CopyCode client:visible code={prereqCode} label="Copy prerequisite SDK example" />
+
+<Callout title="Key point">
+Prerequisites let a flag depend on another — useful for staged dependencies where turning off the parent flag should silently deactivate all children without a code deploy.
+</Callout>
+
+export const quizPrerequisites = [
+  {
+    q: 'What happens to a dependent flag when its prerequisite parent flag is OFF?',
+    options: [
+      'The dependent flag is evaluated normally',
+      'The dependent flag returns its off value regardless of its own rules',
+      'GrowthBook throws an error',
+      'The SDK fetches a fresh payload automatically',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Where in the GrowthBook UI do you add a prerequisite to a feature?',
+    options: [
+      'Experiments → Targeting',
+      'Features → Edit → Prerequisites section',
+      'Settings → Namespaces',
+      'SDK Connections → Rules',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Does the SDK need extra code to respect prerequisites?',
+    options: [
+      'Yes, you must manually check the parent flag first in your code',
+      'No, the SDK evaluates prerequisites automatically from the feature payload',
+      'Only if you are using the REST API',
+      'Only in server-side SDKs',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What does GrowthBook do if you attempt to create a circular prerequisite (A requires B, B requires A)?',
+    options: [
+      'It silently ignores the second prerequisite',
+      'It detects and blocks the circular dependency at save time',
+      'It allows it but logs a warning',
+      'It breaks the entire feature namespace',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="advanced-production/prerequisites" questions={quizPrerequisites} />
+
+<ProgressTracker client:visible id="advanced-production/prerequisites" />

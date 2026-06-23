@@ -1,0 +1,26 @@
+---
+const compose = `# compose.yaml
+services:
+  mongo:
+    image: mongo:latest
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=password
+  growthbook:
+    image: growthbook/growthbook:latest
+    ports: ["3000:3000", "3100:3100"]
+    depends_on: [mongo]
+    environment:
+      - MONGO_URL=mongodb://root:password@mongo:27017/
+    volumes: ["uploads:/usr/local/src/app/packages/back-end/uploads"]
+volumes:
+  uploads:`;
+const { script = compose } = Astro.props;
+---
+<aside class="rr">
+  <p class="rr__label">🚀 Run GrowthBook with Docker first</p>
+  <p class="rr__hint">Save this as <code>compose.yaml</code>, then start the stack:</p>
+  <pre class="rr__code"><code>{script}</code></pre>
+  <p class="rr__hint">Then run <code>docker compose up -d</code> and open <code>http://localhost:3000</code>.</p>
+  <p class="rr__note">No Docker? Use <a href="https://app.growthbook.io/" target="_blank" rel="noopener">GrowthBook Cloud</a> (free tier).</p>
+</aside>

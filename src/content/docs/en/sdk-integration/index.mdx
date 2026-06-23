@@ -1,0 +1,106 @@
+---
+title: 'SDK Integration'
+description: 'How the GrowthBook SDK fits into your app: definitions fetch, local evaluation, and what this module covers.'
+sidebar:
+  order: 1
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## How the GrowthBook SDK works
+
+The GrowthBook SDK follows a **fetch-once, evaluate-locally** model. When your app starts, the SDK connects to the GrowthBook API and downloads a compact JSON bundle called **feature definitions** — all the flags, rules, and experiment configurations for your project. After that initial fetch, every flag evaluation happens entirely inside your app. There is no network round-trip per call.
+
+Here is the end-to-end flow:
+
+1. **GrowthBook UI** — you create flags, configure targeting rules, and publish changes.
+2. **GrowthBook CDN** — stores the compiled feature definitions for each SDK key.
+3. **SDK `init()`** — your app fetches and caches those definitions on startup.
+4. **`isOn()` / `getFeatureValue()`** — every evaluation reads from the local cache; no network call.
+
+This architecture keeps flag evaluation fast (sub-millisecond), works offline after the first fetch, and scales to any request volume without adding load to GrowthBook.
+
+## What this module covers
+
+| Lesson | What you will learn |
+|---|---|
+| JavaScript SDK | Installing the vanilla SDK, initialising it, setting attributes, and evaluating flags in any JS environment |
+| React SDK | The `GrowthBookProvider`, the `useFeatureIsOn` hook, and feature-flag patterns in React components |
+| Node.js / Server-side | Per-request GrowthBook instances and safe server-side evaluation |
+| Streaming & Caching | Real-time flag updates with Server-Sent Events and cache strategy options |
+
+## Supported platforms
+
+The GrowthBook SDK is available for every major language and platform:
+
+- **JavaScript / TypeScript** — browser and Node.js
+- **React** — hooks and context provider
+- **React Native** — mobile apps
+- **Go** — server-side
+- **Python** — server-side
+- **Ruby** — server-side
+- **PHP** — server-side
+- **iOS (Swift)** — native mobile
+- **Android (Kotlin)** — native mobile
+- **Flutter** — cross-platform mobile
+
+## A minimal initialisation
+
+The two required config values are `apiHost` (the CDN endpoint) and `clientKey` (the SDK key for your environment, found in GrowthBook under **SDK Connections**).
+
+export const sdkOverviewCode = `import { GrowthBook } from '@growthbook/growthbook';
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-abc123',
+});
+
+await gb.init({ timeout: 2000 });
+// Definitions are now cached locally — evaluate away
+console.log(gb.isOn('my-flag')); // true or false, no network call`;
+
+<CopyCode client:visible code={sdkOverviewCode} />
+
+<Callout title="Local evaluation">
+After `gb.init()` completes, feature definitions are cached inside the SDK instance. Every `isOn()` and `getFeatureValue()` call reads from that local cache — fast, with no per-evaluation network call.
+</Callout>
+
+export const quizSdkIntegrationIndex = [
+  {
+    q: 'Where does the GrowthBook SDK evaluate feature flags?',
+    options: [
+      'On the GrowthBook server for every call',
+      'Locally inside your app after fetching definitions',
+      'In a shared CDN worker',
+      "In the browser's service worker only",
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What two values does the SDK need to fetch feature definitions?',
+    options: [
+      'username and password',
+      'apiHost and clientKey',
+      'projectId and secretKey',
+      'orgId and bearerToken',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Which of these is NOT a platform the GrowthBook SDK supports?',
+    options: [
+      'React',
+      'Flutter',
+      'WordPress plugin (official)',
+      'Python',
+    ],
+    answer: 2,
+  },
+];
+
+<Quiz client:visible id="sdk-integration/index" questions={quizSdkIntegrationIndex} />
+
+<ProgressTracker client:visible id="sdk-integration/index" />

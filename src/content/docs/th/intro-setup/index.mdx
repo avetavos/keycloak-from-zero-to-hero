@@ -1,0 +1,116 @@
+---
+title: 'แนะนำและการติดตั้ง'
+description: 'ภาพรวมของโมดูล — GrowthBook คืออะไร คอร์สนี้ครอบคลุมอะไรบ้าง และวิธีทำให้แพลตฟอร์มรันได้ภายในไม่กี่นาที'
+sidebar:
+  order: 1
+---
+
+import RunGrowthBook from '../../../../components/RunGrowthBook.astro';
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## GrowthBook คืออะไร?
+
+GrowthBook คือ **แพลตฟอร์มแบบ open-source** ที่รวมสามความสามารถไว้ในเครื่องมือเดียว:
+
+- **Feature flags** — ควบคุมโค้ดทุกเส้นทางไว้หลัง toggle ที่ตั้งชื่อได้และสั่งงานจาก UI ได้เอง
+- **A/B testing และ experimentation** — รัน experiment ที่มีความเข้มงวดทางสถิติได้โดยไม่ต้องเขียนโค้ดวิเคราะห์ผล
+- **Analytics บน data warehouse ของคุณเอง** — เชื่อมต่อ Snowflake, BigQuery, Redshift หรือ SQL source ใดก็ตามที่คุณมีอยู่แล้ว โดย GrowthBook ไม่เคยแตะ raw events ของคุณเลย
+
+คุณสามารถ **self-host** บน infrastructure ของคุณเอง (Docker, Kubernetes) หรือใช้ **GrowthBook Cloud** ที่ไม่ต้องดูแล server เลยก็ได้ คอร์สนี้ใช้ Docker เพื่อให้ทุกแนวคิดสามารถทำซ้ำได้บนเครื่องของคุณเอง
+
+<RunGrowthBook />
+
+## โมดูลนี้ครอบคลุมอะไรบ้าง
+
+| บทเรียน | Slug | หัวข้อ |
+|--------|------|-------|
+| 1 | `index` (หน้านี้) | ภาพรวมโมดูลและ core loop |
+| 2 | `what-is-growthbook` | สามเสาหลัก — flags, experiments, analytics |
+| 3 | `run-with-docker` | การติดตั้งด้วย Docker Compose |
+| 4 | `first-login` | บัญชี admin และการใช้งาน UI |
+| 5 | `sdk-connection` | คีย์ SDK Connection และการเรียก SDK ครั้งแรก |
+
+## Core loop
+
+ทุก workflow ของ GrowthBook จะมีสี่ขั้นตอน:
+
+1. **รัน GrowthBook** — เริ่มแพลตฟอร์ม (Docker หรือ Cloud)
+2. **ล็อกอิน** — สร้างบัญชี admin ของคุณและสำรวจ dashboard
+3. **สร้าง feature flag** — กำหนด key, type และค่า default ให้กับมัน
+4. **อ่านค่า flag ในแอปของคุณ** ผ่าน SDK — แค่เรียก `isOn()` ครั้งเดียวก็พอ
+
+โค้ดด้านล่างแสดงการตั้งค่า SDK ขั้นต่ำที่คุณจะค่อย ๆ สร้างขึ้นจนถึงในบทเรียนที่ 5
+
+export const firstTasteCode = `import { GrowthBook } from "@growthbook/growthbook";
+
+const gb = new GrowthBook({
+  apiHost: "https://cdn.growthbook.io",
+  clientKey: "sdk-abc123",          // from SDK Connection page
+});
+
+await gb.loadFeatures();
+
+if (gb.isOn("dark-mode")) {
+  enableDarkMode();
+}`;
+
+```js
+import { GrowthBook } from "@growthbook/growthbook";
+
+const gb = new GrowthBook({
+  apiHost: "https://cdn.growthbook.io",
+  clientKey: "sdk-abc123",          // from SDK Connection page
+});
+
+await gb.loadFeatures();
+
+if (gb.isOn("dark-mode")) {
+  enableDarkMode();
+}
+```
+
+<CopyCode client:visible code={firstTasteCode} label="Copy SDK init" />
+
+<Callout title="Key point">
+  GrowthBook แยก deploy ออกจาก release — ส่งโค้ดของคุณขึ้นแบบปิดไว้ก่อน แล้วค่อยเปิดใช้งานทีหลังโดยไม่ต้องแตะ codebase อีก
+</Callout>
+
+export const quizIndex = [
+  {
+    q: "GrowthBook ใช้สำหรับอะไรเป็นหลัก?",
+    options: [
+      "Feature flags, A/B testing และ analytics บน data warehouse ของคุณเอง",
+      "ให้บริการ data warehouse แบบ managed",
+      "เขียน SQL query ไปยังผู้ให้บริการ analytics ภายนอก",
+      "แทนที่ CI/CD pipeline ของคุณ",
+    ],
+    answer: 0,
+  },
+  {
+    q: "SDK clientKey ใช้สำหรับอะไร?",
+    options: [
+      "เข้ารหัสข้อมูลผู้ใช้ก่อนส่งไปยัง GrowthBook",
+      "ระบุว่า client ควรโหลด features จาก SDK Connection ไหน",
+      "ยืนยันตัวตนของผู้ใช้ที่เป็น admin ของ GrowthBook",
+      "สร้าง random seed สำหรับ A/B test",
+    ],
+    answer: 1,
+  },
+  {
+    q: 'คำว่า "shipping dark" ใน workflow ของ GrowthBook หมายความว่าอย่างไร?',
+    options: [
+      "Deploy โค้ดพร้อมกับ feature flag ที่ปิดอยู่ ทำให้ฟีเจอร์ยังไม่ปรากฏให้ผู้ใช้เห็น",
+      "Deploy ให้เฉพาะผู้ใช้ที่เปิด dark mode บน browser เท่านั้น",
+      "รัน shadow experiment ที่บันทึกข้อมูลแต่ไม่เปลี่ยน UI",
+      "เผยแพร่ experiment ฉบับร่างที่ยังไม่ได้รับการอนุมัติ",
+    ],
+    answer: 0,
+  },
+];
+
+<Quiz client:visible id="intro-setup/index" questions={quizIndex} />
+
+<ProgressTracker client:visible id="intro-setup/index" />

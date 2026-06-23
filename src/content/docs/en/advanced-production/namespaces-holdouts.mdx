@@ -1,0 +1,129 @@
+---
+title: 'Namespaces & Holdouts'
+description: 'Use namespaces to run mutually-exclusive experiments and holdout groups to measure long-term impact.'
+sidebar:
+  order: 2
+---
+
+import CopyCode from '../../../../components/CopyCode.tsx';
+import Callout from '../../../../components/Callout.astro';
+import Quiz from '../../../../components/Quiz.tsx';
+import ProgressTracker from '../../../../components/ProgressTracker.tsx';
+
+## Why experiment overlap is dangerous
+
+When you run two experiments at the same time that affect the same page or user journey, users can end up assigned to both. This creates **interaction effects** — the result of experiment B is contaminated by experiment A's treatment. Your data looks clean but the conclusions are wrong.
+
+GrowthBook solves this with **namespaces**.
+
+## Namespaces
+
+A namespace is a shared bucketing pool. Every experiment assigned to a namespace carves out a non-overlapping slice of the 0–1 traffic range. A user who falls at position 0.42 in the namespace can only be in the experiment that owns that slice — never two at once.
+
+### Creating a namespace
+
+1. In the GrowthBook sidebar, navigate to **Settings → Namespaces**.
+2. Click **Add Namespace**.
+3. Give it a meaningful name, e.g. `checkout-flow`.
+4. Click **Save**.
+
+### Assigning an experiment to a namespace
+
+1. Open the experiment you want to assign.
+2. Click **Edit** on the experiment's targeting section.
+3. Under **Namespace**, select your namespace from the dropdown.
+4. Set the **Range** — two sliders defining the start and end of the traffic slice this experiment owns (e.g., 0.00–0.50).
+5. Click **Save**.
+
+> **Tip:** Two experiments in the same namespace with non-overlapping ranges will never share a user. Experiments in **different** namespaces are independent bucketing pools and can overlap freely.
+
+## Holdout groups
+
+A **holdout** is a segment of users deliberately excluded from all experiments in a namespace for a set period. When the holdout ends, you compare the holdout group's metrics against the rest of the population to measure the **cumulative long-term impact** of all the experiments they missed.
+
+Without a holdout, experiment results reflect short-term lift. With a holdout, you can answer: "Have all these features we shipped actually moved the needle over the last quarter?"
+
+### Creating a holdout experiment
+
+GrowthBook models a holdout as a regular experiment where the control group receives no treatment and is excluded from all other experiments in the namespace.
+
+1. Navigate to **Experiments → Add Experiment** and choose **Holdout**.
+2. Assign it to your namespace and give it a wide range, e.g. 0.90–1.00 (the top 10% of traffic becomes the holdout).
+3. Set the duration (e.g., 90 days).
+4. Click **Start Experiment**.
+
+Any experiment in the same namespace that does **not** overlap with 0.90–1.00 will never reach the holdout users.
+
+export const namespaceCode = `// SDK-side: namespaces are transparent.
+// You configure them in the GrowthBook UI;
+// the SDK assignment hash already respects namespace ranges.
+
+const gb = new GrowthBook({
+  apiHost: 'https://cdn.growthbook.io',
+  clientKey: 'sdk-YOUR_DEV_KEY',
+  attributes: { id: 'user-123' },
+});
+
+await gb.init({ timeout: 2000 });
+
+// This assignment will NEVER conflict with another
+// experiment in the same namespace that owns a
+// non-overlapping range.
+const result = gb.runInlineExperiment({
+  key: 'checkout-cta',
+  variations: [0, 1],
+});
+console.log('Variation:', result.value);`;
+
+<CopyCode client:visible code={namespaceCode} label="Copy namespace SDK example" />
+
+<Callout title="Key point">
+Namespaces keep overlapping experiments from contaminating each other — always assign simultaneous experiments that share the same user journey to the same namespace with non-overlapping ranges.
+</Callout>
+
+export const quizNamespacesHoldouts = [
+  {
+    q: 'What does a GrowthBook namespace guarantee?',
+    options: [
+      'All users see every experiment',
+      'A user can only be in one experiment per namespace at a time',
+      'Experiments in the same namespace share results',
+      'Holdouts are automatically created for every namespace',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'In namespace traffic ranges, what does setting 0.00–0.50 vs 0.50–1.00 for two experiments achieve?',
+    options: [
+      'The two experiments split users 50/50 and each user sees both',
+      'The two experiments are mutually exclusive — no user appears in both',
+      'Both experiments run on all users but at different times',
+      'The first experiment gets priority over the second',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'What is the primary purpose of a holdout group?',
+    options: [
+      'To exclude bots from experiments',
+      'To measure the long-term cumulative impact of all experiments a group missed',
+      'To hold back new features from internal employees',
+      'To increase statistical power in individual experiments',
+    ],
+    answer: 1,
+  },
+  {
+    q: 'Are experiments in different namespaces affected by each other?',
+    options: [
+      'Yes, they share the same bucketing pool',
+      'No, different namespaces are independent pools',
+      'Only if they have the same traffic range',
+      'Only in production environments',
+    ],
+    answer: 1,
+  },
+];
+
+<Quiz client:visible id="advanced-production/namespaces-holdouts" questions={quizNamespacesHoldouts} />
+
+<ProgressTracker client:visible id="advanced-production/namespaces-holdouts" />
