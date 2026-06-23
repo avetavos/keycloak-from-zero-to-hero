@@ -6,6 +6,7 @@ sidebar:
 ---
 
 import RunKeycloak from '../../../../components/RunKeycloak.astro';
+import Mermaid from '../../../../components/Mermaid.astro';
 import Callout from '../../../../components/Callout.astro';
 import Quiz from '../../../../components/Quiz.tsx';
 import ProgressTracker from '../../../../components/ProgressTracker.tsx';
@@ -36,18 +37,12 @@ Every Keycloak workflow follows the same four-step loop:
 3. Create a realm and register a client
 4. Secure your app using OIDC
 
-```
-Docker run Keycloak
-        │
-        ▼
-  Admin console
-        │
-        ▼
-  Create realm + client
-        │
-        ▼
-  Secure your app (OIDC)
-```
+export const setupFlow = `flowchart TD
+  A[Docker run Keycloak] --> B[Admin console]
+  B --> C[Create realm + client]
+  C --> D[Secure your app with OIDC]`;
+
+<Mermaid code={setupFlow} title="The setup-to-secure flow" />
 
 ## Lessons in this module
 

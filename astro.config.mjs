@@ -19,6 +19,9 @@ export default defineConfig({
         th: { label: 'ไทย', lang: 'th' },
       },
       customCss: ['./src/styles/custom.css'],
+      head: [
+        { tag: 'script', attrs: { type: 'module', src: '/keycloak-from-zero-to-hero/enhance.js' } },
+      ],
       social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/avetavos/keycloak-from-zero-to-hero' }],
       sidebar: [
         { label: 'Intro & Setup', items: [{ autogenerate: { directory: 'intro-setup' } }] },

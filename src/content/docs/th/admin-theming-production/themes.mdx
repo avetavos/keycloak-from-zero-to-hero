@@ -6,6 +6,7 @@ sidebar:
 ---
 
 import Callout from '../../../../components/Callout.astro';
+import Mermaid from '../../../../components/Mermaid.astro';
 import CopyCode from '../../../../components/CopyCode.tsx';
 import Quiz from '../../../../components/Quiz.tsx';
 import ProgressTracker from '../../../../components/ProgressTracker.tsx';
@@ -40,19 +41,16 @@ Keycloak แสดงผลหน้าต่างๆ โดยใช้ HTML t
 
 custom theme คือโฟลเดอร์ที่คุณวางไว้ใต้โฟลเดอร์ `themes/` ของ Keycloak โครงสร้างขั้นต่ำสำหรับ login theme มีลักษณะดังนี้:
 
-```
-themes/
-└── my-brand/
-    └── login/
-        ├── theme.properties
-        ├── resources/
-        │   ├── css/
-        │   │   └── login.css
-        │   └── img/
-        │       └── logo.png
-        └── messages/
-            └── messages_en.properties
-```
+export const themeTree = `flowchart TD
+  T["themes/"] --> B["my-brand/"]
+  B --> L["login/"]
+  L --> P["theme.properties"]
+  L --> R["resources/"]
+  R --> CSS["css/login.css"]
+  R --> IMG["img/logo.png"]
+  L --> M["messages/messages_en.properties"]`;
+
+<Mermaid code={themeTree} title="A custom theme's directory structure" />
 
 ไฟล์ `theme.properties` ประกาศว่า theme ของคุณสืบทอดจาก parent theme ใด เริ่มต้นด้วยการขยาย theme `keycloak` ที่มีอยู่แล้ว เพื่อให้คุณต้อง override เฉพาะสิ่งที่เปลี่ยนแปลงเท่านั้น:
 

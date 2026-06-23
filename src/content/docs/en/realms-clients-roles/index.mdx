@@ -6,6 +6,7 @@ sidebar:
 ---
 
 import RunKeycloak from '../../../../components/RunKeycloak.astro';
+import Mermaid from '../../../../components/Mermaid.astro';
 import Callout from '../../../../components/Callout.astro';
 import Quiz from '../../../../components/Quiz.tsx';
 import ProgressTracker from '../../../../components/ProgressTracker.tsx';
@@ -47,14 +48,14 @@ Roles show up in tokens so your application can make authorisation decisions wit
 
 ### How they fit together
 
-```
-Realm
-  ├── Users
-  ├── Roles (realm-level)
-  └── Clients
-        ├── Client roles
-        └── Valid redirect URIs / settings
-```
+export const realmTree = `flowchart TD
+  R[Realm] --> U[Users]
+  R --> RR[Realm-level roles]
+  R --> C[Clients]
+  C --> CR[Client roles]
+  C --> RU[Valid redirect URIs / settings]`;
+
+<Mermaid code={realmTree} title="How a realm contains users, roles, and clients" />
 
 A user in a realm can be assigned realm roles and client roles. When the user authenticates through a client, the resulting token contains those roles so the client can enforce access control.
 

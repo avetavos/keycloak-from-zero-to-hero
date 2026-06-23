@@ -6,6 +6,7 @@ sidebar:
 ---
 
 import Callout from '../../../../components/Callout.astro';
+import Mermaid from '../../../../components/Mermaid.astro';
 import Quiz from '../../../../components/Quiz.tsx';
 import ProgressTracker from '../../../../components/ProgressTracker.tsx';
 
@@ -41,15 +42,11 @@ Keycloak สามารถ delegate authentication ไปยัง identity pro
 
 Keycloak อยู่ระหว่างผู้ใช้กับแอปพลิเคชันของคุณ ผู้ใช้ authenticate ครั้งเดียวกับ Keycloak และรับ signed token มา แอปของคุณ validate token เหล่านั้นในเครื่องโดยไม่ต้องเรียก Keycloak ทุก request
 
-```
-Users
-  │
-  ▼
-Keycloak (auth server)
-  │   issues signed tokens
-  ▼
-Your Apps
-```
+export const archFlow = `flowchart TD
+  U[Users] --> K[Keycloak auth server]
+  K -- issues signed tokens --> A[Your apps]`;
+
+<Mermaid code={archFlow} title="Where Keycloak sits in your architecture" />
 
 <Callout title="ประเด็นสำคัญ">
 Keycloak รองรับ OIDC/OAuth2 และ SAML — แอปพลิเคชันที่ compliant ทุกตัวสามารถ integrate ได้โดยไม่ต้องเขียน auth code เอง

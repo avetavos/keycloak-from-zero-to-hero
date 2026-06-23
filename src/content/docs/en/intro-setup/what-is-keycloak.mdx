@@ -6,6 +6,7 @@ sidebar:
 ---
 
 import Callout from '../../../../components/Callout.astro';
+import Mermaid from '../../../../components/Mermaid.astro';
 import Quiz from '../../../../components/Quiz.tsx';
 import ProgressTracker from '../../../../components/ProgressTracker.tsx';
 
@@ -41,15 +42,11 @@ Every operation available in the admin console is also available via the REST AP
 
 Keycloak sits between your users and your applications. Users authenticate once with Keycloak and receive signed tokens. Your apps validate those tokens locally — without calling Keycloak on every request.
 
-```
-Users
-  │
-  ▼
-Keycloak (auth server)
-  │   issues signed tokens
-  ▼
-Your Apps
-```
+export const archFlow = `flowchart TD
+  U[Users] --> K[Keycloak auth server]
+  K -- issues signed tokens --> A[Your apps]`;
+
+<Mermaid code={archFlow} title="Where Keycloak sits in your architecture" />
 
 <Callout title="Key point">
 Keycloak speaks OIDC/OAuth2 and SAML — any compliant app can integrate without custom auth code.

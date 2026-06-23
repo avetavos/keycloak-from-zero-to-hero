@@ -6,6 +6,7 @@ sidebar:
 ---
 
 import Callout from '../../../../components/Callout.astro';
+import Mermaid from '../../../../components/Mermaid.astro';
 import CopyCode from '../../../../components/CopyCode.tsx';
 import Quiz from '../../../../components/Quiz.tsx';
 import ProgressTracker from '../../../../components/ProgressTracker.tsx';
@@ -40,19 +41,16 @@ The change takes effect immediately — no restart required.
 
 A custom theme is a directory you place under Keycloak's `themes/` folder. The minimal structure for a login theme looks like this:
 
-```
-themes/
-└── my-brand/
-    └── login/
-        ├── theme.properties
-        ├── resources/
-        │   ├── css/
-        │   │   └── login.css
-        │   └── img/
-        │       └── logo.png
-        └── messages/
-            └── messages_en.properties
-```
+export const themeTree = `flowchart TD
+  T["themes/"] --> B["my-brand/"]
+  B --> L["login/"]
+  L --> P["theme.properties"]
+  L --> R["resources/"]
+  R --> CSS["css/login.css"]
+  R --> IMG["img/logo.png"]
+  L --> M["messages/messages_en.properties"]`;
+
+<Mermaid code={themeTree} title="A custom theme's directory structure" />
 
 The `theme.properties` file declares which parent theme yours inherits from. Start by extending the built-in `keycloak` theme so you only need to override what you change:
 
