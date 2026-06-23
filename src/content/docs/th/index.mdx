@@ -1,6 +1,66 @@
 ---
 title: Keycloak — From Zero to Hero
-description: Learn Keycloak — identity & access management, SSO, and OIDC/OAuth2.
+description: เรียน Keycloak — identity & access management, SSO และ OIDC/OAuth2 แบบโอเพนซอร์ส ตั้งแต่ล็อกอินครั้งแรกจนถึงโปรดักชัน
 template: splash
+hero:
+  tagline: คอร์ส Keycloak แบบ standalone ตั้งแต่ผู้เริ่มต้นจนถึงขั้นสูง self-host ได้ในไม่กี่วินาทีด้วยคำสั่ง Docker ที่แจกให้ด้านล่าง แล้วเรียน realm, OIDC flow, การ secure แอป และโปรดักชันแบบลงมือทำ
+  actions:
+    - text: เริ่มที่นี่
+      link: /keycloak-from-zero-to-hero/th/intro-setup/
+      icon: right-arrow
+      variant: primary
+    - text: ข้ามไปที่ Realms & Clients
+      link: /keycloak-from-zero-to-hero/th/realms-clients-roles/
+      icon: open-book
 ---
-Coming soon.
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import RunKeycloak from '../../../components/RunKeycloak.astro';
+
+<RunKeycloak />
+
+## สิ่งที่คุณจะได้เรียน
+
+<CardGrid>
+  <Card title="Intro & Setup" icon="rocket">
+    Keycloak คืออะไร, คำสั่ง Docker ที่แจกให้, admin console, dev เทียบ production [เริ่ม →](/keycloak-from-zero-to-hero/th/intro-setup/)
+  </Card>
+  <Card title="Realms, Clients & Roles" icon="setting">
+    realm, client (public/confidential), realm role เทียบ client role, composite [เรียน →](/keycloak-from-zero-to-hero/th/realms-clients-roles/)
+  </Card>
+  <Card title="Users, Groups & Credentials" icon="seti:default">
+    user, group &amp; role mapping, password/OTP, required action [จัดการ →](/keycloak-from-zero-to-hero/th/users-groups-credentials/)
+  </Card>
+  <Card title="OIDC & OAuth2 Flows" icon="random">
+    OIDC เทียบ OAuth2, Authorization Code + PKCE, client credentials, token endpoint [เรียนรู้ flow →](/keycloak-from-zero-to-hero/th/oidc-oauth2-flows/)
+  </Card>
+  <Card title="Securing Apps" icon="approve-check">
+    SPA ด้วย keycloak-js, backend ที่ตรวจ JWT, refresh &amp; logout, adapter [ป้องกันแอป →](/keycloak-from-zero-to-hero/th/securing-apps/)
+  </Card>
+  <Card title="Tokens, Scopes & Mappers" icon="puzzle">
+    access/ID/refresh token, client scope, protocol mapper, lifespan [เรื่อง token →](/keycloak-from-zero-to-hero/th/tokens-scopes-mappers/)
+  </Card>
+  <Card title="Identity Federation & Social Login" icon="external">
+    social login, identity brokering, LDAP/AD federation, IdP mapper [เชื่อม identity →](/keycloak-from-zero-to-hero/th/federation-social/)
+  </Card>
+  <Card title="Admin, Theming & Production" icon="bars">
+    admin REST API, theme, event &amp; audit, production checklist [ขึ้นโปรดักชัน →](/keycloak-from-zero-to-hero/th/admin-theming-production/)
+  </Card>
+</CardGrid>
+
+## คอร์สนี้ทำงานยังไง
+
+<CardGrid>
+  <Card title="แจกคำสั่งตั้งค่า" icon="rocket">
+    docker run คัดลอกวางครั้งเดียวเพื่อสตาร์ต Keycloak ในโหมด dev — คุณเข้า admin console ได้ก่อนบทเรียนแรก
+  </Card>
+  <Card title="Snippet คัดลอกพร้อมใช้" icon="open-book">
+    ทุกตัวอย่าง curl, config และ SDK มีปุ่มคัดลอกคลิกเดียวเพื่อวางลงในโปรเจกต์ของคุณ
+  </Card>
+  <Card title="แบบทดสอบ & ความคืบหน้า" icon="bars">
+    ทบทวนความเข้าใจหลังแต่ละบท ความคืบหน้าถูกบันทึกไว้ในเครื่อง
+  </Card>
+  <Card title="สองภาษา" icon="translate">
+    มีทั้งภาษาอังกฤษและไทย — สลับได้ตลอดจากแถบด้านบน
+  </Card>
+</CardGrid>

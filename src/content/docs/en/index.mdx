@@ -1,6 +1,66 @@
 ---
 title: Keycloak — From Zero to Hero
-description: Learn Keycloak — identity & access management, SSO, and OIDC/OAuth2.
+description: Learn Keycloak — open-source identity & access management, SSO, and OIDC/OAuth2 — from first login to production.
 template: splash
+hero:
+  tagline: A standalone, beginner→advanced course on Keycloak. Self-host it in seconds with the gifted Docker command below, then learn realms, OIDC flows, securing apps, and production hands-on.
+  actions:
+    - text: Start here
+      link: /keycloak-from-zero-to-hero/en/intro-setup/
+      icon: right-arrow
+      variant: primary
+    - text: Jump to Realms & Clients
+      link: /keycloak-from-zero-to-hero/en/realms-clients-roles/
+      icon: open-book
 ---
-Coming soon.
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import RunKeycloak from '../../../components/RunKeycloak.astro';
+
+<RunKeycloak />
+
+## What you'll learn
+
+<CardGrid>
+  <Card title="Intro & Setup" icon="rocket">
+    What Keycloak is, the gifted Docker command, the admin console, dev vs production. [Start →](/keycloak-from-zero-to-hero/en/intro-setup/)
+  </Card>
+  <Card title="Realms, Clients & Roles" icon="setting">
+    Realms, clients (public/confidential), realm vs client roles, composites. [Learn →](/keycloak-from-zero-to-hero/en/realms-clients-roles/)
+  </Card>
+  <Card title="Users, Groups & Credentials" icon="seti:default">
+    Users, groups &amp; role mappings, passwords/OTP, required actions. [Manage →](/keycloak-from-zero-to-hero/en/users-groups-credentials/)
+  </Card>
+  <Card title="OIDC & OAuth2 Flows" icon="random">
+    OIDC vs OAuth2, Authorization Code + PKCE, client credentials, token endpoint. [Flow →](/keycloak-from-zero-to-hero/en/oidc-oauth2-flows/)
+  </Card>
+  <Card title="Securing Apps" icon="approve-check">
+    A SPA with keycloak-js, a backend validating JWTs, refresh &amp; logout, adapters. [Secure →](/keycloak-from-zero-to-hero/en/securing-apps/)
+  </Card>
+  <Card title="Tokens, Scopes & Mappers" icon="puzzle">
+    Access/ID/refresh tokens, client scopes, protocol mappers, lifespans. [Tokens →](/keycloak-from-zero-to-hero/en/tokens-scopes-mappers/)
+  </Card>
+  <Card title="Identity Federation & Social Login" icon="external">
+    Social login, identity brokering, LDAP/AD federation, IdP mappers. [Federate →](/keycloak-from-zero-to-hero/en/federation-social/)
+  </Card>
+  <Card title="Admin, Theming & Production" icon="bars">
+    Admin REST API, themes, events &amp; audit, the production checklist. [Ship →](/keycloak-from-zero-to-hero/en/admin-theming-production/)
+  </Card>
+</CardGrid>
+
+## How this course works
+
+<CardGrid>
+  <Card title="Gifted setup" icon="rocket">
+    One copy-paste docker run starts Keycloak in dev mode — you're in the admin console before the first lesson.
+  </Card>
+  <Card title="Copy-ready snippets" icon="open-book">
+    Every curl, config, and SDK example has a one-click copy to paste into your project.
+  </Card>
+  <Card title="Quizzes & progress" icon="bars">
+    Check your understanding after each lesson; your progress is saved locally.
+  </Card>
+  <Card title="Bilingual" icon="translate">
+    Available in English and ไทย — switch anytime from the top bar.
+  </Card>
+</CardGrid>
