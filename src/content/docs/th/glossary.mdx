@@ -1,0 +1,70 @@
+---
+title: Glossary
+description: คำศัพท์ Keycloak และ identity/access management ที่ใช้ตลอด course นี้ — รักษา terminology ภาษาอังกฤษตามที่ developer ใช้จริง
+sidebar:
+  order: 99
+---
+
+import Callout from '../../../components/Callout.astro';
+import ProgressTracker from '../../../components/ProgressTracker.tsx';
+
+## Core Concepts
+
+| English | Thai Style | หมายเหตุ |
+|---------|-----------|---------|
+| Realm | realm | tenant ระดับบนสุดที่แยก user, client, role ออกจากกันอย่างสมบูรณ์ |
+| Client | client | แอปพลิเคชันที่ลงทะเบียนกับ Keycloak เพื่อมอบหมายงาน authentication |
+| User | user | บัญชีของบุคคลที่ login เข้าระบบ |
+| Role | role | สิทธิ์ที่มีชื่อ ผูกเข้ากับ user หรือ group ได้ |
+| Group | group | การรวม user เพื่อกำหนด role/attribute พร้อมกันเป็นชุด |
+| Session | session | ช่วงเวลาที่ user ยังคง login อยู่ใน Keycloak |
+
+## Protocols
+
+| English | Thai Style | หมายเหตุ |
+|---------|-----------|---------|
+| OIDC (OpenID Connect) | OIDC | protocol authentication ที่สร้างต่อจาก OAuth2 |
+| OAuth2 | OAuth2 | protocol authorisation ที่ใช้ delegate การเข้าถึง resource |
+| SAML | SAML | protocol federation แบบ XML-based รุ่นเก่ากว่า OIDC |
+| JWT | JWT | รูปแบบ token ที่เข้ารหัสเป็น string ลงนามได้ ใช้ส่ง claim |
+| PKCE | PKCE | ส่วนขยายของ Authorization Code flow ที่ป้องกัน public client จากการถูกดัก code |
+| Grant | grant | วิธีที่ client แลก credential เป็น token (เช่น authorization_code, client_credentials) |
+| Flow | flow | ลำดับขั้นตอนทั้งหมดตั้งแต่ผู้ใช้เริ่ม login จนได้ token |
+
+## Tokens
+
+| English | Thai Style | หมายเหตุ |
+|---------|-----------|---------|
+| Access Token | access token | token ที่ resource server ตรวจสอบในทุก request |
+| Refresh Token | refresh token | token ที่ใช้แลก access token ใหม่แบบ silent |
+| ID Token | ID token | JWT ที่บอกว่า user คือใคร ใช้โดย frontend ไม่ใช่โดย API |
+| Claim | claim | คู่ key-value ที่อยู่ใน payload ของ token |
+| Scope | scope | ชุดของ claim/permission ที่ client ขอผ่าน OAuth2 |
+| Mapper | mapper | เครื่องมือที่เพิ่มหรือแปลง claim ลงใน token |
+| Lifespan | lifespan | อายุการใช้งานของ token หรือ session |
+| JWKS | JWKS | endpoint ที่เผยแพร่ public key สำหรับตรวจสอบ signature ของ JWT |
+
+## Federation
+
+| English | Thai Style | หมายเหตุ |
+|---------|-----------|---------|
+| Identity Provider (IdP) | identity provider | ระบบ external ที่ยืนยันตัวตน user แทน Keycloak เช่น Google, Azure AD |
+| Brokering | brokering | Keycloak ทำหน้าที่เป็นตัวกลางระหว่างแอปกับ IdP ภายนอก |
+| LDAP | LDAP | protocol directory ที่ใช้เชื่อมต่อกับ user store ภายนอก เช่น Active Directory |
+| SSO (Single Sign-On) | SSO | login ครั้งเดียวแล้วเข้าถึงหลายแอปได้โดยไม่ต้อง login ซ้ำ |
+
+## เมื่อ **ไม่** ควรใช้ literal Thai translation
+
+| หลีกเลี่ยง | ใช้แทน |
+|------------|--------|
+| การพิสูจน์ตัวตน / การยืนยันตัวตน | authentication |
+| ทำการ login / ทำการตรวจสอบ | login / ตรวจสอบ (drop ทำการ) |
+| ดำเนินการต่อ | ทำต่อ / ไปต่อ |
+| การดำเนินการ (table header) | Operation |
+| อ็อบเจกต์ | object |
+
+<Callout title="ทำไมคำเหล่านี้ไม่แปลเป็นไทยทั้งหมด">
+Course นี้เก็บคำศัพท์ด้าน identity และ access management ไว้เป็นภาษาอังกฤษ เพราะเป็นคำที่ทีม engineering ใช้พูดคุยกันจริงในที่ทำงาน — ทั้งใน Keycloak admin console เอง, ใน spec ของ OAuth2/OIDC และในเอกสารต้นฉบับ การแปลคำเหล่านี้ทั้งหมดจะทำให้สื่อสารกับทีมและเอกสารต้นฉบับไม่ตรงกัน คำอย่าง "ขอบเขต" (boundary ทั่วไป) และ "บทบาท" (การใช้ทั่วไปที่ไม่ใช่ Keycloak role object) ยังคงใช้ภาษาไทยได้ตามปกติเพราะไม่ใช่ terminology เฉพาะทาง
+</Callout>
+
+<ProgressTracker client:visible id="th/glossary" />

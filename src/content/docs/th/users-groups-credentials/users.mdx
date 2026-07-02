@@ -91,6 +91,26 @@ curl -s -H "Authorization: Bearer ${TOKEN}" \
 ตั้ง **Email verified** ให้กับ user เมื่อคุณสร้างบัญชี หรือกำหนด required action `verify-email` — user ที่ยังไม่ได้ยืนยันอาจเป็นช่องโหว่ด้านความปลอดภัย หากอีเมลของ user ยังไม่ได้รับการยืนยัน ผู้โจมตีที่เข้าถึงที่อยู่อีเมลนั้นได้อาจรับลิงก์รีเซ็ต password ที่ตั้งใจจะส่งไปยังอีกบัญชีหนึ่ง
 </Callout>
 
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| ให้ admin สร้าง user เองทุกบัญชี (manual onboarding) | ควบคุมได้ละเอียด — admin กำหนด attribute, email verified, required action ได้ตั้งแต่วันแรก | ไม่ scale เมื่อจำนวน user เพิ่มขึ้น ต้องเสียเวลา admin ต่อบัญชี |
+| เปิด self-registration ให้ user สมัครเอง | ลดภาระงาน admin, onboarding เร็วขึ้นมาก | ต้องวางระบบ default group และ required action ให้ดี ไม่งั้นบัญชีใหม่จะไม่มี permission ที่ถูกต้องหรือยังไม่ได้ยืนยันอีเมล |
+| แนบ attribute แบบกำหนดเองบน user โดยตรง | ยืดหยุ่น เก็บ metadata เฉพาะแอปได้โดยไม่ต้องแก้ data model | ถ้าไม่ map เข้ากับ client scope ผ่าน mapper, attribute จะไม่ไปปรากฏใน token เลย ต้องดูแล mapping เพิ่ม |
+
+## Common Mistakes
+
+- **สร้าง user ทีละคนโดยไม่วางแผนเรื่อง group/permission** — ทำให้การกำหนด role กระจัดกระจาย ควรคิดเรื่อง group และ default group ตั้งแต่ต้นแทนที่จะไล่แก้ทีหลัง
+- **เปิด Email verified เป็น On โดยไม่ตรวจสอบว่าเป็น user จริง** — ถ้า admin สร้างบัญชีแทน user แล้วปิดขั้นตอนยืนยันอีเมลโดยไม่จำเป็น จะเปิดช่องให้เกิดบัญชีปลอมหรืออีเมลผิดคนโดยไม่รู้ตัว
+- **ลืมว่า user มีขอบเขตอยู่แค่ใน realm เดียว** — พยายาม query หรืออ้างอิง user ข้าม realm โดยตรงจะไม่เจอ ต้องใช้ federation ถ้าต้องการแชร์ identity ข้าม realm
+
+> 💡 Real World Example
+>
+> **บริษัท SaaS B2B** — ใช้ Admin REST API สร้าง user อัตโนมัติทุกครั้งที่มีการ provision tenant ใหม่ พร้อมตั้ง attribute เช่น `tenantId` และ `plan` ตั้งแต่ตอนสร้าง เพื่อให้ backend แยกสิทธิ์ตาม tenant ได้ทันทีโดยไม่ต้องรอ admin กดมือ
+>
+> **องค์กรขนาดใหญ่ (enterprise)** — เปิด self-registration เฉพาะโดเมนอีเมลภายในองค์กร แล้วบังคับ required action `verify-email` เพื่อให้มั่นใจว่าทุกบัญชีที่เข้าระบบมาเป็นพนักงานจริง ก่อนจะให้เข้าถึง internal application ใด ๆ
+
 export const quizUsers = [
   {
     q: 'ฟิลด์ใดที่จำเป็นต้องกรอกเมื่อสร้าง user ใน Keycloak?',

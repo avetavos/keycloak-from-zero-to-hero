@@ -55,6 +55,26 @@ export const authRequestCode = `https://auth.example.com/realms/my-app/protocol/
 Optional client scope ทำให้ access token มีขนาดเล็ก — Keycloak จะรวม claim เหล่านั้นเฉพาะเมื่อ client ร้องขออย่างชัดเจน ร้องขอเฉพาะ scope ที่แอปพลิเคชันต้องการจริงๆ เท่านั้น
 </Callout>
 
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| Default scope | ทุก client ได้ claim ชุดเดียวกันอัตโนมัติโดยไม่ต้องตั้งค่าเพิ่ม ลดโอกาส config ผิดพลาดหรือลืม assign | Token มีขนาดใหญ่ขึ้นเสมอ แม้บาง client จะไม่เคยใช้ claim นั้นเลย |
+| Optional scope | Token เล็กลง เพราะมีเฉพาะ claim ที่ client ร้องขอจริงผ่าน `scope` parameter | Client ต้องจำและระบุ scope ทุกครั้งใน authorization request ถ้าลืมจะไม่ได้ claim ที่ต้องการ |
+| แยก scope ตาม API (เช่น `orders:read`, `billing:write`) แทนที่จะรวมไว้ scope เดียว | ควบคุมสิทธิ์แบบ least privilege ได้ละเอียดต่อ client ต่อ use case | ต้อง maintain scope และ mapper หลายชุดมากขึ้น เพิ่มภาระดูแล |
+
+## Common Mistakes
+
+- **ตั้งทุก custom scope เป็น default** — ทำให้ token บวมด้วย claim ที่ client ส่วนใหญ่ไม่ได้ใช้ ควรตั้งเป็น optional แล้วให้ client ที่ต้องการจริงร้องขอเอง
+- **ลืมระบุ scope ใน authorization request แล้วสงสัยว่าทำไม claim ไม่มา** — การ assign optional scope ให้ client เพียงอย่างเดียวไม่ทำให้ claim ปรากฏใน token อัตโนมัติ ต้องระบุใน `scope` parameter ของ request ด้วยเสมอ
+- **ใช้ scope เดียวสำหรับหลาย API ที่ระดับสิทธิ์ต่างกัน** — ทำให้ทุก client ที่ได้ scope นั้นมีสิทธิ์เท่ากันหมด ควรแยก scope ตามระดับความเสี่ยงของแต่ละ API
+
+> 💡 Real World Example
+>
+> **Multi-tenant SaaS platform** — แยก optional scope ตาม module เช่น `billing`, `reports`, `admin` เพื่อให้ token ของแต่ละ integration หรือ third-party app มีแค่ claim ที่จำเป็นต่อ module ที่ขอใช้งานจริง
+>
+> **API gateway ระดับองค์กร** — ใช้ default scope `roles` เพื่อให้ทุก client ได้ realm/client role claim พื้นฐานเสมอ ส่วน scope ที่ละเอียดอ่อนกว่าอย่างข้อมูลการเงินตั้งเป็น optional และเปิดให้เฉพาะ client ที่ผ่านการอนุมัติ
+
 export const quizClientScopes = [
   {
     q: 'Client scope คืออะไร?',

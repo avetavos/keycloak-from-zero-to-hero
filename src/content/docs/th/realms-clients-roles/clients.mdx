@@ -12,7 +12,7 @@ import ProgressTracker from '../../../../components/ProgressTracker.tsx';
 
 ## client คืออะไร?
 
-**client** คือแอปพลิเคชันใด ๆ ที่มอบหมายงานการยืนยันตัวตน (authentication) และการให้สิทธิ์ (authorisation) ให้ Keycloak จัดการ เมื่อ user ต้องการ sign in เข้าแอปของคุณ แอปของคุณจะ redirect พวกเขาไปยัง Keycloak Keycloak จะยืนยันตัวตน user แล้ว redirect กลับมายังแอปของคุณพร้อมกับ code หรือ token การ redirect ไปมาแบบนี้คือ Authorization Code flow ของ OAuth2 / OIDC และ "client" ก็คือฝ่ายที่แอปของคุณลงทะเบียนตัวเองเอาไว้
+**client** คือแอปพลิเคชันใด ๆ ที่มอบหมายงาน authentication และ authorisation ให้ Keycloak จัดการ เมื่อ user ต้องการ sign in เข้าแอปของคุณ แอปของคุณจะ redirect พวกเขาไปยัง Keycloak Keycloak จะยืนยันตัวตน user แล้ว redirect กลับมายังแอปของคุณพร้อมกับ code หรือ token การ redirect ไปมาแบบนี้คือ Authorization Code flow ของ OAuth2 / OIDC และ "client" ก็คือฝ่ายที่แอปของคุณลงทะเบียนตัวเองเอาไว้
 
 ตัวอย่างของ client:
 
@@ -90,12 +90,32 @@ export const discoveryCode = `curl https://localhost:8080/realms/my-app/.well-kn
 เฉพาะ URI ที่อยู่ในรายการ Valid redirect URIs เท่านั้นที่สามารถรับ token หลัง login ได้ wildcard อย่าง `*` จะรับ redirect ใด ๆ ก็ได้ — รวมถึง server ของผู้โจมตีด้วย ให้ redirect URI เจาะจงมากที่สุดเท่าที่จะทำได้ โดยเฉพาะใน production
 </Callout>
 
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| Client type: OpenID Connect | มาตรฐานสมัยใหม่ เข้ากันได้กับ library และ SDK ส่วนใหญ่ ตั้งค่าและ debug ง่ายกว่า | ไม่มีประโยชน์เพิ่มเติมสำหรับระบบ legacy ที่ผูกกับ SAML assertion โดยเฉพาะ |
+| Valid redirect URI แบบเจาะจง (exact match) | ป้องกัน authorization-code interception attack ได้แน่นหนา ควบคุมชัดเจนว่า Keycloak ส่ง token กลับไปที่ไหนได้บ้าง | ต้องอัปเดตรายการทุกครั้งที่เพิ่ม environment หรือ path ใหม่ เพิ่ม maintenance overhead |
+| Web origins ตั้งเป็น `+` (นำมาจาก redirect URIs) | ตั้งค่าครั้งเดียว ไม่ต้อง sync สอง list แยกกัน | หากรายการ redirect URIs กว้างเกินไป Web origins ก็จะกว้างตามไปด้วย |
+
+## Common Mistakes
+
+- **ใช้ wildcard `*` ทั้งหมดใน Valid redirect URIs บน production client** — เปิดช่องให้ Keycloak redirect ไปยังโดเมนใดก็ได้ที่ตรง pattern รวมถึงโดเมนของผู้โจมตี ควรระบุ callback path ที่แน่นอนเท่านั้นใน production
+- **ลงทะเบียน SPA เป็น confidential client แล้วฝัง client secret ไว้ใน frontend bundle** — secret ที่ฝังอยู่ใน code ฝั่ง client ถือว่าเปิดเผยต่อสาธารณะเสมอ เพราะใครก็เปิด devtools ดูได้ ควรใช้ public client ร่วมกับ PKCE แทน
+- **ไม่ตั้งค่า Web origins ให้ตรงกับ origin จริงของ frontend** — ทำให้ CORS preflight ล้มเหลวเวลาเรียก token endpoint ตรง ๆ จาก browser หรือถ้าตั้งกว้างเกินไปก็เปิดช่องโหว่โดยไม่จำเป็น
+
+> 💡 Real World Example
+>
+> **Google Cloud Console** — ลงทะเบียน OAuth client แยกกันสำหรับแต่ละ environment (dev, staging, production) พร้อม redirect URI ที่เจาะจงต่อ environment นั้น ๆ เพื่อไม่ให้ authorization code หรือ token รั่วไหลข้าม environment
+>
+> **Stripe Connect** — ใช้ confidential client กับ client secret ที่เก็บไว้เฉพาะฝั่ง server เพื่อลงทะเบียน platform application ที่เชื่อมต่อกับบัญชีผู้ใช้จำนวนมาก ไม่มี secret ใดหลุดออกไปยัง browser ของ end-user เลย
+
 export const quizClients = [
   {
     q: 'Keycloak client คืออะไร?',
     options: [
       'บัญชี user ใน realm',
-      'แอปพลิเคชันที่ลงทะเบียนไว้เพื่อใช้ Keycloak สำหรับการยืนยันตัวตน',
+      'แอปพลิเคชันที่ลงทะเบียนไว้เพื่อใช้ Keycloak สำหรับ authentication',
       'ผู้ดูแลระบบ (administrator) ของ Keycloak',
       'role ที่ระดับ realm',
     ],

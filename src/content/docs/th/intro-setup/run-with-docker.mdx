@@ -59,6 +59,25 @@ docker rm keycloak
 `start-dev` ปิดการตรวจสอบด้านความปลอดภัยที่สำคัญและใช้ in-memory database ข้อมูลทั้งหมดจะหายไปเมื่อ container หยุดทำงาน ห้ามใช้ `start-dev` ใน production — ใช้ `start` พร้อม external database แทน
 </Callout>
 
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| `start-dev` ใน Docker container | เริ่มใช้งานได้ในคำสั่งเดียว ไม่ต้องตั้งค่า database, เหมาะกับการทดลองและเรียนรู้ | ข้อมูลหายทุกครั้งที่ container ถูกลบ, ไม่มี TLS, ไม่เหมาะกับ workload จริงแม้แต่ staging ที่ต้องการความเสถียร |
+| `start` พร้อม external database (production mode) | ข้อมูล persist ผ่าน restart/redeploy, รองรับ TLS และ hostname ที่แน่นอน, scale ได้หลาย instance | ต้องตั้งค่า database, TLS certificate และ reverse proxy เพิ่มเติมก่อนใช้งานได้ |
+
+## Common Mistakes
+
+- **รัน `start-dev` แล้วลืมสลับเป็น `start` ก่อนขึ้น production** — `start-dev` ปิด security check หลายตัวและใช้ in-memory database ถ้าหลงลืมสลับโหมด ข้อมูล production จะหายทันทีที่ container restart
+- **ไม่เปลี่ยน `KC_BOOTSTRAP_ADMIN_USERNAME`/`KC_BOOTSTRAP_ADMIN_PASSWORD` จากค่า default** — การปล่อย `admin`/`admin` ไว้แม้ใน container ที่ expose port ออกสู่ network อื่นเป็นช่องโหว่ด้าน security ที่พบบ่อยมาก
+- **ไม่ pin version ของ image** — การใช้ `quay.io/keycloak/keycloak:latest` ใน CI หรือ staging ทำให้ behaviour เปลี่ยนแบบไม่คาดคิดเมื่อ Red Hat release version ใหม่ ควร pin เป็น version เจาะจงเสมอ
+
+> 💡 Real World Example
+>
+> **ทีม platform engineering ในองค์กร** — มักใช้ `docker run start-dev` หรือ `docker-compose` เฉพาะบนเครื่อง local ของ developer สำหรับทดสอบ integration แล้วค่อย deploy Keycloak จริงผ่าน Helm chart บน Kubernetes พร้อม external PostgreSQL
+>
+> **Red Hat build of Keycloak (RH-SSO)** — image ที่ใช้ในบทเรียนนี้มาจาก community build; องค์กรที่ต้องการ support สัญญา SLA จะใช้ container image ของ Red Hat build of Keycloak แทน แต่คำสั่ง `start`/`start-dev` และ environment variable ทำงานเหมือนกัน
+
 export const quizDocker = [
   {
     q: 'flag -p 8080:8080 ในคำสั่ง docker run ทำอะไร?',

@@ -11,7 +11,7 @@ import ProgressTracker from '../../../../components/ProgressTracker.tsx';
 
 ## realm คืออะไร?
 
-**realm** คือ container ระดับบนสุดใน Keycloak ทุกอ็อบเจกต์ใน Keycloak — ไม่ว่าจะเป็น user, client, role, identity provider, token policy — ล้วนอยู่ใน realm หนึ่งเดียวเท่านั้น realm แต่ละตัวแยกออกจากกันอย่างสมบูรณ์: user ใน realm `shop` ไม่สามารถ log in เข้าแอปพลิเคชันที่ลงทะเบียนไว้ใน realm `blog` ได้ และ session ของพวกเขาก็จะไม่ถูกแชร์กัน
+**realm** คือ container ระดับบนสุดใน Keycloak ทุก object ใน Keycloak — ไม่ว่าจะเป็น user, client, role, identity provider, token policy — ล้วนอยู่ใน realm หนึ่งเดียวเท่านั้น realm แต่ละตัวแยกออกจากกันอย่างสมบูรณ์: user ใน realm `shop` ไม่สามารถ log in เข้าแอปพลิเคชันที่ลงทะเบียนไว้ใน realm `blog` ได้ และ session ของพวกเขาก็จะไม่ถูกแชร์กัน
 
 คุณสามารถนึกถึง realm ว่าเหมือน tenant ในระบบ SaaS แบบ multi-tenant ได้ เพียงแต่ว่าแต่ละ realm ถูกจัดการอยู่ภายใน Keycloak server เครื่องเดียวทั้งหมด
 
@@ -78,6 +78,25 @@ http://localhost:8080/realms/{realm-name}/protocol/openid-connect/certs
 <Callout title="ห้ามสร้างแอปใน master เด็ดขาด">
 อย่าลงทะเบียนแอปพลิเคชันของคุณหรือเก็บ user ของแอปพลิเคชันไว้ใน master realm master realm สงวนไว้สำหรับการบริหารจัดการ Keycloak ให้สร้าง realm เฉพาะสำหรับทุกโปรเจกต์หรือทุกผลิตภัณฑ์
 </Callout>
+
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| realm ต่อแอป (realm-per-app) | แยก user, session และ token policy ของแต่ละแอปออกจากกันอย่างสมบูรณ์ ลดผลกระทบเมื่อแอปหนึ่งมีปัญหาความปลอดภัย | ต้องดูแลหลาย realm — theme, SMTP, identity provider ต้องตั้งค่าซ้ำในแต่ละ realm เพิ่ม operational overhead |
+| shared realm (หลายแอปอยู่ realm เดียว) | ตั้งค่าและดูแลรักษาง่ายกว่า user เดียวใช้ได้กับหลายแอปแบบ SSO ทันที | isolation อ่อนกว่า — การตั้งค่าหรือ role ที่ผิดพลาดในแอปหนึ่งอาจกระทบแอปอื่นในขอบเขตเดียวกัน |
+
+## Common Mistakes
+
+- **ลงทะเบียนแอปจริงไว้ใน master realm** — master ควรสงวนไว้สำหรับงานบริหารจัดการ Keycloak เท่านั้น ให้สร้าง realm แยกสำหรับทุกโปรเจกต์หรือผลิตภัณฑ์ เพื่อไม่ให้ user ของแอปปนกับ super-user ฝ่ายบริหาร
+- **ลืมตั้งค่า token lifespan ให้เหมาะกับความเสี่ยงของแอป** — ใช้ค่า default ของทุก realm เหมือนกันหมด ทั้งที่บาง realm (เช่น banking) ควรมี access token lifespan สั้นกว่า realm ที่ความเสี่ยงต่ำ
+- **ไม่ rotate signing key เป็นระยะใน production** — ปล่อยให้ key เดิมใช้งานตลอดอายุของระบบ เพิ่มความเสี่ยงหาก private key รั่วไหลโดยไม่รู้ตัว
+
+> 💡 Real World Example
+>
+> **Multi-tenant SaaS platform** — แพลตฟอร์ม SaaS จำนวนมากใช้ pattern realm-per-customer โดยสร้าง realm แยกให้ลูกค้าแต่ละราย ทำให้ user, role และ session ของลูกค้าแต่ละคนแยกขาดจากกันอย่างสมบูรณ์ พร้อมรองรับการทำ custom branding และ identity provider ต่อ tenant ได้ง่าย
+>
+> **องค์กรขนาดใหญ่ที่มีหลายทีม** — บริษัทที่มีทั้งระบบ internal tool และ customer-facing product มักแยก realm ตามกลุ่มผู้ใช้ เช่น realm `staff` สำหรับพนักงาน กับ realm `customers` สำหรับลูกค้า เพื่อไม่ให้ policy ด้าน password หรือ MFA ของฝั่งหนึ่งไปกระทบอีกฝั่ง
 
 export const quizRealms = [
   {

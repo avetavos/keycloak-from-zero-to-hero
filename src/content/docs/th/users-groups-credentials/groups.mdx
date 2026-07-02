@@ -89,6 +89,26 @@ export const groupMembersCode = `curl -s -H "Authorization: Bearer \${TOKEN}" ht
 กำหนด role ให้กับ group, แล้วใส่ user เข้า group — จัดการง่ายกว่าการกำหนด role ให้กับ user แต่ละรายมาก เมื่อความรับผิดชอบของ user เปลี่ยนไป ให้ย้ายพวกเขาระหว่าง group แทนที่จะไล่ค้นหาทุก role assignment บนบัญชีของพวกเขา
 </Callout>
 
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| กำหนด permission ผ่าน group (map role ให้ group แล้วเพิ่ม user เข้า) | อัปเดต role mapping ครั้งเดียวก็มีผลกับสมาชิกทุกคน ย้าย user ระหว่างทีมแค่ย้าย group | ต้องออกแบบโครงสร้าง group ให้ดีตั้งแต่แรก ถ้าวางผิดจะต้อง refactor ทีหลัง |
+| กำหนด role แบบ role-by-role ให้ user แต่ละคนโดยตรง | เหมาะกับ exception เฉพาะบุคคลที่ไม่ต้องการให้กระทบคนอื่นใน group | ไม่ scale — เมื่อ permission ของทีมเปลี่ยน ต้องไล่แก้ทุกบัญชีทีละคน เสี่ยงตกหล่น |
+| ใช้ default group ให้ user ใหม่เข้าโดยอัตโนมัติ | onboarding ไม่ต้องมีขั้นตอน manual, user ใหม่ได้ role พื้นฐานทันที | ถ้ากำหนด default group ผิดหรือกว้างเกินไป user ใหม่อาจได้ permission เกินความจำเป็น |
+
+## Common Mistakes
+
+- **กำหนด role ให้ user ทีละคนแทนที่จะผ่าน group** — เมื่อทีมโตขึ้นจะจัดการไม่ไหว ควร map role เข้า group แล้วให้ user สืบทอดผ่านการเป็นสมาชิก
+- **ลืมว่า subgroup ไม่สืบทอด role ของ parent group โดยอัตโนมัติ** — ถ้าคาดหวังให้สมาชิก subgroup ได้ permission ของ parent ด้วย ต้อง map role ซ้ำหรือเพิ่ม user เป็นสมาชิกของ parent ตรง ๆ
+- **ไม่ตรวจสอบ default groups ก่อนเปิด self-registration** — ถ้าลืมตั้งหรือกำหนดกว้างเกินไป user ที่สมัครเองจะได้ role ที่ไม่ควรได้ หรือไม่มี role พื้นฐานเลย
+
+> 💡 Real World Example
+>
+> **บริษัท enterprise onboarding พนักงานใหม่** — ตั้ง default group เป็น `all-employees` ให้ user ทุกคนที่สมัครผ่าน self-registration ภายในโดเมนบริษัทถูกจัดเข้า group นี้อัตโนมัติ พร้อม role พื้นฐานอย่าง `view-directory` โดยไม่ต้องให้ HR หรือ IT กดมือทีละคน
+>
+> **ทีม engineering ที่แบ่งเป็น subgroup** — ใช้โครงสร้าง `engineering` → `backend`, `frontend` เพื่อ map role เฉพาะทาง (เช่น `deploy-backend`) ให้เฉพาะ subgroup ที่เกี่ยวข้อง เวลามีคนย้ายทีมก็แค่ย้าย membership ระหว่าง subgroup ไม่ต้องแก้ role assignment ใหม่ทั้งหมด
+
 export const quizGroups = [
   {
     q: 'ความแตกต่างที่สำคัญระหว่าง group กับ role ใน Keycloak คืออะไร?',

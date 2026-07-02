@@ -10,6 +10,8 @@ import CopyCode from '../../../../components/CopyCode.tsx';
 import Quiz from '../../../../components/Quiz.tsx';
 import ProgressTracker from '../../../../components/ProgressTracker.tsx';
 
+SPA รันอยู่ทั้งหมดในเบราว์เซอร์ของผู้ใช้ โค้ดฝั่ง client (รวมถึงค่าคงที่หรือ config ใด ๆ ที่ฝังไว้) จึงเปิดให้ทุกคนตรวจสอบได้เสมอ ด้วยเหตุนี้ SPA จึงไม่สามารถเก็บ client secret ไว้อย่างปลอดภัยเหมือนที่ backend ทำได้ Keycloak แก้ปัญหานี้โดยให้ SPA ลงทะเบียนเป็น **public client** (ไม่มี secret) แล้วใช้ **PKCE** (Proof Key for Code Exchange) แทน เพื่อป้องกันไม่ให้ authorization code ที่ถูกดักจับระหว่างทางถูกนำไปแลก token ได้
+
 ## การติดตั้ง keycloak-js
 
 `keycloak-js` คือ adapter อย่างเป็นทางการฝั่งเบราว์เซอร์สำหรับ Keycloak จัดการ Authorization Code + PKCE flow, การจัดเก็บ token, silent refresh และ logout โดยที่คุณไม่ต้องจัดการ redirect URL หรือการแลก token เอง
@@ -87,8 +89,28 @@ keycloak.tokenParsed?.resource_access?.['my-app-frontend']?.roles // client role
 ```
 
 <Callout title="กำหนดค่า client เป็น Public พร้อม PKCE">
-ใน Keycloak admin console ต้องตั้งค่า Client authentication เป็น Off (public client) และถ้าใช้ Keycloak 21+ PKCE จะถูกบังคับใช้โดย keycloak-js adapter โดยอัตโนมัติเมื่อส่ง pkceMethod: 'S256' keycloak-js เก็บ token ในหน่วยความจำ ไม่ใช่ใน localStorage และจัดการ silent refresh ให้คุณเอง อย่าเก็บ token ใน localStorage หรือ sessionStorage เอง
+ใน Keycloak admin console ต้องตั้งค่า Client authentication เป็น Off (public client) และถ้าใช้ Keycloak 21+ PKCE จะถูกบังคับใช้โดย keycloak-js adapter โดยอัตโนมัติเมื่อส่ง pkceMethod: 'S256' keycloak-js เก็บ token ไว้ในหน่วยความจำ ไม่ใช่ใน localStorage และจัดการ silent refresh ให้คุณเองโดยอัตโนมัติ อย่าเก็บ token ใน localStorage หรือ sessionStorage ด้วยตัวเองเด็ดขาด
 </Callout>
+
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| เก็บ token ไว้ในหน่วยความจำ (in-memory) | ปลอดภัยกว่า เพราะ JavaScript ฝั่งอื่นหรือ script ที่ถูกแทรกผ่าน XSS เข้าถึงได้ยากกว่า และ token จะหายไปเองเมื่อปิด tab | token หายทุกครั้งที่ refresh หน้า ต้อง trigger silent SSO check ใหม่ผ่าน iframe หรือ redirect |
+| เก็บ token ไว้ใน localStorage | ผู้ใช้ยังคง login อยู่แม้ refresh หน้าเว็บ ใช้งานง่ายเพราะไม่ต้องจัดการ silent refresh เอง | เปิดช่องให้ XSS attack ขโมย token ได้ทันที เพราะ script ใดก็ตามที่รันบนหน้าเว็บอ่าน localStorage ได้ |
+| ใช้ keycloak-js (official adapter) | จัดการ PKCE flow, silent refresh และการจัดเก็บ token ให้อัตโนมัติ ลดโอกาสเขียนโค้ด security ผิดเอง | ผูกกับ Keycloak โดยตรง หาก migrate ไป identity provider อื่นต้องเขียน integration ใหม่ |
+
+## Common Mistakes
+
+- **เก็บ token ไว้ใน localStorage** — เป็นความผิดพลาดที่พบบ่อยที่สุดของ SPA เพราะ localStorage เข้าถึงได้จาก JavaScript ทุกบรรทัดที่รันบนหน้า หาก third-party script หรือ dependency ที่ถูกแฮ็กมี XSS vulnerability ผู้โจมตีจะดึง token ออกไปได้ทันที ให้ปล่อยให้ keycloak-js เก็บ token ไว้ในหน่วยความจำตามค่าเริ่มต้นแทน
+- **เชื่อ client-side "logged in" state โดยไม่ตรวจสอบที่ backend** — การเช็คว่า keycloak.authenticated เป็น true บน frontend บอกได้แค่ว่า UI ควรแสดงอะไร ไม่ใช่หลักฐานว่า request นั้นถูกต้อง backend ต้อง verify JWT signature ทุกครั้งที่ endpoint
+- **ไม่เรียก updateToken ก่อนยิง API ทุกครั้ง** — การเก็บ token ไว้ในตัวแปรแล้วใช้ซ้ำโดยไม่เช็คว่าใกล้หมดอายุหรือยัง ทำให้ request ล้มเหลวกลางทางด้วย 401 ทั้งที่สามารถ refresh แบบ silent ล่วงหน้าได้
+
+> 💡 Real World Example
+>
+> **keycloak-js official pattern** — Keycloak เองแนะนำให้เก็บ token ไว้ในหน่วยความจำ (JavaScript variable) เท่านั้น ไม่ใช่ localStorage หรือ sessionStorage เมื่อ refresh หน้า adapter จะทำ silent SSO check ผ่าน hidden iframe เพื่อขอ token ใหม่โดยผู้ใช้ไม่รู้ตัว
+>
+> **Auth0 SPA SDK** — ใช้แนวทางเดียวกันคือ in-memory storage + refresh token rotation แทนการเก็บลง localStorage ซึ่งกลายเป็น best practice มาตรฐานของ OIDC client library สำหรับ browser ทั่วทั้งอุตสาหกรรม
 
 export const quizSpaFrontend = [
   {

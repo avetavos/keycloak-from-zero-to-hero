@@ -78,6 +78,25 @@ https://auth.example.com/realms/my-app/broker/google/endpoint
 Redirect URI ที่ Keycloak เปิดเผยสำหรับ brokering นั้นแน่นอน: `&lt;keycloak-host&gt;/realms/&lt;realm&gt;/broker/&lt;alias&gt;/endpoint` คุณต้องลงทะเบียน URI นี้ตรง ๆ กับ external provider ความไม่ตรงกัน — host ผิด ชื่อรีล์มผิด alias ผิด trailing slash เกิน — จะทำให้ social login ล้มเหลวด้วย OAuth2 redirect URI error
 </Callout>
 
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| Identity brokering เป็น hub กลาง (ให้ Keycloak เป็นตัวกลางจัดการ social login ทั้งหมด) | จัดการ credential, redirect URI และ token exchange ในที่เดียว เพิ่ม provider ใหม่โดยไม่ต้องแตะแอปพลิเคชัน | ต้อง maintain configuration ของแต่ละ IdP ใน Keycloak เอง และแอปทั้งหมดพึ่งพา Keycloak เป็น single point of failure |
+| แต่ละแอปฝัง social-login SDK ของตัวเอง (เช่น Google Sign-In SDK ตรง ๆ ในแต่ละแอป) | ควบคุม UX ของปุ่ม login ได้ละเอียดกว่า ไม่ต้อง depend กับ Keycloak | ทีมต้อง maintain OAuth client และ SDK แยกกันในทุกแอป เปลี่ยน provider ทีต้องแก้หลายที่ |
+
+## Common Mistakes
+
+- **ใช้ Google OAuth client เดียวกันข้าม dev/staging/prod** — ควรสร้าง OAuth client แยกต่อ environment เพราะ redirect URI ต่างกัน และถ้า client เดียวกันรั่วใน environment ที่ไม่ปลอดภัย (เช่น dev) จะกระทบ prod ด้วย
+- **ลืมตั้ง redirect URI ให้ตรงเป๊ะกับที่ Keycloak เปิดเผย** — แม้ trailing slash เกินก็ทำให้ social login ล้มเหลวด้วย redirect URI mismatch ต้อง copy pattern จากขั้นตอนที่ 2 มาวางตรง ๆ
+- **ไม่ตรวจสอบ first-login flow ก่อนเปิดใช้ social login จริง** — ถ้าไม่ตั้งค่าการเชื่อมบัญชีให้ถูกต้อง ผู้ใช้ที่มีบัญชีเดิมอยู่แล้วอาจได้บัญชีซ้ำซ้อนโดยไม่รู้ตัว
+
+> 💡 Real World Example
+>
+> **แอปที่มีปุ่ม "Log in with Google" หรือ "Log in with GitHub"** — นี่คือ identity brokering ที่ทำงานอยู่จริงในโปรดักชัน แอปไม่เคยเห็น credential ของ Google หรือ GitHub เลย มันแค่รับ token ที่ Keycloak ออกให้หลังจาก broker เสร็จ
+>
+> **สตาร์ทอัพที่ขยายจาก 1 แอปเป็นหลายแอป** — เดิมแต่ละแอปฝัง Google SDK ของตัวเอง พอย้ายมาใช้ Keycloak เป็น broker กลาง การเพิ่ม provider ใหม่ (เช่น Apple Sign-In) ทำครั้งเดียวใน Keycloak แล้วทุกแอปได้ใช้ทันทีโดยไม่ต้อง deploy ใหม่
+
 export const quizSocialLogin = [
   {
     q: 'Keycloak ทำหน้าที่อะไรเมื่อผู้ใช้คลิก "Log in with Google"?',

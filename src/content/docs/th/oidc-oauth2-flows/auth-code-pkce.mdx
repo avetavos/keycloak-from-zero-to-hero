@@ -46,6 +46,27 @@ export const authCodeCurlCode = `curl -X POST https://\${KC_URL}/realms/\${REALM
 Public client (SPA และแอปมือถือ) ไม่สามารถเก็บ client secret ได้อย่างปลอดภัย Authorization Code + PKCE คือทางเลือกที่ปลอดภัย — code_verifier รู้เฉพาะแอปที่เริ่ม flow เท่านั้น ดังนั้นแม้ code จะถูกดักจับก็ไม่สามารถนำไปแลก token ได้ ห้ามใช้ Implicit flow เพราะล้าสมัยแล้ว
 </Callout>
 
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| Authorization Code + PKCE | Token ไม่เคยผ่าน browser URL ปลอดภัยสำหรับ public client และเป็นมาตรฐานปัจจุบันสำหรับ SPA และแอปมือถือ | ต้องมี extra round-trip ไปยัง token endpoint และต้องจัดการ `code_verifier`/`code_challenge` เพิ่มเติมในโค้ด |
+| Implicit flow (deprecated) | Setup ง่ายกว่าในอดีต ไม่ต้องมี token endpoint call แยก | Token หลุดไปอยู่ใน URL fragment เสี่ยงต่อการรั่วผ่าน browser history, referrer header, และ log — ถูกถอดออกจาก OAuth 2.1 แล้ว |
+| Client Credentials | เหมาะกับ machine-to-machine ไม่ต้องมี user เข้ามาเกี่ยวข้อง | ใช้ไม่ได้เลยถ้า flow ต้องมีผู้ใช้จริง เพราะไม่มี user context |
+
+## Common Mistakes
+
+- **ใช้ Implicit flow ในโปรเจกต์ใหม่ปี 2024 ขึ้นไป** — Implicit flow ถูก deprecate ไปแล้วเพราะ access token ถูกส่งกลับมาผ่าน URL fragment ซึ่งอาจรั่วผ่าน browser history หรือ referrer header ทุกโปรเจกต์ใหม่ควรใช้ Authorization Code + PKCE แทนเสมอ ไม่ว่าจะเป็น SPA หรือแอปมือถือ
+- **ข้าม `state` parameter** — `state` ใช้ป้องกัน CSRF โดยให้แอป generate ค่าแบบสุ่มก่อน redirect แล้วตรวจสอบว่าค่าที่ได้กลับมาตรงกันตอน callback หากข้ามขั้นตอนนี้ผู้โจมตีสามารถหลอกให้ผู้ใช้ล็อกอินด้วย session ของผู้โจมตีเองได้
+- **ใส่ client secret ลงใน SPA หรือแอปมือถือ** — public client ไม่สามารถเก็บ secret ได้อย่างปลอดภัยเพราะโค้ด client-side ถูก inspect ได้เสมอ นี่คือเหตุผลที่ PKCE มีไว้แทนที่ secret ด้วย `code_verifier` ที่สร้างใหม่ทุกครั้ง
+- **ไม่ validate `code_challenge_method`** — ควรบังคับใช้ `S256` เท่านั้น อย่ายอมให้ fallback ไปเป็น `plain` เพราะจะทำให้ PKCE ไม่ได้ช่วยป้องกันอะไรเลย
+
+> 💡 Real World Example
+>
+> **ปุ่ม "Log in with Google/GitHub"** — เป็นตัวอย่าง Authorization Code + PKCE ที่ใช้งานจริงในระดับ production ทุกวันนี้ ทั้งเว็บและแอปมือถือใช้ pattern เดียวกันนี้เกือบทั้งหมด
+>
+> **แอป mobile banking** — ใช้ Authorization Code + PKCE สำหรับหน้าจอ native login เช่นกัน เพราะแอปมือถือถือเป็น public client ไม่สามารถเก็บ client secret ได้อย่างปลอดภัย จึงต้องพึ่ง PKCE เพื่อป้องกันการดักจับ authorization code ระหว่าง redirect
+
 export const quizAuthCodePkce = [
   {
     q: 'เหตุใด PKCE จึงจำเป็นสำหรับ public client?',

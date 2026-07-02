@@ -71,6 +71,26 @@ export const jwtDecodeCode = `echo \${ACCESS_TOKEN} | cut -d. -f2 | base64 -d | 
 Direct Access Grant เหมาะสำหรับ testing script และ CLI tool แต่อย่าใช้ในแอปจริง เพราะเปิดเผย credential ของผู้ใช้ให้กับ client ใช้ Authorization Code + PKCE สำหรับแอปเบราว์เซอร์และมือถือ
 </Callout>
 
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| ทดสอบด้วย curl ตรง ๆ ที่ token endpoint | เห็น request/response ดิบ ๆ ชัดเจน เข้าใจ protocol จริง ๆ ไม่มี abstraction บัง | ต้องจัดการ token lifecycle เอง (refresh, expiry, storage) และเสี่ยง credential หลุดถ้าไม่ระวัง |
+| ใช้ OIDC client library (เช่น `openid-client`, Keycloak adapter) | Library จัดการ token refresh, validation, และ security best practice ให้อัตโนมัติ | เพิ่ม dependency และมี abstraction ที่ต้องเรียนรู้ ไม่เห็น raw protocol ตรง ๆ เหมือน curl |
+
+## Common Mistakes
+
+- **พิมพ์ password หรือ client secret ตรง ๆ ใน curl command** — คำสั่งที่พิมพ์ในเทอร์มินัลจะถูกบันทึกลง shell history (`.bash_history`, `.zsh_history`) แบบ plaintext ควรใช้ environment variable หรือไฟล์ `.env` ที่ไม่ commit เข้า git แทนการพิมพ์ credential ตรง ๆ
+- **แปะ access token ลงใน log หรือแชร์ใน chat เพื่อ debug** — access token และ refresh token คือของมีค่าเทียบเท่า password ใครก็ตามที่มี token ก่อน expire สามารถเรียก API แทนผู้ใช้ได้เลย ไม่ควร log token แบบเต็ม ควร mask หรือ log แค่บางส่วน
+- **ใช้ Direct Access Grant (password grant) กับแอป production จริง** — grant นี้เหมาะสำหรับ testing script และ CLI tool เท่านั้น เพราะต้องส่ง username/password ตรงให้ client ก่อน ถ้าใช้ในแอปจริงเท่ากับเปิดเผย credential ผู้ใช้ให้กับ client โดยไม่จำเป็น
+- **ไม่ปิด `HISTCONTROL` หรือลืมลบ history หลังทดสอบด้วย curl** — เมื่อ debug เสร็จแล้วลืมล้าง credential ที่หลุดไปอยู่ใน shell history ทำให้ secret ค้างอยู่ในเครื่องระยะยาวโดยไม่รู้ตัว
+
+> 💡 Real World Example
+>
+> **Postman หรือ Insomnia ใน dev workflow** — ทีม dev มักใช้เครื่องมือเหล่านี้แทน curl ตรง ๆ เพื่อเก็บ credential ใน encrypted vault แทนที่จะพิมพ์ผ่าน command line ที่เสี่ยงหลุดไปอยู่ใน shell history
+>
+> **`kubectl` และ CLI tool อื่น ๆ ที่คุย OIDC** — เบื้องหลังใช้หลักการเดียวกับ curl ต่อ token endpoint แต่ห่อด้วย library ที่จัดการ token caching, refresh, และ secure storage ให้อัตโนมัติ ต่างจาก script curl ดิบ ๆ ที่ต้องทำเองทุกขั้นตอน
+
 export const quizTokenEndpoint = [
   {
     q: 'Direct Access Grant (password grant) ใช้ทำอะไรเป็นหลัก?',

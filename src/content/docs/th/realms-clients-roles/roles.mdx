@@ -144,6 +144,26 @@ if (realmRoles.includes('app-admin')) {
 แทนที่จะกำหนด role แยกกันหลายตัวให้แต่ละ user ให้สร้าง composite role ที่รวมสิทธิ์สำหรับ persona หนึ่ง ๆ ไว้ (เช่น `editor`, `viewer`, `admin`) การกำหนด composite role เพียงตัวเดียวจัดการและตรวจสอบได้ง่ายกว่าการกำหนด role แยกกันสิบตัวต่อ user
 </Callout>
 
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| Realm role | ใช้ได้ทั่วทุก client ใน realm เหมาะกับสิทธิ์แบบหยาบที่ใช้ร่วมกันข้ามแอป | ไม่สามารถจำกัดขอบเขตไปยัง client ใด client หนึ่งได้ ต้องพึ่ง client role ถ้าต้องการความละเอียด |
+| Client role | จำกัดขอบเขตอยู่ที่ client เดียว เหมาะกับสิทธิ์แบบละเอียดที่เจาะจงกับแอปพลิเคชัน (เช่น `orders:write`) | ต้องกำหนดซ้ำในทุก client ที่มีสิทธิ์คล้ายกัน จัดการยากขึ้นเมื่อมีหลาย client |
+| Group + role vs กำหนด role ตรงให้ user | มอบหมาย role ให้คนจำนวนมากพร้อมกันผ่าน group เดียว จัดการง่ายเมื่อมีคนเข้า-ออกทีมบ่อย | ต้องออกแบบโครงสร้าง group ล่วงหน้าให้ดี ถ้าโครงสร้างผิดจะแก้ทีหลังยาก |
+
+## Common Mistakes
+
+- **กำหนด role ให้ user ทีละคนแทนที่จะใช้ group** — เมื่อมีพนักงานเข้าใหม่หรือเปลี่ยนตำแหน่งบ่อย การไล่กำหนด role ทีละคนทำให้เกิดความผิดพลาดและ role ตกหล่นได้ง่าย ควรผูก role เข้ากับ group แล้วกำหนด user เข้า group แทน
+- **ใช้ client role ทั้งหมดโดยไม่มี realm role เลย แม้สิทธิ์นั้นใช้ร่วมกันหลายแอป** — ทำให้ต้องกำหนด role ซ้ำ ๆ ในทุก client เมื่อจริง ๆ ควรยกสิทธิ์ที่ใช้ร่วมกันขึ้นไปเป็น realm role
+- **ลืมว่า role ใหม่จะไม่มีผลกับ session เดิมทันที** — ทีมมักเข้าใจผิดว่าการกำหนด role ใหม่จะมีผลทันที ทั้งที่ user ต้อง login ใหม่หรือรอ token refresh ก่อน ทำให้เข้าใจผิดว่าการตั้งค่า "ไม่ทำงาน"
+
+> 💡 Real World Example
+>
+> **GitHub Organizations** — ใช้แนวคิดคล้าย realm role กับ team-scoped permission โดยสิทธิ์ระดับ organization (เช่น owner, member) ใช้ได้ทั่วทุก repository ในขณะที่สิทธิ์ต่อ repository ทำหน้าที่คล้าย client role ที่จำกัดขอบเขตแคบลง
+>
+> **Enterprise onboarding ผ่าน group** — องค์กรขนาดใหญ่จำนวนมากผูก composite role เข้ากับ group ตามแผนก (เช่น `engineering`, `sales`) เมื่อพนักงานใหม่เข้าทีม HR system เพียงเพิ่ม user เข้า group ที่ถูกต้อง role ทั้งหมดของแผนกนั้นก็ถูกกำหนดให้อัตโนมัติผ่าน Keycloak
+
 export const quizRoles = [
   {
     q: 'ความแตกต่างระหว่าง realm role กับ client role คืออะไร?',

@@ -86,6 +86,26 @@ Keycloakify ให้คุณควบคุม React component แบบ full 
 ปรับแต่ง login theme ให้ตรงกับแบรนด์ของคุณ — มันคือหน้า Keycloak หน้าเดียวที่ผู้ใช้ของคุณเห็นจริงๆ แม้แค่การเปลี่ยน logo และสีก็ช่วยเพิ่มคุณภาพที่รับรู้ได้ของผลิตภัณฑ์อย่างมาก
 </Callout>
 
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| Custom theme สืบทอดจาก `keycloak` parent | override เฉพาะไฟล์ที่ต้องเปลี่ยน ได้ประโยชน์จาก fix และ feature ใหม่ของ parent theme โดยอัตโนมัติ | ต้องตรวจสอบทุกครั้งที่อัปเกรด Keycloak ว่า template ที่ override ไว้ยังเข้ากันได้กับ parent เวอร์ชันใหม่หรือไม่ |
+| Keycloakify (React-based theme) | ควบคุม UI แบบ full ด้วย React component ที่ทีม frontend คุ้นเคยอยู่แล้ว | เพิ่มขั้นตอน build เป็น JAR และต้องเรียนรู้จุดเชื่อมต่อกับ protocol ภายในของ Keycloak |
+| แก้ไข built-in theme (`keycloak`) โดยตรง | เห็นผลเร็วเพราะไม่ต้องสร้างโครงสร้าง theme ใหม่ | การอัปเกรด Keycloak จะเขียนทับไฟล์ built-in ทั้งหมด ทำให้การแก้ไขหายไปโดยไม่รู้ตัว |
+
+## Common Mistakes
+
+- **แก้ไข built-in theme (`keycloak`) ไว้ในที่ตั้งเดิมโดยตรง** — เมื่ออัปเกรด Keycloak เวอร์ชันใหม่ ไฟล์ built-in ทั้งหมดจะถูกเขียนทับ ทำให้การปรับแต่งหายไปโดยไม่มีการเตือน ควรสร้าง custom theme แยกที่สืบทอดจาก parent เสมอ
+- **ไม่ทดสอบ custom theme กับ theme type อื่นนอกจาก login** — ปรับแต่งเฉพาะหน้า login แต่ลืมว่า `account`, `email` และ `admin` theme ก็ควรได้รับการพิจารณาเรื่อง branding ด้วยเช่นกัน โดยเฉพาะ email template ที่ user เห็นบ่อยไม่แพ้หน้า login
+- **Deploy custom theme แล้วไม่รีสตาร์ทหรือ clear cache ตอน dev** — Keycloak cache theme resource ไว้ในโหมด production ทำให้การเปลี่ยนแปลงไม่ปรากฏจนกว่าจะรีสตาร์ทหรือปิด theme cache ระหว่างพัฒนา
+
+> 💡 Real World Example
+>
+> **Keycloakify ในโปรดักชัน** — ทีม frontend จำนวนมากใช้ Keycloakify เพื่อ compile React component ชุดเดียวกับที่ใช้ในแอปหลัก ให้กลายเป็นหน้า login ของ Keycloak ทำให้ประสบการณ์ผู้ใช้ต่อเนื่องเป็นแบรนด์เดียวกันตั้งแต่หน้า login ไปจนถึงตัวแอป
+>
+> **Enterprise white-labeling** — บริษัทที่ให้บริการ platform แบบ multi-tenant มักสร้าง custom theme แยกต่อ realm เพื่อให้แต่ละลูกค้าเห็นหน้า login ที่มี logo และสีของแบรนด์ตัวเอง ทั้งที่ใช้ Keycloak instance เดียวกันเบื้องหลัง
+
 export const quizThemes = [
   {
     q: 'Which Keycloak theme type controls the login and registration pages?',

@@ -76,6 +76,26 @@ export const oidcBrokerEndpointCode = `https://<keycloak-host>/realms/<realm>/br
 First broker login flow ตัดสินใจว่า brokered user จะถูกเชื่อมกับบัญชีที่มีอยู่หรือสร้างบัญชีใหม่ — ปรับแต่งอย่างระมัดระวัง การเชื่อมอัตโนมัติบน email match เป็นเรื่องสะดวก แต่ต้องเชื่อถือการตรวจสอบ email ของ external IdP การตั้งค่า flow ผิดอาจนำไปสู่การยึดบัญชีถ้าผู้โจมตีควบคุม IdP ที่คืน email ของเหยื่อ
 </Callout>
 
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| Identity brokering แบบรวมศูนย์ (Keycloak เป็น hub เดียวสำหรับทุก external IdP) | จัดการ trust relationship, first-login flow และ mapper policy จากจุดเดียว ตรวจสอบและ audit ง่าย | ทุก external IdP ต้อง onboard ผ่าน Keycloak — ถ้า Keycloak down การ login ผ่านทุก provider จะพังพร้อมกัน |
+| Sync mode `LEGACY` (sync เฉพาะ login แรก) | ลด load บน external IdP เพราะไม่ต้อง query ซ้ำทุกครั้ง เหมาะกับข้อมูลที่ไม่ค่อยเปลี่ยน | Attributes ในเครื่องอาจเก่ากว่าความจริงถ้า external IdP อัปเดตข้อมูล เช่น role หรือ department |
+| Sync mode `FORCE` (sync ทุกครั้งที่ login) | ข้อมูลผู้ใช้ตรงกับ external IdP เสมอ เหมาะเมื่อ external IdP เป็น source of truth | เพิ่ม round-trip ไปยัง external IdP ทุก login ทำให้ login ช้าลงเล็กน้อยและเพิ่ม dependency ต่อ IdP ตอน authenticate |
+
+## Common Mistakes
+
+- **ไม่ map `email_verified` จาก external IdP** — ถ้าปล่อยไว้ Keycloak อาจถือว่า email ยังไม่ verified ทั้งที่ external IdP ยืนยันแล้ว ทำให้ flow ที่ต้องใช้ verified email (เช่น การ reset รหัสผ่าน) ใช้งานไม่ได้ ควรตั้ง mapper หรือเปิด "Trust email" อย่างมีสติ
+- **เปิด "Trust email" โดยไม่ตรวจสอบว่า external IdP ตรวจสอบ email จริง** — ถ้า external provider ยอมให้ผู้ใช้ตั้ง email เองโดยไม่ verify การเปิด trust email จะเปิดช่องให้ยึดบัญชีผ่านการปลอม email
+- **ตั้งค่า first-login flow ให้เชื่อมบัญชีอัตโนมัติโดยไม่ยืนยันตัวตนเพิ่ม** — ควรบังคับให้ผู้ใช้ยืนยันด้วยรหัสผ่านหรือ OTP ก่อนเชื่อมบัญชีเดิม ไม่ใช่เชื่อ email match เพียงอย่างเดียว
+
+> 💡 Real World Example
+>
+> **องค์กรที่ bridge Keycloak เข้ากับ Okta หรือ Azure AD** — ใช้ identity brokering แบบ OIDC เพื่อให้พนักงานล็อกอินแอปภายในด้วยบัญชี corporate SSO เดิม โดยไม่ต้องสร้างบัญชี Keycloak แยก
+>
+> **แพลตฟอร์ม SaaS ที่รองรับ SAML SSO ให้ลูกค้า enterprise** — ลูกค้าแต่ละรายเชื่อม Keycloak เข้ากับ ADFS หรือ IdP ของตัวเองผ่าน SAML brokering ทำให้พนักงานของลูกค้า login เข้าแพลตฟอร์มด้วย credential ของบริษัทตัวเองได้ทันที
+
 export const quizBrokering = [
   {
     q: 'อะไรไม่ใช่แหล่ง identity brokering ที่ถูกต้องใน Keycloak?',

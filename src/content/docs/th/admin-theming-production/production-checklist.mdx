@@ -106,6 +106,26 @@ state ของ Keycloak อยู่ใน external database ทั้งหม
 External database, fixed hostname, HTTPS และ optimised build — `start-dev` ไม่มีสิ่งใดเลย การเปลี่ยนจาก `start-dev` ไปยัง `start --optimized` โดยไม่มีสี่สิ่งนี้จะทำให้ deployment พังทลาย
 </Callout>
 
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| Edge TLS termination (reverse proxy) | ดูแล certificate ที่จุดเดียว (Nginx/Traefik/ALB) รองรับ rolling cert renewal ได้ง่าย | ต้องตั้งค่า `KC_PROXY_HEADERS` ให้ถูกต้อง มิฉะนั้น Keycloak จะมองเห็น protocol/host ผิดและ redirect พัง |
+| TLS passthrough (Keycloak จัดการเอง) | ไม่ต้องพึ่ง proxy เพิ่ม เหมาะกับ deployment ที่เรียบง่าย | ต้องจัดการ certificate lifecycle เองภายใน Keycloak ทุก instance |
+| Optimised build (`kc.sh build` ล่วงหน้า) | ลดเวลา startup จาก ~30 วินาที เหลือ ~3 วินาที เหมาะกับ container ที่ scale ขึ้น-ลงบ่อย | ต้องเพิ่มขั้นตอน build แยกใน CI/CD และ rebuild image ทุกครั้งที่เปลี่ยน provider config |
+
+## Common Mistakes
+
+- **รัน `start-dev` ใน production** — ยังใช้ embedded H2 database, self-signed certificate และผ่อนปรนการตรวจสอบ hostname ทำให้ข้อมูลหายเมื่อ container restart และเปิดช่องโหว่ด้านความปลอดภัยหลายจุดพร้อมกัน
+- **เปิด `/metrics` หรือ `/health` endpoint ออกสู่ public โดยไม่จำกัดการเข้าถึง** — endpoint เหล่านี้เปิดเผยข้อมูล internal ของระบบ ควรจำกัดให้เข้าถึงได้เฉพาะจาก internal network หรือ monitoring system เท่านั้น
+- **ไม่ตั้งค่า `KC_HOSTNAME` ให้ตรงกับ domain จริง** — ทำให้ token issuer และ OIDC discovery document ไม่ตรงกับที่ client คาดหวัง client จะปฏิเสธ token แม้ Keycloak ทำงานปกติทุกอย่าง
+
+> 💡 Real World Example
+>
+> **Production checklist มาตรฐานของทีม platform** — ทีม infrastructure ส่วนใหญ่ผูก external PostgreSQL, fixed hostname ผ่าน DNS, TLS ผ่าน reverse proxy และ multi-node clustering เข้าด้วยกันเป็น deployment template เดียว แล้วใช้ realm export/import เพื่อให้ config เดิมซ้ำได้ทุก environment
+>
+> **High-availability clustering** — องค์กรที่ต้องการ uptime สูงรัน Keycloak หลาย instance หลัง load balancer โดยแชร์ external database ตัวเดียวกัน ทำให้ instance ใดตายไปหนึ่งตัว session ของผู้ใช้ก็ยังไม่หลุด
+
 export const quizProduction = [
   {
     q: 'What database does start-dev use by default?',

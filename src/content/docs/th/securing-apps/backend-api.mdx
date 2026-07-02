@@ -97,6 +97,26 @@ function hasRole(user: Record<string, unknown>, role: string): boolean {
 token ที่มีอยู่เพียงอย่างเดียวไม่ใช่ token ที่ถูกต้อง ผู้โจมตีสามารถสร้าง JWT ที่มี claims ใดก็ได้ มีเพียง cryptographic signature เท่านั้นที่พิสูจน์ว่ามาจาก Keycloak ในทำนองเดียวกัน signature ที่ถูกต้องยังไม่พอ — คุณต้องยืนยันว่า token ถูก issue สำหรับ realm ของคุณ (iss) และมีเจตนาสำหรับ API ของคุณ (aud) และยังไม่หมดอายุด้วย
 </Callout>
 
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| ตรวจสอบ JWT ทุก request (stateless validation) | ไม่ต้อง query session store ทุกครั้ง scale ได้ง่ายเพราะ backend ไม่ต้องเก็บ state | ต้อง verify signature ด้วย cryptography ทุก request ซึ่งมี CPU cost เล็กน้อยต่อ request |
+| Cache JWKS ไว้ในหน่วยความจำ (เช่น createRemoteJWKSet ของ jose) | ลดจำนวนครั้งที่ต้องเรียก JWKS endpoint ของ Keycloak ทำให้ latency ต่ำลง | ถ้า Keycloak หมุนเวียน key กะทันหันโดยไม่รอ cache หมดอายุ อาจมี window สั้น ๆ ที่ verify ล้มเหลวจนกว่า library จะดึง key ใหม่ |
+| ใช้ library ตรวจสอบ JWT มาตรฐาน (เช่น jose) | เป็น library ที่ community ตรวจสอบแล้ว รองรับ JWKS, key rotation และมาตรฐาน OIDC ครบ | ต้องเขียน middleware เชื่อมกับ framework เอง ไม่ได้ผูกกับ Keycloak โดยตรงเหมือน adapter เฉพาะทาง |
+
+## Common Mistakes
+
+- **backend ไม่ตรวจสอบ claim aud/iss ทุก request** — ตรวจแค่ signature อย่างเดียวไม่พอ เพราะ token ที่เซ็นถูกต้องจาก realm อื่นหรือ client อื่นก็ผ่านการตรวจ signature ได้เช่นกัน ต้องเช็ค iss ให้ตรงกับ realm ของคุณ และ aud ให้ตรงกับ client ID ของ backend ทุกครั้ง
+- **เชื่อ token ที่แนบมาโดยไม่ verify signature กับ JWKS** — การ decode JWT แล้วอ่าน claims ตรง ๆ โดยไม่ verify signature เท่ากับเปิดให้ผู้โจมตีปลอม payload อะไรก็ได้ ต้องใช้ library อย่าง jose หรือ jjwt เพื่อ verify กับ public key จาก JWKS เสมอ
+- **ไม่จัดการ key rotation** — hardcode public key ไว้ในโค้ดแทนที่จะดึงจาก JWKS endpoint แบบ dynamic ทำให้เมื่อ Keycloak หมุนเวียน key แล้ว backend verify token ใหม่ไม่ผ่านจนกว่าจะ deploy โค้ดใหม่
+
+> 💡 Real World Example
+>
+> **Spring Security oauth2ResourceServer** — เป็นตัวอย่างมาตรฐานของ backend-side JWT validation middleware กำหนดแค่ issuer-uri ก็ดึง JWKS, ตรวจ signature, iss, aud และ exp ให้อัตโนมัติโดยไม่ต้องเขียน validation logic เอง
+>
+> **jose + createRemoteJWKSet** — ใช้ในตัวอย่าง Node/Express ของบทเรียนนี้ เป็น pattern เดียวกับที่ทีม backend จำนวนมากใช้จริงใน production เพราะ cache JWKS อัตโนมัติและรองรับ key rotation โดยไม่ต้อง restart service
+
 export const quizBackendApi = [
   {
     q: 'claim iss (issuer) ใน JWT ของ Keycloak บรรจุข้อมูลอะไร?',

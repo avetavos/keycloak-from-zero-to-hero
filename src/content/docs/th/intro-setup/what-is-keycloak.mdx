@@ -52,6 +52,25 @@ export const archFlow = `flowchart TD
 Keycloak รองรับ OIDC/OAuth2 และ SAML — แอปพลิเคชันที่ compliant ทุกตัวสามารถ integrate ได้โดยไม่ต้องเขียน auth code เอง
 </Callout>
 
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| Self-host Keycloak | ควบคุม data residency เต็มที่, ไม่มีค่า MAU (monthly active user), customize ได้ทุกส่วนรวมถึง theme และ SPI | ต้องดูแล infrastructure เอง (patching, scaling, backup, HA) และต้องมีทีมที่เข้าใจ Keycloak internals |
+| Managed IdP (Auth0, AWS Cognito) | เริ่มใช้งานได้เร็ว ไม่ต้องดูแล server, มี SLA และ support จาก vendor | ค่าใช้จ่ายเพิ่มตามจำนวนผู้ใช้ (MAU pricing), customize ได้จำกัดกว่า, ข้อมูลผู้ใช้อยู่นอกโครงสร้างพื้นฐานของคุณ |
+
+## Common Mistakes
+
+- **มอง Keycloak เป็น "ติดตั้งแล้วจบ"** — Keycloak ต้องการการดูแลต่อเนื่อง เช่น อัปเกรด version, monitor performance และ patch security vulnerability เหมือน service อื่นใน production
+- **เลือก self-host โดยไม่ประเมิน ops cost** — ทีมที่ไม่มีประสบการณ์ดูแล stateful service มักประเมินค่าใช้จ่ายด้าน infrastructure และ on-call ต่ำเกินไปเมื่อเทียบกับการจ่ายค่า managed IdP
+- **สับสนระหว่าง Keycloak กับ application-level authorization** — Keycloak จัดการ authentication และ token issuance เท่านั้น ส่วน authorization logic ที่ซับซ้อนของแต่ละแอปยังต้อง implement เองอยู่ดี
+
+> 💡 Real World Example
+>
+> **Red Hat build of Keycloak (RH-SSO)** — Red Hat เอง distribute Keycloak แบบมี commercial support ภายใต้ชื่อ "Red Hat build of Keycloak" (เดิมชื่อ RH-SSO) ให้องค์กรที่ต้องการ SLA และ certified build โดยไม่ต้องเสียความยืดหยุ่นของ open source
+>
+> **องค์กร enterprise ขนาดใหญ่** — บริษัทที่มีแอปพลิเคชันภายในหลายสิบตัวมักเลือก self-host Keycloak เพื่อรวม login ทั้งหมดเป็น SSO เดียว ลดภาระ helpdesk เรื่อง password reset และให้ทีม security ควบคุม authentication policy จากจุดเดียว
+
 export const quizWhatIs = [
   {
     q: 'SSO ในบริบทของ Keycloak หมายความว่าอย่างไร?',

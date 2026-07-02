@@ -65,7 +65,7 @@ export const listUsersCode = `curl -s https://localhost:8080/admin/realms/my-app
 
 Admin endpoint ทั่วไป:
 
-| การดำเนินการ | Method | Path |
+| Operation | Method | Path |
 |---|---|---|
 | แสดงรายการผู้ใช้ | GET | `/admin/realms/{realm}/users` |
 | สร้างผู้ใช้ | POST | `/admin/realms/{realm}/users` |
@@ -92,6 +92,26 @@ Keycloak มาพร้อม CLI tool ชื่อ `kcadm.sh` (ภายใน
 <Callout title="ใช้ service account ไม่ใช่ master admin password">
 สร้าง service-account client เฉพาะทางที่มีเฉพาะ admin role ที่จำเป็นจริงๆ — อย่าทำงานอัตโนมัติด้วย master admin username และ password นี่จะจำกัดความเสียหายหาก credentials หลุดออกไป และยังช่วยให้คุณ rotate client secret ได้อิสระ
 </Callout>
+
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| `admin-cli` + master admin password | ใช้งานได้ทันทีโดยไม่ต้องตั้งค่าอะไรเพิ่ม เหมาะกับการทดลองหรือ debug ชั่วคราว | ผูกทุก automation กับ super-user credentials ตัวเดียว หากหลุดจะกระทบทั้งระบบ และ rotate ยาก |
+| Service account เฉพาะทาง (confidential client) | จำกัดสิทธิ์ให้เหลือเฉพาะ `realm-management` role ที่จำเป็น rotate secret ได้อิสระต่อ pipeline | ต้องสร้างและดูแล client เพิ่มอีกตัว ต้องกำหนด role ให้ถูกต้องล่วงหน้า |
+| `kcadm.sh` CLI | syntax สั้นกว่า raw curl, cache token ให้อัตโนมัติต่อ session | ใช้ได้เฉพาะเมื่อเข้าถึง shell ของ container/host ได้ ไม่เหมาะกับ automation ที่รันนอก environment ของ Keycloak |
+
+## Common Mistakes
+
+- **ทำงานอัตโนมัติทั้งหมดด้วย master admin username/password** — เพิ่มความเสียหายเป็นวงกว้างหาก credentials รั่วไหล และ rotate ยากเพราะ credentials นี้ผูกกับทุก script ควรสร้าง service account เฉพาะทางแทน
+- **กำหนด role ให้ service account กว้างเกินความจำเป็น** — เผื่อไว้ล่วงหน้าด้วยการให้ `realm-management` ทุก role ทั้งที่ script ต้องใช้แค่ `manage-users` เพียงอย่างเดียว เพิ่มความเสี่ยงหาก client secret หลุด
+- **ลืมว่า admin token มีอายุสั้นมาก** — เก็บ token ไว้ในตัวแปรแล้วใช้ซ้ำข้าม script run โดยไม่ขอใหม่ ทำให้ automation ล้มเหลวกลางทางด้วย 401 เมื่อ token หมดอายุ (ปกติ ~60 วินาที)
+
+> 💡 Real World Example
+>
+> **CI/CD pipeline สำหรับ config-as-code** — ทีม platform จำนวนมากใช้ service account client เพื่อ import/export realm configuration เป็นส่วนหนึ่งของ deployment pipeline แทนที่จะให้ engineer คลิกผ่าน admin console ด้วยมือ
+>
+> **Terraform Keycloak provider** — เครื่องมือ infrastructure-as-code อย่าง `mrparkers/keycloak` provider เรียก Admin REST API เบื้องหลังด้วย service account credentials เพื่อสร้างและจัดการ realm, client และ role แบบ declarative
 
 export const quizAdminApi = [
   {

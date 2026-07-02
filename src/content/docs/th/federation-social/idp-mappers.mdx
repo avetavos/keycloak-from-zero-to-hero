@@ -86,6 +86,25 @@ Mapper sync mode: FORCE`;
 หากไม่มี IdP mappers brokered users จะมาพร้อมแค่ standard claims ขั้นต่ำ (email, ชื่อ, นามสกุล) ใช้ mappers เพื่อคัดลอก claims ของ external provider — groups, department, custom attributes — ลงบน Keycloak user ตอน login ใช้ FORCE sync mode สำหรับ mapper ที่ค่าอาจเปลี่ยนระหว่าง logins
 </Callout>
 
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| Map claims เยอะ (import ทุก attribute ที่ external IdP ส่งมา) | Profile ของผู้ใช้ครบถ้วน รองรับ use case ในอนาคตโดยไม่ต้องกลับมาแก้ mapper เพิ่ม | เพิ่มพื้นที่ attack surface และ PII ที่เก็บใน Keycloak เกินความจำเป็น ต้องดูแลเรื่อง privacy/compliance มากขึ้น |
+| Map claims เท่าที่ใช้จริง (minimal mapping) | ลดความเสี่ยงด้าน privacy เก็บเฉพาะข้อมูลที่แอปต้องใช้จริง ตรวจสอบง่ายกว่า | ถ้าต้องการ attribute เพิ่มทีหลัง ต้องกลับมาตั้ง mapper ใหม่และอาจต้องให้ผู้ใช้ login ใหม่เพื่อให้ sync ทำงาน |
+
+## Common Mistakes
+
+- **ไม่ map `email_verified` หรือ claim สถานะยืนยันตัวตนอื่น ๆ** — ทำให้ Keycloak ไม่รู้ว่า email ของผู้ใช้ผ่านการยืนยันจาก external IdP แล้วหรือยัง ส่งผลต่อ flow ที่ต้องพึ่งพา verified email เช่น การกู้คืนบัญชี
+- **ลืมตั้ง Sync mode เป็น `FORCE` สำหรับ claim ที่เปลี่ยนบ่อย** — เช่น group membership หรือ role ถ้าใช้ `LEGACY` (default) ค่าจะถูก apply แค่ login แรก ทำให้สิทธิ์ผู้ใช้ค้างข้อมูลเก่าแม้ external IdP จะอัปเดตแล้ว
+- **ใช้ Hardcoded role mapper ผิด scope** — กำหนด role ที่กว้างเกินไปให้ผู้ใช้ทุกคนจาก IdP เดียว โดยไม่แยกตาม claim จริง (ควรใช้ Role importer แทนถ้าสิทธิ์ควรขึ้นกับข้อมูลจาก external token)
+
+> 💡 Real World Example
+>
+> **องค์กรที่ broker กับ Azure AD และต้องการ sync department/group ของพนักงาน** — ใช้ Attribute importer และ Role importer เพื่อให้ผู้ใช้ที่ login ผ่าน Azure AD ได้ Keycloak role ที่ตรงกับ group ใน Azure AD โดยอัตโนมัติ ไม่ต้องมีแอดมินมานั่งกำหนดสิทธิ์ทีละคน
+>
+> **แพลตฟอร์มที่ broker กับ Google Workspace** — ใช้ Hardcoded attribute mapper ตั้งค่า `org` ให้ทุกคนที่ login ผ่าน Google Workspace ของบริษัท เพื่อแยกผู้ใช้ในองค์กรออกจากผู้ใช้ social login ทั่วไปที่ login ผ่าน Google account ส่วนตัว
+
 export const quizIdpMappers = [
   {
     q: 'Attribute importer mapper ทำอะไร?',

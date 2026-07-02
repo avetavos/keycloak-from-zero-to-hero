@@ -15,7 +15,7 @@ import ProgressTracker from '../../../../components/ProgressTracker.tsx';
 
 ### Identity brokering
 
-**Identity brokering** หมายความว่า Keycloak ทำหน้าที่เป็นตัวกลางที่น่าเชื่อถือระหว่างแอปพลิเคชันกับ identity provider (IdP) อื่น เมื่อผู้ใช้เลือก "Log in with Google" (หรือ provider ที่รองรับ OIDC/SAML) Keycloak จะ redirect ผู้ใช้ไปยัง external provider นั้น รับ token หรือ assertion กลับมา แล้วออก token ของตัวเองให้แอปพลิเคชัน แอปพลิเคชันไม่ต้องติดต่อกับ external provider โดยตรงเลย
+**Identity brokering** หมายความว่า Keycloak ทำหน้าที่เป็นตัวกลางที่น่าเชื่อถือระหว่างแอปพลิเคชันกับ identity provider (IdP) อื่น เมื่อผู้ใช้เลือก "Log in with Google" (หรือ provider ที่รองรับ OIDC/SAML) Keycloak จะ redirect ผู้ใช้ไปยัง external provider นั้นก่อน จากนั้นจึงรับ token หรือ assertion กลับมา แล้วออก token ของตัวเองให้แอปพลิเคชัน ด้วยวิธีนี้ แอปพลิเคชันไม่ต้องติดต่อกับ external provider โดยตรงเลย
 
 ใช้ identity brokering เมื่อ:
 

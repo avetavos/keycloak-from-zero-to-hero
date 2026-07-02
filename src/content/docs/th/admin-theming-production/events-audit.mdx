@@ -14,8 +14,8 @@ import ProgressTracker from '../../../../components/ProgressTracker.tsx';
 
 Keycloak บันทึก event สองหมวดหมู่ที่แตกต่างกัน:
 
-- **Login event** — การกระทำที่ดำเนินการโดย end-user: การ login สำเร็จ, การพยายาม login ที่ล้มเหลว, การ refresh token, การ logout, การรีเซ็ตรหัสผ่าน และอื่นๆ สิ่งเหล่านี้เก็บไว้ต่อ realm และเป็น audit trail หลักสำหรับกิจกรรมของผู้ใช้
-- **Admin event** — การกระทำที่ดำเนินการโดย administrator ใน admin console หรือผ่าน Admin REST API: การสร้าง realm, การลงทะเบียน client, การอัปเดตผู้ใช้, การกำหนด role และอื่นๆ
+- **Login event** — การกระทำที่มาจาก end-user: การ login สำเร็จ, การพยายาม login ที่ล้มเหลว, การ refresh token, การ logout, การรีเซ็ตรหัสผ่าน และอื่นๆ สิ่งเหล่านี้เก็บไว้ต่อ realm และเป็น audit trail หลักสำหรับกิจกรรมของผู้ใช้
+- **Admin event** — การกระทำที่มาจาก administrator ใน admin console หรือผ่าน Admin REST API: การสร้าง realm, การลงทะเบียน client, การอัปเดตผู้ใช้, การกำหนด role และอื่นๆ
 
 ทั้งสองประเภทถูกปิดใช้งานโดยค่าเริ่มต้น คุณต้องเปิดใช้งานอย่างชัดเจน
 
@@ -78,6 +78,26 @@ export const loginEventsCode = `curl -s "https://localhost:8080/admin/realms/my-
 <Callout title="เปิดใช้งาน event ก่อนเกิดเหตุ ไม่ใช่หลัง">
 เปิดใช้งาน login event และ admin event ก่อน go live — มันคือ audit trail ของคุณ การเปิดใช้งานหลังเกิดเหตุหมายความว่าคุณสูญเสียข้อมูลที่ต้องการสำหรับการสืบสวนไปแล้ว ตั้งค่าอายุที่เหมาะสม (7–30 วัน) เพื่อควบคุม storage
 </Callout>
+
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| เก็บ admin event พร้อม "Include representation" | ได้ full JSON payload ก่อน/หลังของทุกการเปลี่ยนแปลง เหมาะกับ audit ที่ต้องรู้ว่าอะไรเปลี่ยนไปบ้าง | เพิ่มการใช้งาน storage อย่างมาก โดยเฉพาะ realm ที่มี admin เข้ามาแก้ config บ่อย |
+| Expiration สั้น (7 วัน) | ควบคุม storage ให้อยู่ในขอบเขต ไม่ต้องดูแล archive เอง | หากเกิดเหตุการณ์ที่ต้องสืบสวนย้อนหลังเกิน 7 วัน ข้อมูลอาจหายไปแล้ว |
+| Expiration ยาว หรือ export ไปเก็บนอกระบบ | รองรับ compliance/audit ที่ต้องเก็บ log ย้อนหลังนาน (เช่น SOC2) | เพิ่ม storage cost และต้องมีกลไก archive/export แยกต่างหาก |
+
+## Common Mistakes
+
+- **ไม่เปิดใช้งาน event เลยจนกว่าจะเกิดเหตุการณ์ผิดปกติ** — event ถูกปิดโดยค่าเริ่มต้น ทีมจำนวนมากเปิดใช้งานหลังเกิด incident ไปแล้ว ทำให้ไม่มีข้อมูลสำหรับสืบสวนย้อนหลัง ควรเปิดใช้งานก่อน go live เสมอ
+- **ไม่ตั้งค่า Expiration เลย** — ปล่อยให้ event สะสมไม่จำกัดใน database ทำให้ table โตขึ้นเรื่อย ๆ จนกระทบ performance ของ Keycloak เอง ควรตั้งอายุที่เหมาะสมกับความต้องการ audit ขององค์กร
+- **เปิด "Include representation" ทุก realm โดยไม่พิจารณา storage cost** — เก็บ JSON payload เต็มของทุกการเปลี่ยนแปลงในทุก realm รวมถึง realm ที่ไม่จำเป็นต้อง audit ละเอียดขนาดนั้น เพิ่มภาระ storage โดยไม่จำเป็น
+
+> 💡 Real World Example
+>
+> **SOC2 / compliance audit** — องค์กรที่ต้องผ่าน SOC2 หรือมาตรฐาน compliance อื่นมักตั้งค่า admin event ให้เก็บ representation เต็มรูปแบบ แล้ว export ไปยัง SIEM หรือ log aggregation ภายนอกเป็นระยะ เพื่อพิสูจน์ว่าทุกการเปลี่ยนแปลงด้าน identity ถูกบันทึกไว้
+>
+> **Security incident response** — ทีม security ใช้ login event เพื่อสืบสวนว่า account ใดถูกโจมตีแบบ credential stuffing โดยกรองด้วย event type `LOGIN_ERROR` และช่วงเวลาที่เกิดเหตุผ่าน Admin REST API แทนการไล่ดูทีละหน้าใน console
 
 export const quizEvents = [
   {

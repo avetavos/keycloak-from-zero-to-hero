@@ -79,6 +79,26 @@ export const decodedAccessTokenCode = `{
 ส่ง access token ไปยัง API ของคุณเป็น Bearer token ใน Authorization header ใช้ ID token เฉพาะใน client เพื่อแสดงข้อมูลผู้ใช้ — อย่าส่ง ID token ไปยัง backend service เด็ดขาด
 </Callout>
 
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| ขอ ID token พร้อม access token (`scope=openid`) | Client รู้ตัวตนผู้ใช้ทันทีโดยไม่ต้องเรียก userinfo endpoint เพิ่ม | Response ใหญ่ขึ้น และมี token อีกใบที่ต้อง handle ให้ถูก — ห้ามส่งไป backend เด็ดขาด |
+| ใช้ refresh token เพื่อขอ access token ใหม่ | ผู้ใช้ไม่ต้อง login ซ้ำ แม้ access token จะหมดอายุเร็ว | ต้องเก็บ refresh token อย่างปลอดภัย เพราะมีอายุยาวกว่าและมีสิทธิ์สูงกว่า access token |
+| Public client (SPA) ใช้ PKCE แทน client secret | ไม่ต้อง embed secret ไว้ในโค้ด frontend ที่ใครก็ inspect ได้ | ต้องพึ่ง redirect URI ที่ตั้งไว้อย่างเข้มงวด เพื่อป้องกัน authorization code ถูกขโมยระหว่าง redirect |
+
+## Common Mistakes
+
+- **ส่ง ID token ไปยัง backend API** — ID token มีไว้ให้ client อ่านเพื่อแสดงข้อมูลผู้ใช้ใน UI เท่านั้น ไม่ได้ออกแบบมาให้ API ตรวจสอบ ให้ส่ง access token เป็น Bearer token เสมอ
+- **เก็บ token (โดยเฉพาะ refresh token) ไว้ใน localStorage** — JavaScript ใดๆ บนหน้าเว็บอ่าน localStorage ได้ ถ้าแอปมีช่องโหว่ XSS แม้เล็กน้อย token ก็หลุดไปกับผู้โจมตีทันที ควรเก็บใน memory หรือ httpOnly cookie แทน
+- **ใช้ access token เป็นตัวระบุ session ระยะยาว** — access token หมดอายุและเปลี่ยนค่าไปเรื่อยๆ ตาม lifespan อย่าผูก logic ที่ต้องคงอยู่นานกับค่า token ตรงๆ ให้ผูกกับ `sub` claim หรือ session ฝั่ง server แทน
+
+> 💡 Real World Example
+>
+> **Auth0 SPA SDK / Google Identity Services** — เก็บ access token และ refresh token ไว้ใน memory ของ JavaScript runtime เท่านั้น (ไม่แตะ localStorage) แล้วให้ session กลับมาผ่าน silent refresh หรือ refresh token rotation เมื่อ reload หน้า
+>
+> **แอปธนาคารบนมือถือ** — แยกการใช้งาน ID token ชัดเจนว่าใช้แสดงชื่อ/รูปโปรไฟล์ในแอปเท่านั้น ส่วนทุก call ไปยัง core banking API จะแนบเฉพาะ access token ผ่าน `Authorization: Bearer` header
+
 export const quizTokenTypes = [
   {
     q: 'REST API ของคุณตรวจสอบ token ใด?',

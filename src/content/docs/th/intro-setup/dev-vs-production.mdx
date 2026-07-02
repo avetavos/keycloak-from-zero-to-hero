@@ -60,6 +60,25 @@ ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start"]
 production ต้องการ external database, hostname ที่แน่นอน และ HTTPS — ห้ามรัน `start-dev` ใน production เด็ดขาด เพราะใช้ in-memory database, ข้าม hostname check และปิด security features ข้อมูลจะหายไปทุกครั้งที่ container restart
 </Callout>
 
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| `start-dev` (development mode) | Setup เร็ว ไม่ต้องมี TLS certificate, hostname หรือ external database — เหมาะกับการเรียนรู้และ local development | ไม่มี TLS, ข้าม hostname check, ใช้ in-memory H2 database ที่ข้อมูลหายทุกครั้งที่ restart — ใช้ใน production ไม่ได้ |
+| `start` (production mode) | บังคับให้กำหนด TLS/hostname/database ให้ถูกต้องก่อน start ได้จริง ป้องกันการ deploy ที่ไม่ปลอดภัยโดยไม่ตั้งใจ | ต้องเตรียม external database, certificate และ reverse proxy configuration ล่วงหน้า — setup ใช้เวลานานกว่า |
+
+## Common Mistakes
+
+- **รัน `start-dev` ใน production เพราะ setup ง่ายกว่า** — ทีมที่รีบ deploy มักลืมสลับไปใช้ `start` ทำให้ระบบไม่มี TLS และข้อมูลอยู่ใน in-memory database ที่หายทุกครั้งที่ container restart
+- **ลืมตั้งค่า `KC_HOSTNAME` ให้ตรงกับ domain จริง** — ถ้า hostname ไม่ตรง token ที่ issue ออกมาจะมี issuer URL ผิด ทำให้แอปที่ validate token อย่างเข้มงวด reject token ทั้งหมด
+- **เปิด `KC_HTTP_ENABLED=true` โดยไม่มี reverse proxy ทำ TLS termination จริง** — ค่านี้ควรใช้เฉพาะเมื่อมี proxy อย่าง Nginx หรือ load balancer จัดการ TLS ให้แล้วเท่านั้น ไม่ใช่เปิดทิ้งไว้เฉยๆ บน public endpoint
+
+> 💡 Real World Example
+>
+> **องค์กรที่ทำ SSO consolidation** — บริษัทที่มีแอปภายในหลายสิบระบบมักย้ายทุกแอปมาใช้ Keycloak instance เดียวใน production mode พร้อม external PostgreSQL และ TLS ผ่าน load balancer เพื่อให้พนักงาน login ครั้งเดียวเข้าทุกระบบ
+>
+> **Red Hat build of Keycloak (RH-SSO)** — เวอร์ชัน supported ของ Red Hat ใช้หลักการเดียวกันคือบังคับ production mode configuration (DB, hostname, TLS) ก่อน deploy จริง เพื่อป้องกันลูกค้าตั้งค่าระบบแบบไม่ปลอดภัยโดยไม่ตั้งใจ
+
 export const quizDevProd = [
   {
     q: 'start-dev ใช้ database อะไร?',

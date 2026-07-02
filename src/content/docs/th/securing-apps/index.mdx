@@ -1,6 +1,6 @@
 ---
 title: การรักษาความปลอดภัยของแอป
-description: 'ภาพรวมของสองส่วนหลักในการรักษาความปลอดภัยด้วย Keycloak: frontend ทำการ login และรับ token; backend ตรวจสอบ token ทุกครั้งที่มี request เข้ามา'
+description: 'ภาพรวมของสองส่วนหลักในการรักษาความปลอดภัยด้วย Keycloak: frontend login และรับ token; backend ตรวจสอบ token ทุกครั้งที่มี request เข้ามา'
 sidebar:
   order: 1
 ---
@@ -15,7 +15,7 @@ import ProgressTracker from '../../../../components/ProgressTracker.tsx';
 
 **Frontend** (SPA บนเบราว์เซอร์, แอปมือถือ, หรือ public client ใดก็ตาม) รับผิดชอบประสบการณ์การ login โดย redirect ผู้ใช้ไปยัง Keycloak รับ authorization code กลับมา แลก token มาเก็บไว้ในหน่วยความจำ และนำ access token ต่อท้าย API call ทุกครั้ง
 
-**Backend** (REST API หรือ resource server) ไม่ได้คุยกับ Keycloak แทนผู้ใช้ระหว่างการรับ request แต่รับ access token จาก header `Authorization` ดึง public key จาก JWKS endpoint ของ Keycloak และตรวจสอบ signature, issuer, audience และ expiry ของ token เมื่อผ่านการตรวจสอบทั้งหมด backend จึงเชื่อ identity claims ที่อยู่ใน token
+**Backend** (REST API หรือ resource server) ไม่ได้คุยกับ Keycloak แทนผู้ใช้ระหว่างการรับ request แต่รับ access token จาก header `Authorization` แทน จากนั้นมันดึง public key จาก JWKS endpoint ของ Keycloak แล้วตรวจสอบ signature, issuer, audience และ expiry ของ token เมื่อผ่านการตรวจสอบทั้งหมดแล้ว backend จึงเชื่อ identity claims ที่อยู่ใน token
 
 ## สิ่งที่โมดูลนี้ครอบคลุม
 
@@ -29,7 +29,7 @@ import ProgressTracker from '../../../../components/ProgressTracker.tsx';
 แต่ละบทเรียนสามารถอ่านได้อิสระ — เลือกอ่านบทที่ตรงกับ stack ที่ใช้งานได้เลย
 
 <Callout title="อย่าไว้ใจ frontend สำหรับการ authorisation">
-Frontend ถือ token ไว้ แต่ backend ต้องทำการตรวจสอบ token เอง ห้ามข้ามการตรวจสอบ JWT บน server โดยอาศัยคำบอกของ client ว่า "ผู้ใช้ล็อกอินแล้ว" backend เท่านั้นที่เป็นสถานที่ที่น่าเชื่อถือสำหรับการตัดสินใจด้าน authorisation
+Frontend ถือ token ไว้ แต่ backend ต้องตรวจสอบ token เอง ห้ามข้ามการตรวจสอบ JWT บน server โดยอาศัยคำบอกของ client ว่า "ผู้ใช้ล็อกอินแล้ว" การตัดสินใจด้าน authorisation ต้องเกิดที่ backend เท่านั้น
 </Callout>
 
 export const quizSecuringAppsIndex = [
@@ -37,7 +37,7 @@ export const quizSecuringAppsIndex = [
     q: 'หน้าที่ของ FRONTEND ในแอปพลิเคชันที่รักษาความปลอดภัยด้วย Keycloak คืออะไร?',
     options: [
       'ตรวจสอบ signature ของ JWT ในทุก request',
-      'ทำการ login ผู้ใช้ รับ token แล้วแนบ token นั้นไปกับ API call',
+      'login ผู้ใช้ รับ token แล้วแนบ token นั้นไปกับ API call',
       'ดึงข้อมูลจาก JWKS endpoint เพื่อตรวจสอบ token',
       'จัดเก็บ role ของผู้ใช้ไว้ในฐานข้อมูล',
     ],

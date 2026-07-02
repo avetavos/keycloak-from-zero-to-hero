@@ -38,7 +38,7 @@ import ProgressTracker from '../../../../components/ProgressTracker.tsx';
 | **Enable StartTLS** | ทางเลือกที่นิยมแทน LDAPS สำหรับเข้ารหัสการเชื่อมต่อบน port 389 |
 | **Connection pooling** | เปิดใช้ใน production เพื่อนำ LDAP connections กลับมาใช้ |
 
-คลิก **Test connection** เพื่อยืนยันว่า Keycloak เข้าถึง server ได้ก่อนดำเนินการต่อ
+คลิก **Test connection** เพื่อยืนยันว่า Keycloak เข้าถึง server ได้ก่อนทำต่อ
 
 ## ขั้นตอนที่ 3 — Bind settings
 
@@ -96,6 +96,26 @@ Edit mode: READ_ONLY`;
 <Callout title="เลือก READ_ONLY ถ้าไม่ได้ตั้งใจจะเขียนกลับไปยัง LDAP">
 Edit mode `READ_ONLY` ป้องกัน Keycloak จากการแก้ไข LDAP directory นี่คือค่าเริ่มต้นที่ปลอดภัยสำหรับการ deploy Active Directory ในองค์กรที่ฝ่าย IT เป็นเจ้าของ directory เปลี่ยนเป็น `WRITABLE` เฉพาะเมื่อองค์กรอนุมัติให้ Keycloak เป็น client ที่เขียนได้ใน directory อย่างชัดเจน
 </Callout>
+
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| `READ_ONLY` | ปลอดภัยที่สุด — Keycloak ไม่มีทางเขียนกลับไปยัง LDAP ไม่มีความเสี่ยงที่จะทำ directory ขององค์กรพัง เหมาะกับ corporate AD ที่ฝ่าย IT เป็นเจ้าของ | ผู้ใช้เปลี่ยนรหัสผ่านหรือ profile ผ่าน Keycloak ไม่ได้ ต้องไปเปลี่ยนที่ระบบต้นทาง (เช่น AD) เอง |
+| `WRITABLE` | ผู้ใช้เปลี่ยนรหัสผ่านหรือ attributes ผ่าน Keycloak ได้โดยตรง สะดวกสำหรับ self-service | Keycloak มีสิทธิ์เขียนเข้า production directory — ถ้า config ผิดพลาดหรือ service account ถูกโจมตี อาจกระทบข้อมูลจริงใน LDAP/AD ทั้งองค์กร |
+| `UNSYNCED` | เก็บการเปลี่ยนแปลง attributes ไว้ในเครื่อง (local DB) โดยไม่แตะ LDAP เลย — ยืดหยุ่นสำหรับ attribute เสริมที่ LDAP ไม่มี | ข้อมูลใน Keycloak กับ LDAP อาจไม่ตรงกัน (diverge) เมื่อเวลาผ่านไป เพราะ local override ไม่ sync กลับไปยัง source of truth |
+
+## Common Mistakes
+
+- **Import ผู้ใช้ทั้งหมดแบบ unpaged จาก directory ขนาดใหญ่** — ถ้า directory มีผู้ใช้หลักหมื่นหลักแสน การ sync แบบไม่แบ่งหน้า (paging) อาจทำให้ LDAP server หรือ Keycloak เองล่มจาก memory/timeout ควรตั้งค่า batch size และใช้ paged search ที่ LDAP server รองรับ
+- **ตั้ง edit mode เป็น `WRITABLE` โดยไม่ได้รับอนุมัติจากฝ่ายที่ดูแล directory** — Keycloak จะกลายเป็น client ที่เขียนเข้า production AD/LDAP ได้ทันที ซึ่งเสี่ยงต่อการทำข้อมูลพนักงานเสียหายถ้า mapping ผิด ควรเริ่มจาก `READ_ONLY` เสมอแล้วค่อยขยับถ้าจำเป็นจริง ๆ
+- **ไม่ตั้งค่า Connection pooling หรือ scheduled sync ใน production** — การ query LDAP ตรงทุกครั้งที่ login (import off) โดยไม่มี connection pooling ทำให้ LDAP server รับ load สูงเกินจำเป็นเมื่อผู้ใช้เยอะพร้อมกัน
+
+> 💡 Real World Example
+>
+> **องค์กรที่ bridge Keycloak เข้ากับ Active Directory เดิม** — พนักงานยังคง login ด้วยรหัสผ่าน AD เดิมที่ใช้อยู่แล้วสำหรับ Windows login และอีเมล โดยไม่ต้องจำรหัสผ่านใหม่หรือสร้างบัญชี Keycloak แยกต่างหาก IT ทีมยังคงควบคุม password policy ผ่าน AD เหมือนเดิม
+>
+> **บริษัทที่มี OpenLDAP เป็นแหล่งข้อมูลพนักงานกลาง** — ใช้ LDAP federation แบบ `READ_ONLY` เพื่อให้ระบบ internal tools ทั้งหมดที่ผ่าน Keycloak เห็นผู้ใช้ชุดเดียวกัน โดยไม่ต้อง sync ข้อมูลไปมาระหว่างระบบหลายตัว
 
 export const quizLdap = [
   {

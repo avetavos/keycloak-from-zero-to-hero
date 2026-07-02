@@ -44,6 +44,25 @@ export const discoveryCode = `curl https://\${KC_URL}/realms/\${REALM}/.well-kno
 อย่า hardcode URL ของ endpoint ทุก endpoint ที่แอปต้องการอยู่ใน discovery document เมื่อ Keycloak อัปเกรดหรือย้าย แอปจะรับ URL ใหม่อัตโนมัติหากดึง discovery doc ตอนเริ่มต้น
 </Callout>
 
+## Trade-offs
+
+| ตัวเลือก | Benefit | Cost |
+|---|---|---|
+| ใช้ OIDC discovery document | แอปดึง config อัตโนมัติ ไม่ต้อง hardcode endpoint แต่ละตัว | ต้องมี network call เพิ่มตอน startup และต้อง cache ให้ดีเพื่อไม่ให้ดึงซ้ำทุก request |
+| Hardcode endpoint URL เอง | เริ่มต้นเร็ว ไม่ต้องพึ่ง discovery document | เมื่อ Keycloak ย้าย realm หรือเปลี่ยน URL ต้องไปแก้โค้ดทุกที่ที่ hardcode ไว้ |
+
+## Common Mistakes
+
+- **สับสนระหว่าง OAuth2 กับ OIDC** — OAuth2 คือ authorization framework (ให้สิทธิ์เข้าถึงทรัพยากร) ส่วน OIDC เป็น identity layer ที่สร้างต่อบน OAuth2 (บอกว่าใครคือผู้ใช้) ต้องขอ `scope=openid` เท่านั้นถึงจะได้ `id_token` กลับมา
+- **ไม่ตรวจสอบ `issuer` ใน discovery document** — ก่อนเชื่อ endpoint ใด ๆ ควร verify ว่า `issuer` ตรงกับ Keycloak realm ที่คาดไว้ ไม่งั้นเสี่ยงต่อการถูกหลอกให้เชื่อ discovery document ปลอม
+- **Cache discovery document ไว้ตลอดชีพ ไม่เคย refresh** — ถ้า Keycloak หมุน key หรือย้าย endpoint แอปที่ cache ค่าเก่าไว้ถาวรจะพังแบบไม่มีสัญญาณเตือน ควรตั้ง TTL หรือ refresh เป็นระยะ
+
+> 💡 Real World Example
+>
+> **ปุ่ม "Log in with Google" หรือ "Log in with GitHub"** — เบื้องหลังคือ OIDC เต็มรูปแบบ แอปจะดึง discovery document ของ Google/GitHub ก่อนเพื่อรู้ authorization endpoint และ token endpoint แล้วค่อยเริ่ม flow
+>
+> **Auth0 และ Okta** — เป็น Identity Provider (IdP) เชิงพาณิชย์ที่ใช้ pattern discovery document แบบเดียวกับ Keycloak ทำให้แอปสลับ provider ได้โดยแทบไม่ต้องแก้โค้ด เพราะทุกตัวพูดภาษา OIDC เดียวกัน
+
 export const quizOidcBasics = [
   {
     q: 'Keycloak เผยแพร่ OIDC discovery document ที่ไหน?',
