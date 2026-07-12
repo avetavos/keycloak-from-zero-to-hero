@@ -108,7 +108,7 @@ Keycloakify ให้คุณควบคุม React component แบบ full 
 
 export const quizThemes = [
   {
-    q: 'Which Keycloak theme type controls the login and registration pages?',
+    q: 'Keycloak theme type ตัวใดที่ควบคุมหน้า login และ registration?',
     options: [
       'account',
       'admin',
@@ -118,7 +118,7 @@ export const quizThemes = [
     answer: 3,
   },
   {
-    q: 'Where in the admin console do you change a realm\'s active login theme?',
+    q: 'คุณเปลี่ยน login theme ที่ใช้งานอยู่ของ realm ได้ที่ไหนใน admin console?',
     options: [
       'Clients > Settings',
       'Realm settings > Themes',
@@ -128,22 +128,22 @@ export const quizThemes = [
     answer: 1,
   },
   {
-    q: 'What does the parent= line in theme.properties do?',
+    q: 'บรรทัด parent= ใน theme.properties ทำอะไร?',
     options: [
-      'It sets the realm that owns the theme',
-      'It declares which built-in theme to fall back to for resources you have not overridden',
-      'It specifies the admin account for the theme',
-      'It enables email notifications',
+      'ตั้งค่า realm ที่เป็นเจ้าของ theme',
+      'ระบุว่าจะ fall back ไปยัง built-in theme ตัวใดสำหรับ resource ที่คุณยังไม่ได้ override',
+      'ระบุ admin account สำหรับ theme',
+      'เปิดใช้งานการแจ้งเตือนทางอีเมล',
     ],
     answer: 1,
   },
   {
-    q: 'What does Keycloakify do?',
+    q: 'Keycloakify ทำอะไร?',
     options: [
-      'It is a Keycloak admin CLI replacement',
-      'It compiles React components into a Keycloak-compatible theme JAR',
-      'It generates Admin REST API client code',
-      'It encrypts theme files for production',
+      'เป็นตัวแทนของ Keycloak admin CLI',
+      'compile React component ให้เป็น theme JAR ที่ใช้กับ Keycloak ได้',
+      'สร้าง client code สำหรับ Admin REST API',
+      'เข้ารหัสไฟล์ theme สำหรับ production',
     ],
     answer: 1,
   },

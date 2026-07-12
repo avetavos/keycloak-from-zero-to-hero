@@ -128,7 +128,7 @@ External database, fixed hostname, HTTPS และ optimised build — `start-de
 
 export const quizProduction = [
   {
-    q: 'What database does start-dev use by default?',
+    q: 'start-dev ใช้ database ใดเป็นค่าเริ่มต้น?',
     options: [
       'PostgreSQL',
       'MySQL',
@@ -138,32 +138,32 @@ export const quizProduction = [
     answer: 2,
   },
   {
-    q: 'What does KC_PROXY_HEADERS=xforwarded tell Keycloak?',
+    q: 'KC_PROXY_HEADERS=xforwarded บอกอะไรกับ Keycloak?',
     options: [
-      'To disable HTTPS entirely',
-      'To trust X-Forwarded-* headers from a reverse proxy for hostname and protocol detection',
-      'To forward all requests to an external proxy',
-      'To require client certificates',
+      'ให้ปิด HTTPS ทั้งหมด',
+      'ให้เชื่อถือ X-Forwarded-* header จาก reverse proxy สำหรับตรวจจับ hostname และ protocol',
+      'ให้ forward ทุก request ไปยัง external proxy',
+      'ให้บังคับใช้ client certificate',
     ],
     answer: 1,
   },
   {
-    q: 'Why should you run kc.sh build before kc.sh start in production?',
+    q: 'ทำไมคุณควรรัน kc.sh build ก่อน kc.sh start ใน production?',
     options: [
-      'To create the external database schema',
-      'To compile provider configuration and reduce startup time',
-      'To generate a self-signed TLS certificate',
-      'To export the default realm configuration',
+      'เพื่อสร้าง schema ของ external database',
+      'เพื่อ compile provider configuration และลดเวลา startup',
+      'เพื่อสร้าง self-signed TLS certificate',
+      'เพื่อ export realm configuration เริ่มต้น',
     ],
     answer: 1,
   },
   {
-    q: 'How do you make Keycloak automatically import a realm on first startup?',
+    q: 'คุณทำให้ Keycloak import realm อัตโนมัติตอน startup ครั้งแรกได้อย่างไร?',
     options: [
-      'Set KC_REALM_IMPORT=true',
-      'Place the realm JSON in /opt/keycloak/data/import/ and run start --import-realm',
-      'Call the Admin REST API before Keycloak starts',
-      'Enable the auto-import event listener',
+      'ตั้งค่า KC_REALM_IMPORT=true',
+      'วางไฟล์ realm JSON ไว้ใน /opt/keycloak/data/import/ แล้วรัน start --import-realm',
+      'เรียก Admin REST API ก่อนที่ Keycloak จะเริ่มทำงาน',
+      'เปิดใช้งาน auto-import event listener',
     ],
     answer: 1,
   },

@@ -101,17 +101,17 @@ export const loginEventsCode = `curl -s "https://localhost:8080/admin/realms/my-
 
 export const quizEvents = [
   {
-    q: 'What is the difference between login events and admin events in Keycloak?',
+    q: 'ความแตกต่างระหว่าง login event กับ admin event ใน Keycloak คืออะไร?',
     options: [
-      'Login events are for admins; admin events are for end-users',
-      'Login events record end-user actions; admin events record administrator actions',
-      'There is no difference — they are stored in the same log',
-      'Login events are permanent; admin events expire automatically',
+      'login event ใช้สำหรับ admin ส่วน admin event ใช้สำหรับ end-user',
+      'login event บันทึกการกระทำของ end-user ส่วน admin event บันทึกการกระทำของ administrator',
+      'ไม่มีความแตกต่าง — ทั้งคู่ถูกเก็บไว้ใน log เดียวกัน',
+      'login event เก็บถาวร ส่วน admin event หมดอายุอัตโนมัติ',
     ],
     answer: 1,
   },
   {
-    q: 'Where in the admin console do you enable event storage?',
+    q: 'คุณเปิดใช้งานการเก็บ event ได้ที่ไหนใน admin console?',
     options: [
       'Clients > Sessions',
       'Realm settings > Events',
@@ -121,17 +121,17 @@ export const quizEvents = [
     answer: 1,
   },
   {
-    q: 'What does enabling "Include representation" for admin events do?',
+    q: 'การเปิด "Include representation" สำหรับ admin event ทำอะไร?',
     options: [
-      'It shows the UI screenshots of each admin action',
-      'It stores the full JSON payload of each admin change for detailed auditing',
-      'It sends admin events to an external webhook automatically',
-      'It enables GDPR anonymisation of event data',
+      'แสดง screenshot ของ UI สำหรับแต่ละ admin action',
+      'เก็บ JSON payload เต็มของแต่ละการเปลี่ยนแปลงที่ admin ทำ เพื่อการ audit แบบละเอียด',
+      'ส่ง admin event ไปยัง external webhook อัตโนมัติ',
+      'เปิดใช้งานการทำ GDPR anonymisation กับข้อมูล event',
     ],
     answer: 1,
   },
   {
-    q: 'Which built-in event listener sends an email to the user on login errors?',
+    q: 'built-in event listener ตัวใดที่ส่งอีเมลให้ผู้ใช้เมื่อเกิด login error?',
     options: [
       'jboss-logging',
       'webhook',

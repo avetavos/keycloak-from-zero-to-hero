@@ -115,7 +115,7 @@ Keycloak มาพร้อม CLI tool ชื่อ `kcadm.sh` (ภายใน
 
 export const quizAdminApi = [
   {
-    q: 'What HTTP header do you use to authenticate Admin REST API calls?',
+    q: 'คุณใช้ HTTP header ตัวใดในการ authenticate การเรียก Admin REST API?',
     options: [
       'X-Api-Key',
       'Authorization: Bearer <token>',
@@ -125,7 +125,7 @@ export const quizAdminApi = [
     answer: 1,
   },
   {
-    q: 'Which grant type does a service account use to obtain a token?',
+    q: 'service account ใช้ grant type ใดในการขอ token?',
     options: [
       'authorization_code',
       'password',
@@ -135,7 +135,7 @@ export const quizAdminApi = [
     answer: 2,
   },
   {
-    q: 'What is the correct Admin REST API path to list users in a realm called "shop"?',
+    q: 'Admin REST API path ที่ถูกต้องสำหรับแสดงรายการผู้ใช้ใน realm ชื่อ "shop" คืออะไร?',
     options: [
       '/realms/shop/users',
       '/admin/realms/shop/users',
@@ -145,12 +145,12 @@ export const quizAdminApi = [
     answer: 1,
   },
   {
-    q: 'Why is kcadm.sh sometimes simpler than raw curl for admin scripts?',
+    q: 'ทำไม kcadm.sh บางครั้งถึงง่ายกว่า raw curl สำหรับ admin script?',
     options: [
-      'It communicates directly with the database',
-      'It caches the admin token locally so you only authenticate once per session',
-      'It bypasses realm isolation',
-      'It does not require a running Keycloak server',
+      'มันสื่อสารกับ database โดยตรง',
+      'มัน cache admin token ไว้ในเครื่อง ทำให้ authenticate เพียงครั้งเดียวต่อ session',
+      'มันข้าม realm isolation',
+      'มันไม่ต้องใช้ Keycloak server ที่กำลังทำงานอยู่',
     ],
     answer: 1,
   },
