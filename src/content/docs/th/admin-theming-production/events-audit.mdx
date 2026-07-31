@@ -76,10 +76,10 @@ export const loginEventsCode = `curl -s "https://localhost:8080/admin/realms/my-
 สำหรับ integration แบบกำหนดเอง (เช่น การส่ง event ไปยัง webhook หรือ message queue) คุณสามารถ implement Keycloak SPI (`EventListenerProvider`) และ deploy เป็น provider JAR
 
 <Callout title="เปิดใช้งาน event ก่อนเกิดเหตุ ไม่ใช่หลัง">
-เปิดใช้งาน login event และ admin event ก่อน go live — มันคือ audit trail ของคุณ การเปิดใช้งานหลังเกิดเหตุหมายความว่าคุณสูญเสียข้อมูลที่ต้องการสำหรับการสืบสวนไปแล้ว ตั้งค่าอายุที่เหมาะสม (7–30 วัน) เพื่อควบคุม storage
+เปิดใช้งาน login event และ admin event ก่อน go live — เพราะนี่คือ audit trail ของคุณ การเปิดใช้งานหลังเกิดเหตุหมายความว่าคุณสูญเสียข้อมูลที่ต้องการสำหรับการสืบสวนไปแล้ว ตั้งค่าอายุที่เหมาะสม (7–30 วัน) เพื่อควบคุม storage
 </Callout>
 
-## Trade-offs
+## ข้อแลกเปลี่ยน
 
 | ตัวเลือก | Benefit | Cost |
 |---|---|---|
@@ -87,13 +87,13 @@ export const loginEventsCode = `curl -s "https://localhost:8080/admin/realms/my-
 | Expiration สั้น (7 วัน) | ควบคุม storage ให้อยู่ในขอบเขต ไม่ต้องดูแล archive เอง | หากเกิดเหตุการณ์ที่ต้องสืบสวนย้อนหลังเกิน 7 วัน ข้อมูลอาจหายไปแล้ว |
 | Expiration ยาว หรือ export ไปเก็บนอกระบบ | รองรับ compliance/audit ที่ต้องเก็บ log ย้อนหลังนาน (เช่น SOC2) | เพิ่ม storage cost และต้องมีกลไก archive/export แยกต่างหาก |
 
-## Common Mistakes
+## ข้อผิดพลาดที่พบบ่อย
 
 - **ไม่เปิดใช้งาน event เลยจนกว่าจะเกิดเหตุการณ์ผิดปกติ** — event ถูกปิดโดยค่าเริ่มต้น ทีมจำนวนมากเปิดใช้งานหลังเกิด incident ไปแล้ว ทำให้ไม่มีข้อมูลสำหรับสืบสวนย้อนหลัง ควรเปิดใช้งานก่อน go live เสมอ
 - **ไม่ตั้งค่า Expiration เลย** — ปล่อยให้ event สะสมไม่จำกัดใน database ทำให้ table โตขึ้นเรื่อย ๆ จนกระทบ performance ของ Keycloak เอง ควรตั้งอายุที่เหมาะสมกับความต้องการ audit ขององค์กร
 - **เปิด "Include representation" ทุก realm โดยไม่พิจารณา storage cost** — เก็บ JSON payload เต็มของทุกการเปลี่ยนแปลงในทุก realm รวมถึง realm ที่ไม่จำเป็นต้อง audit ละเอียดขนาดนั้น เพิ่มภาระ storage โดยไม่จำเป็น
 
-> 💡 Real World Example
+> 💡 ตัวอย่างจากของจริง
 >
 > **SOC2 / compliance audit** — องค์กรที่ต้องผ่าน SOC2 หรือมาตรฐาน compliance อื่นมักตั้งค่า admin event ให้เก็บ representation เต็มรูปแบบ แล้ว export ไปยัง SIEM หรือ log aggregation ภายนอกเป็นระยะ เพื่อพิสูจน์ว่าทุกการเปลี่ยนแปลงด้าน identity ถูกบันทึกไว้
 >

@@ -15,7 +15,7 @@ import ProgressTracker from '../../../../components/ProgressTracker.tsx';
 ใน Keycloak มีสองแนวคิดที่เกี่ยวข้องกันแต่แตกต่างกัน คือ **group** และ **role**
 
 - **role** คือ permission หรือความสามารถ (เช่น `admin`, `viewer`, `editor`) role จะถูกมอบให้กับ user และถูกตรวจสอบโดยแอปพลิเคชันเพื่อตัดสินว่า user ได้รับอนุญาตให้ทำอะไร
-- **group** คือ container สำหรับ user group ไม่ได้มอบ permission ด้วยตัวมันเอง — มันได้รับ permission ผ่าน role ที่ map ไว้กับมัน
+- **group** คือ container สำหรับ user group ไม่ได้มอบ permission ด้วยตัวเอง — แต่ได้รับ permission ผ่าน role ที่ map ไว้กับ group
 
 พลังของการใช้ร่วมกัน: map role ไปยัง group, แล้วเพิ่ม user เข้า group สมาชิกทุกคนของ group จะสืบทอด role ทั้งหมดที่กำหนดให้กับ group นั้นโดยอัตโนมัติ เมื่อคุณต้องการเปลี่ยน permission ให้กับชุดของ user คุณก็อัปเดต role mapping ของ group เพียงครั้งเดียวแทนที่จะต้องไปแตะทุกบัญชี user แต่ละราย
 
@@ -27,7 +27,7 @@ import ProgressTracker from '../../../../components/ProgressTracker.tsx';
 4. ใส่ **Name** สำหรับ group (เช่น `developers`, `support-agents`)
 5. คลิก **Save**
 
-group ใหม่จะปรากฏในรายการ group ตอนนี้ คลิกชื่อของมันเพื่อเปิดหน้ารายละเอียดของ group และเข้าถึงแท็บต่าง ๆ ของมัน
+group ใหม่จะปรากฏในรายการ group ตอนนี้ คลิกชื่อของตัวเองเพื่อเปิดหน้ารายละเอียดของ group และเข้าถึงแท็บต่าง ๆ ของตัวเอง
 
 ## การเพิ่มสมาชิกเข้า group
 
@@ -62,7 +62,7 @@ Keycloak รองรับลำดับชั้นของ group **subgroup
 3. คลิก **Create group**
 4. ใส่ **Name** สำหรับ child group แล้วคลิก **Save**
 
-จากนั้นคุณสามารถเพิ่มสมาชิกและ map role ให้กับ subgroup ได้อย่างอิสระจาก parent สิ่งนี้ทำให้ง่ายต่อการจำลองลำดับชั้นขององค์กร (เช่น `engineering` → `backend`, `frontend`)
+จากนั้นคุณสามารถเพิ่มสมาชิกและ map role ให้กับ subgroup ได้อย่างอิสระจาก parent ทำให้ง่ายต่อการจำลองลำดับชั้นขององค์กร (เช่น `engineering` → `backend`, `frontend`)
 
 ## Default groups
 
@@ -89,7 +89,7 @@ export const groupMembersCode = `curl -s -H "Authorization: Bearer \${TOKEN}" ht
 กำหนด role ให้กับ group, แล้วใส่ user เข้า group — จัดการง่ายกว่าการกำหนด role ให้กับ user แต่ละรายมาก เมื่อความรับผิดชอบของ user เปลี่ยนไป ให้ย้ายพวกเขาระหว่าง group แทนที่จะไล่ค้นหาทุก role assignment บนบัญชีของพวกเขา
 </Callout>
 
-## Trade-offs
+## ข้อแลกเปลี่ยน
 
 | ตัวเลือก | Benefit | Cost |
 |---|---|---|
@@ -97,13 +97,13 @@ export const groupMembersCode = `curl -s -H "Authorization: Bearer \${TOKEN}" ht
 | กำหนด role แบบ role-by-role ให้ user แต่ละคนโดยตรง | เหมาะกับ exception เฉพาะบุคคลที่ไม่ต้องการให้กระทบคนอื่นใน group | ไม่ scale — เมื่อ permission ของทีมเปลี่ยน ต้องไล่แก้ทุกบัญชีทีละคน เสี่ยงตกหล่น |
 | ใช้ default group ให้ user ใหม่เข้าโดยอัตโนมัติ | onboarding ไม่ต้องมีขั้นตอน manual, user ใหม่ได้ role พื้นฐานทันที | ถ้ากำหนด default group ผิดหรือกว้างเกินไป user ใหม่อาจได้ permission เกินความจำเป็น |
 
-## Common Mistakes
+## ข้อผิดพลาดที่พบบ่อย
 
 - **กำหนด role ให้ user ทีละคนแทนที่จะผ่าน group** — เมื่อทีมโตขึ้นจะจัดการไม่ไหว ควร map role เข้า group แล้วให้ user สืบทอดผ่านการเป็นสมาชิก
 - **ลืมว่า subgroup ไม่สืบทอด role ของ parent group โดยอัตโนมัติ** — ถ้าคาดหวังให้สมาชิก subgroup ได้ permission ของ parent ด้วย ต้อง map role ซ้ำหรือเพิ่ม user เป็นสมาชิกของ parent ตรง ๆ
 - **ไม่ตรวจสอบ default groups ก่อนเปิด self-registration** — ถ้าลืมตั้งหรือกำหนดกว้างเกินไป user ที่สมัครเองจะได้ role ที่ไม่ควรได้ หรือไม่มี role พื้นฐานเลย
 
-> 💡 Real World Example
+> 💡 ตัวอย่างจากของจริง
 >
 > **บริษัท enterprise onboarding พนักงานใหม่** — ตั้ง default group เป็น `all-employees` ให้ user ทุกคนที่สมัครผ่าน self-registration ภายในโดเมนบริษัทถูกจัดเข้า group นี้อัตโนมัติ พร้อม role พื้นฐานอย่าง `view-directory` โดยไม่ต้องให้ HR หรือ IT กดมือทีละคน
 >

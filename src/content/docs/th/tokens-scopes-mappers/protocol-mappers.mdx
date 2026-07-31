@@ -59,7 +59,7 @@ export const audMapperCode = `{
 เพิ่ม audience mapper เพื่อให้ API ตรวจสอบได้ว่า claim `aud` ใน token ตรงกับ client ID ของตัวเอง หากไม่มี token ที่ถูกต้องจาก Keycloak ที่ออกให้แอปอื่น ก็อาจถูก API ของคุณยอมรับได้
 </Callout>
 
-## Trade-offs
+## ข้อแลกเปลี่ยน
 
 | ตัวเลือก | Benefit | Cost |
 |---|---|---|
@@ -67,13 +67,13 @@ export const audMapperCode = `{
 | Token แบบ "thin" (มีเฉพาะ claim ที่จำเป็นจริงๆ) | Token เล็ก ปลอดภัยกว่าเพราะมีข้อมูลให้ leak น้อย ดูแล mapper ง่ายกว่า | Backend อาจต้อง query เพิ่มเพื่อได้ข้อมูลที่ไม่ได้ฝังไว้ใน token |
 | Hardcoded Claim mapper | ค่าคาดเดาได้ ดีสำหรับ debug และ config ที่ตายตัว เช่นระบุ audience | ไม่ยืดหยุ่น เปลี่ยนตามผู้ใช้ไม่ได้ ต้องแก้ mapper ทุกครั้งถ้าค่าต้องเปลี่ยน |
 
-## Common Mistakes
+## ข้อผิดพลาดที่พบบ่อย
 
 - **ใส่ mutable หรือข้อมูลที่เปลี่ยนบ่อยลงใน claim** (เช่น role ปัจจุบัน, ยอดเงินคงเหลือ, สถานะ subscription) — claim คือ snapshot ณ เวลาที่ token ถูกออก ไม่ใช่ live data ถ้าข้อมูลจริงเปลี่ยนไป token เก่าจะยังโชว์ค่าเดิมจนกว่าจะ refresh ใหม่
 - **เพิ่ม mapper สำหรับทุก user attribute "เผื่อไว้ก่อน"** — ทำให้ token บวมโดยไม่จำเป็น เพิ่ม mapper เฉพาะ claim ที่มี consumer ใช้งานจริง
 - **ลืมเปิด "Add to access token" หรือเปิดผิดที่ (เช่นเปิดเฉพาะ userinfo)** — mapper ถูกสร้างไว้แต่ claim ไม่ปรากฏใน access token จริง ทำให้ debug เสียเวลาโดยไม่จำเป็น
 
-> 💡 Real World Example
+> 💡 ตัวอย่างจากของจริง
 >
 > **E-commerce platform** — ใช้ Group Membership mapper ใส่ tier ของลูกค้า (gold/silver) ลง token เพื่อให้ frontend ปรับ UI ได้ทันที แต่ตั้ง access token lifespan สั้นไว้เพื่อไม่ให้ tier เก่าค้างนานเกินไปหากมีการอัปเกรด/ดาวน์เกรด tier
 >

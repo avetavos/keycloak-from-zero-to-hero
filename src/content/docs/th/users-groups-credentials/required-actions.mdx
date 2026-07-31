@@ -33,7 +33,7 @@ Keycloak มาพร้อมชุดของ required action ในตัว
 1. ใน admin console ไปที่ **Users** ในแถบด้านซ้าย
 2. คลิก user ที่คุณต้องการอัปเดต
 3. เปิดแท็บ **Details** (แท็บเริ่มต้นเมื่อคุณเปิด user)
-4. หาฟิลด์ **Required user actions** — มันรับหลายค่าจาก dropdown
+4. หาฟิลด์ **Required user actions** — ฟิลด์นี้รับหลายค่าจาก dropdown
 5. คลิกภายในฟิลด์และเลือก action หนึ่งรายการหรือมากกว่าจากรายการ (ตัวอย่างเช่น **Verify Email** และ **Update Password**)
 6. คลิก **Save**
 
@@ -48,7 +48,7 @@ Self-registration ให้ user ใหม่สร้างบัญชีข�
 3. สลับ **User registration** ไปที่ **On**
 4. คลิก **Save**
 
-เมื่อเปิดใช้งานแล้ว ลิงก์ **Register** จะปรากฏบนหน้าล็อกอิน การคลิกมันจะเปิดฟอร์มลงทะเบียนที่ user กรอกชื่อ, อีเมล, และ password
+เมื่อเปิดใช้งานแล้ว ลิงก์ **Register** จะปรากฏบนหน้าล็อกอิน คลิกแล้วจะเปิดฟอร์มลงทะเบียนที่ user กรอกชื่อ, อีเมล, และ password
 
 คุณสามารถผสาน self-registration เข้ากับ **default groups** และ **required actions** เพื่อทำให้ onboarding เป็นอัตโนมัติได้ ตัวอย่างเช่น กำหนด user ใหม่ทุกคนให้กับ group `app-users` และบังคับให้พวกเขายืนยันอีเมล ซึ่งหมายความว่า user ที่ลงทะเบียนด้วยตนเองทุกคนจะถูกจัดวางใน group ที่ถูกต้องโดยอัตโนมัติ และไม่สามารถใช้แอปพลิเคชันได้จนกว่าจะยืนยันที่อยู่ของตน — ทั้งหมดนี้โดยไม่ต้องเขียนตรรกะแบบกำหนดเองใด ๆ
 
@@ -67,7 +67,7 @@ http://localhost:8080/realms/{realm-name}/account
 - **Authenticator** — ลงทะเบียน, อัปเดต, หรือลบอุปกรณ์ OTP
 - **Sessions** — ดู session ที่ใช้งานอยู่ทั้งหมดและออกจากระบบในอุปกรณ์แต่ละเครื่อง
 
-คุณสามารถลิงก์ user ไปยัง Account Console จากหน้าการตั้งค่าหรือหน้าช่วยเหลือของแอปพลิเคชันของคุณ admin ยังสามารถใช้มันเป็น self-service portal เพื่อให้ user จัดการการดูแล credential ประจำวันด้วยตนเอง ลดการร้องขอการสนับสนุน
+คุณสามารถลิงก์ user ไปยัง Account Console จากหน้าการตั้งค่าหรือหน้าช่วยเหลือของแอปพลิเคชันของคุณ admin ยังใช้ Account Console เป็น self-service portal เพื่อให้ user จัดการการดูแล credential ประจำวันด้วยตนเอง ลดการร้องขอการสนับสนุน
 
 export const requiredActionsCode = `curl -s -X PUT \\
   -H "Authorization: Bearer \${TOKEN}" \\
@@ -80,10 +80,10 @@ export const requiredActionsCode = `curl -s -X PUT \\
 แทนที่ `my-app` ด้วยชื่อ realm ของคุณ, `TOKEN` ด้วย admin access token ที่ถูกต้อง, และ `USER_ID` ด้วย UUID ของ user เป้าหมาย body รับชื่อ action ในตัวรวมกันได้ทุกแบบ (`VERIFY_EMAIL`, `UPDATE_PASSWORD`, `CONFIGURE_TOTP`, `UPDATE_PROFILE`, `TERMS_AND_CONDITIONS`)
 
 <Callout title="Required action บังคับขั้นตอน onboarding">
-Required action ให้คุณบังคับขั้นตอน — ยืนยันอีเมล, ตั้งค่า 2FA — ก่อนที่ user จะล็อกอินเสร็จสมบูรณ์ได้ ใช้มันเพื่อเสริมความแข็งแกร่งด้านความปลอดภัยโดยไม่ต้องเขียนโค้ดแบบกำหนดเอง
+Required action ให้คุณบังคับขั้นตอน — ยืนยันอีเมล, ตั้งค่า 2FA — ก่อนที่ user จะล็อกอินเสร็จสมบูรณ์ได้ ใช้ required action เสริมความแข็งแกร่งด้านความปลอดภัยโดยไม่ต้องเขียนโค้ดแบบกำหนดเอง
 </Callout>
 
-## Trade-offs
+## ข้อแลกเปลี่ยน
 
 | ตัวเลือก | Benefit | Cost |
 |---|---|---|
@@ -91,13 +91,13 @@ Required action ให้คุณบังคับขั้นตอน — �
 | กำหนด required action ให้ user เป็นรายบุคคลผ่าน admin console | เหมาะกับ case พิเศษ เช่น สงสัยว่าบัญชีถูกบุกรุกแล้วอยากบังคับ Update Password เฉพาะคน | ไม่ scale ถ้าต้องทำกับ user จำนวนมาก ควรใช้ Admin REST API หรือ default action แทน |
 | เปิด self-registration โดยไม่ผูก required action ใด ๆ | สมัครเสร็จ ใช้งานได้ทันที ลด friction ในการ onboarding | เสี่ยงมากด้านความปลอดภัย เช่น ไม่มีการยืนยันอีเมล ทำให้เกิดบัญชีปลอมหรืออีเมลผิดคนเข้าระบบได้ |
 
-## Common Mistakes
+## ข้อผิดพลาดที่พบบ่อย
 
 - **เปิด self-registration แต่ข้ามการบังคับ Verify Email** — ทำให้ใครก็ได้สมัครด้วยอีเมลที่ไม่ใช่ของตัวเอง ควรผูก required action `VERIFY_EMAIL` เข้ากับ self-registration เสมอ
 - **ลืมว่า required action ทำงานตามลำดับก่อนออก token** — ถ้ากำหนดหลาย action พร้อมกันโดยไม่ทดสอบ flow จริง อาจทำให้ user ติดค้างระหว่างขั้นตอนโดยไม่รู้สาเหตุ
 - **ใช้ required action แทน password policy หรือ OTP policy** — required action อย่าง Update Password หรือ Configure OTP เป็นแค่ตัว "บังคับให้ทำ" แต่ไม่ได้กำหนดกฎเข้ม เช่น ความยาว password หรือ algorithm ของ OTP ต้องตั้ง policy ที่เกี่ยวข้องควบคู่กันไปด้วย
 
-> 💡 Real World Example
+> 💡 ตัวอย่างจากของจริง
 >
 > **enterprise onboarding พนักงานใหม่แบบอัตโนมัติ** — ระบบ HR สร้าง user ผ่าน Admin REST API พร้อมใส่ default group ที่ตรงตำแหน่งงานและกำหนด required action `VERIFY_EMAIL` กับ `UPDATE_PASSWORD` ทันที ทำให้พนักงานใหม่ถูกจัดเข้าทีมที่ถูกต้องและถูกบังคับยืนยันอีเมล/ตั้ง password ของตัวเองโดยอัตโนมัติ ไม่ต้องรอ IT ดำเนินการ
 >

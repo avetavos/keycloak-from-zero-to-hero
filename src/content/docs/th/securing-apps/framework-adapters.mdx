@@ -14,10 +14,10 @@ import ProgressTracker from '../../../../components/ProgressTracker.tsx';
 
 การผสาน framework ทุกตัวเป็นไปตาม two-role model เดียวกัน:
 
-- **Frontend / OIDC client**: ไลบรารีใดก็ตามที่ implement Authorization Code + PKCE flow (keycloak-js สำหรับเบราว์เซอร์, AppAuth สำหรับมือถือ, MSAL สำหรับ Microsoft stack เป็นต้น)
+- **Frontend / OIDC client**: ไลบรารีใดก็ตามที่ implement Authorization Code + PKCE flow (keycloak-js สำหรับ browser, AppAuth สำหรับมือถือ, MSAL สำหรับ Microsoft stack เป็นต้น)
 - **Backend / resource server**: ไลบรารีใดก็ตามที่ตรวจสอบ Bearer JWT กับ JWKS endpoint ของ realm
 
-ประเด็นสำคัญคือ backend ไม่ต้องการไลบรารีเฉพาะของ Keycloak — ต้องการเพียงไลบรารีที่ตรวจสอบ JWT กับ JWKS URL ได้ ซึ่งเป็นฟีเจอร์มาตรฐานของ ecosystem OAuth2/OIDC ที่โตแล้วทุกตัว
+ประเด็นสำคัญคือ backend ไม่ต้องการไลบรารีเฉพาะของ Keycloak — ต้องการเพียงไลบรารีที่ตรวจสอบ JWT กับ JWKS URL ได้ ที่เป็นฟีเจอร์มาตรฐานของ ecosystem OAuth2/OIDC ที่โตแล้วทุกตัว
 
 ## Spring Boot (Spring Security OAuth2 Resource Server)
 
@@ -102,20 +102,20 @@ Keycloak เคยมี adapter เฉพาะสำหรับแต่ล�
 Keycloak adapter เฉพาะ framework รุ่นเก่า (keycloak-connect, Keycloak Spring adapter) ถูก deprecated แล้ว จะไม่ได้รับฟีเจอร์ใหม่และอาจถูกลบออก backend ของคุณต้องการเพียงการตรวจสอบ JWT เท่านั้น — ไลบรารีใดก็ได้ที่ตรวจสอบ token ที่ลงนามด้วย JWKS ได้ก็ทำงานได้ การใช้ OAuth2 resource server support มาตรฐานใน framework ทำให้โค้ดของคุณ portable ข้าม identity provider ต่าง ๆ
 </Callout>
 
-## Trade-offs
+## ข้อแลกเปลี่ยน
 
 | ตัวเลือก | Benefit | Cost |
 |---|---|---|
 | ใช้ official Keycloak adapter (เช่น keycloak-js, keycloak-connect รุ่นเก่า) | Setup เร็ว มี API เฉพาะทางที่ครอบคลุม use case ของ Keycloak โดยตรง | ผูกกับ Keycloak เจาะจง — adapter ฝั่ง backend อย่าง keycloak-connect ถูก deprecated แล้ว และย้าย identity provider ภายหลังทำได้ยาก |
 | implement OIDC resource-server middleware มาตรฐานเอง (jose, express-oauth2-jwt-bearer, Spring Security oauth2ResourceServer) | Portable ข้าม identity provider ใด ๆ ที่รองรับ OIDC/JWKS ได้รับการดูแลต่อเนื่องจาก community ที่กว้างกว่า | ต้องเข้าใจ OIDC spec เอง (issuer, audience, JWKS) แทนที่จะพึ่ง abstraction ของ adapter เฉพาะทาง |
 
-## Common Mistakes
+## ข้อผิดพลาดที่พบบ่อย
 
 - **เชื่อ client-side auth state แทนการ verify ที่ backend** — การเช็คว่า frontend มี token อยู่หรือ UI แสดงว่า "login แล้ว" ไม่ใช่ authentication ที่ backend ยอมรับได้ ทุก endpoint ที่ต้องการการป้องกันต้องผ่าน middleware ที่ verify JWT จริงเสมอ ไม่ใช่แค่เชื่อ header ที่ frontend ส่งมาว่า user login แล้ว
 - **ยังใช้ Keycloak adapter รุ่นเก่าที่ถูก deprecated** — keycloak-connect และ Keycloak Spring Boot adapter รุ่นเก่าไม่ได้รับฟีเจอร์ใหม่แล้ว โปรเจกต์ใหม่ควรย้ายไปใช้ OAuth2/OIDC resource server support มาตรฐานของ framework แทน
 - **ผสม responsibility ระหว่าง authentication กับ authorization ใน middleware เดียว** — การตรวจสอบว่า token ถูกต้อง (authentication) กับการเช็คว่า user มีสิทธิ์เข้าถึง resource นั้นหรือไม่ (authorization) ควรแยกเป็นคนละ layer หากผูกรวมกันในที่เดียวจะทดสอบและ debug ยากขึ้นมากเมื่อ role/policy เปลี่ยน
 
-> 💡 Real World Example
+> 💡 ตัวอย่างจากของจริง
 >
 > **Spring Security oauth2ResourceServer** — เป็นตัวอย่าง production-grade ของการใช้ middleware มาตรฐานแทน Keycloak adapter เฉพาะทาง เพียงกำหนด issuer-uri ก็ทำงานได้กับ identity provider ใด ๆ ที่รองรับ OIDC ไม่ใช่แค่ Keycloak
 >
@@ -135,7 +135,7 @@ export const quizFrameworkAdapters = [
   {
     q: 'Spring Security ค้นหา JWKS URL จาก issuer-uri ได้อย่างไร?',
     options: [
-      'มัน hardcode ไว้ใน source code ของ Spring Security สำหรับ Keycloak',
+      'hardcode ไว้ใน source code ของ Spring Security สำหรับ Keycloak',
       'คุณต้องกำหนดค่าด้วยตนเองใน application.yml',
       'Spring ดึง OIDC discovery document ที่ issuer-uri/.well-known/openid-configuration แล้วอ่านค่าจาก field jwks_uri',
       'Spring เรียก Keycloak admin API เพื่อดึง key',

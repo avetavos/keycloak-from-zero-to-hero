@@ -15,7 +15,7 @@ import ProgressTracker from '../../../../components/ProgressTracker.tsx';
 
 ## โมดูลนี้ครอบคลุมอะไรบ้าง
 
-โมดูลนี้จะสอนองค์ประกอบหลักสามอย่างที่ทุกการ deploy Keycloak ประกอบขึ้นมา ได้แก่ **realm**, **client** และ **role** ก่อนที่คุณจะสามารถรักษาความปลอดภัยให้แอปพลิเคชันสักตัวด้วย Keycloak ได้ คุณจำเป็นต้องเข้าใจว่าแนวคิดเหล่านี้คืออะไร เกี่ยวข้องกันอย่างไร และจะสร้างกับตั้งค่ามันใน admin console ได้อย่างไร
+โมดูลนี้จะสอนองค์ประกอบหลักสามอย่างที่ทุกการ deploy Keycloak ประกอบขึ้นมา ได้แก่ **realm**, **client** และ **role** ก่อนที่คุณจะสามารถรักษาความปลอดภัยให้แอปพลิเคชันสักตัวด้วย Keycloak ได้ คุณจำเป็นต้องเข้าใจว่าแนวคิดเหล่านี้คืออะไร เกี่ยวข้องกันอย่างไร และจะสร้างกับตั้งค่าใน admin console ได้อย่างไร
 
 เมื่อจบโมดูลนี้ คุณจะสามารถ:
 
@@ -23,19 +23,19 @@ import ProgressTracker from '../../../../components/ProgressTracker.tsx';
 - ลงทะเบียนแอปพลิเคชัน (client) เข้ากับ Keycloak ได้
 - เข้าใจความแตกต่างระหว่าง public client กับ confidential client และเลือกใช้ตัวที่เหมาะสมได้
 - สร้าง realm role และ client role แล้วกำหนดให้กับ user ได้
-- อ่าน JWT ที่ถอดรหัสแล้วและค้นหา role ภายในมันได้
+- อ่าน JWT ที่ถอดรหัสแล้วและค้นหา role ที่อยู่ข้างในได้
 
 ## องค์ประกอบหลักสามอย่าง
 
 ### Realm
 
-**realm** คือขอบเขตการแยกระดับบนสุด (top-level isolation boundary) ของ Keycloak ลองนึกถึงมันเหมือน tenant หนึ่ง ๆ ที่มีชุดของ user, client, role, identity provider และการตั้งค่า token เป็นของตัวเอง ไม่มีอะไรรั่วไหลข้ามระหว่าง realm — session ใน realm A ไม่สามารถยืนยันตัวตน user เข้าสู่ realm B ได้
+**realm** คือขอบเขตการแยกระดับบนสุด (top-level isolation boundary) ของ Keycloak ลองนึกถึง realm เป็น tenant หนึ่ง ๆ ที่มีชุดของ user, client, role, identity provider และการตั้งค่า token เป็นของตัวเอง ไม่มีอะไรรั่วไหลข้ามระหว่าง realm — session ใน realm A ไม่สามารถยืนยันตัวตน user เข้าสู่ realm B ได้
 
-Keycloak มาพร้อม realm ที่สร้างไว้ล่วงหน้าหนึ่งตัวคือ **master** realm master คือ realm สำหรับงานบริหารจัดการ — คุณใช้มันเพื่อ log in เข้า admin console และจัดการ realm อื่น ๆ คุณไม่ควร deploy แอปพลิเคชันของตัวเองไว้ภายใน master realm เด็ดขาด
+Keycloak มาพร้อม realm ที่สร้างไว้ล่วงหน้าหนึ่งตัวคือ **master** realm master คือ realm สำหรับงานบริหารจัดการ — คุณใช้ realm นี้ log in เข้า admin console และจัดการ realm อื่น ๆ คุณไม่ควร deploy แอปพลิเคชันของตัวเองไว้ภายใน master realm เด็ดขาด
 
 ### Client
 
-**client** คือแอปพลิเคชันใด ๆ ที่มอบหมายงาน authentication ให้ Keycloak จัดการ client อาจเป็น single-page app (SPA), mobile app, แอปพลิเคชันเว็บฝั่ง server หรือ service แบบ machine-to-machine ก็ได้ client แต่ละตัวจะลงทะเบียนตัวเองไว้ใน realm หนึ่ง ประกาศ redirect URI ของมัน และรับ token จาก Keycloak หลังจาก user ยืนยันตัวตนแล้ว
+**client** คือแอปพลิเคชันใด ๆ ที่มอบหมายงาน authentication ให้ Keycloak จัดการ client อาจเป็น single-page app (SPA), mobile app, แอปพลิเคชันเว็บฝั่ง server หรือ service แบบ machine-to-machine ก็ได้ client แต่ละตัวจะลงทะเบียนตัวเองไว้ใน realm หนึ่ง ประกาศ redirect URI ของตัวเอง และรับ token จาก Keycloak หลังจาก user ยืนยันตัวตนแล้ว
 
 ### Role
 

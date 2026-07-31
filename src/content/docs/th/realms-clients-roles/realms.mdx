@@ -17,7 +17,7 @@ import ProgressTracker from '../../../../components/ProgressTracker.tsx';
 
 ## master realm
 
-Keycloak ติดตั้งมาพร้อม realm หนึ่งตัวอยู่แล้วคือ **master** master realm มีจุดประสงค์พิเศษ: มันคือ realm สำหรับงานบริหารจัดการ เมื่อคุณเปิด Keycloak admin console แล้ว log in คุณกำลังยืนยันตัวตนกับ master อยู่
+Keycloak ติดตั้งมาพร้อม realm หนึ่งตัวอยู่แล้วคือ **master** master realm มีจุดประสงค์พิเศษ: เป็น realm สำหรับงานบริหารจัดการ เมื่อคุณเปิด Keycloak admin console แล้ว log in คุณกำลังยืนยันตัวตนกับ master อยู่
 
 master realm สามารถสร้างและจัดการ realm อื่น ๆ ได้ แต่ไม่ควรนำไปใช้ลงทะเบียนแอปพลิเคชันของคุณเองหรือเก็บ user ของแอปพลิเคชันของคุณ การปนกัน user ของแอปกับ super-user ฝ่ายบริหารของ master ถือเป็นความเสี่ยงด้านความปลอดภัยที่ร้ายแรง
 
@@ -79,20 +79,20 @@ http://localhost:8080/realms/{realm-name}/protocol/openid-connect/certs
 อย่าลงทะเบียนแอปพลิเคชันของคุณหรือเก็บ user ของแอปพลิเคชันไว้ใน master realm master realm สงวนไว้สำหรับการบริหารจัดการ Keycloak ให้สร้าง realm เฉพาะสำหรับทุกโปรเจกต์หรือทุกผลิตภัณฑ์
 </Callout>
 
-## Trade-offs
+## ข้อแลกเปลี่ยน
 
 | ตัวเลือก | Benefit | Cost |
 |---|---|---|
 | realm ต่อแอป (realm-per-app) | แยก user, session และ token policy ของแต่ละแอปออกจากกันอย่างสมบูรณ์ ลดผลกระทบเมื่อแอปหนึ่งมีปัญหาความปลอดภัย | ต้องดูแลหลาย realm — theme, SMTP, identity provider ต้องตั้งค่าซ้ำในแต่ละ realm เพิ่ม operational overhead |
 | shared realm (หลายแอปอยู่ realm เดียว) | ตั้งค่าและดูแลรักษาง่ายกว่า user เดียวใช้ได้กับหลายแอปแบบ SSO ทันที | isolation อ่อนกว่า — การตั้งค่าหรือ role ที่ผิดพลาดในแอปหนึ่งอาจกระทบแอปอื่นในขอบเขตเดียวกัน |
 
-## Common Mistakes
+## ข้อผิดพลาดที่พบบ่อย
 
 - **ลงทะเบียนแอปจริงไว้ใน master realm** — master ควรสงวนไว้สำหรับงานบริหารจัดการ Keycloak เท่านั้น ให้สร้าง realm แยกสำหรับทุกโปรเจกต์หรือผลิตภัณฑ์ เพื่อไม่ให้ user ของแอปปนกับ super-user ฝ่ายบริหาร
 - **ลืมตั้งค่า token lifespan ให้เหมาะกับความเสี่ยงของแอป** — ใช้ค่า default ของทุก realm เหมือนกันหมด ทั้งที่บาง realm (เช่น banking) ควรมี access token lifespan สั้นกว่า realm ที่ความเสี่ยงต่ำ
 - **ไม่ rotate signing key เป็นระยะใน production** — ปล่อยให้ key เดิมใช้งานตลอดอายุของระบบ เพิ่มความเสี่ยงหาก private key รั่วไหลโดยไม่รู้ตัว
 
-> 💡 Real World Example
+> 💡 ตัวอย่างจากของจริง
 >
 > **Multi-tenant SaaS platform** — แพลตฟอร์ม SaaS จำนวนมากใช้ pattern realm-per-customer โดยสร้าง realm แยกให้ลูกค้าแต่ละราย ทำให้ user, role และ session ของลูกค้าแต่ละคนแยกขาดจากกันอย่างสมบูรณ์ พร้อมรองรับการทำ custom branding และ identity provider ต่อ tenant ได้ง่าย
 >

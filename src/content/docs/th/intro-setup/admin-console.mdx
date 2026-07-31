@@ -14,7 +14,7 @@ admin console คือศูนย์ควบคุม Keycloak ของค�
 ## การเข้าสู่ระบบ
 
 1. ตรวจสอบให้แน่ใจว่า Keycloak กำลังทำงานอยู่ (ดู lesson ก่อนหน้าหากยังไม่ได้เริ่ม)
-2. เปิด `http://localhost:8080` ในเบราว์เซอร์
+2. เปิด `http://localhost:8080` ใน browser
 3. คลิก "Administration Console"
 4. ป้อน `admin` เป็น username และ `admin` เป็น password
 5. คลิก "Sign in" คุณจะมาถึงหน้า home ของ master realm
@@ -53,20 +53,20 @@ sidebar ให้คุณเข้าถึง resource ทุกอย่า�
 สลับไปยัง realm ของคุณเสมอ (ผ่าน top-left selector) ก่อนสร้าง client, user หรือ role — เพราะง่ายมากที่จะทำงานผิด realm โดยไม่ตั้งใจ object ที่สร้างใน master ไม่ปรากฏใน realm ของแอปพลิเคชัน
 </Callout>
 
-## Trade-offs
+## ข้อแลกเปลี่ยน
 
 | ตัวเลือก | Benefit | Cost |
 |---|---|---|
 | จัดการผ่าน admin console (manual) | เห็นผลทันที เหมาะกับการเรียนรู้และการตั้งค่าที่ทำครั้งเดียว ไม่ต้องเขียนโค้ด | ทำซ้ำยาก, ไม่มี audit trail เป็น version control, เสี่ยงต่อ human error เมื่อทีมโตขึ้น |
 | จัดการผ่าน REST API / Terraform provider | Configuration เป็น code, review ผ่าน pull request ได้, reproduce environment ใหม่ได้เร็ว | ต้องเขียนและดูแล script/Terraform state เพิ่มเติม, curve การเรียนรู้สูงกว่าตอนเริ่มต้น |
 
-## Common Mistakes
+## ข้อผิดพลาดที่พบบ่อย
 
 - **ไม่เปลี่ยน default admin credentials (`admin`/`admin`)** — credential เริ่มต้นนี้ตั้งใจให้ใช้เฉพาะตอน bootstrap เท่านั้น ต้องเปลี่ยน password หรือสร้าง admin user ใหม่แล้วปิด account เริ่มต้นก่อนเปิดใช้งานจริง
 - **สร้าง client ของแอปพลิเคชันจริงไว้ใน master realm** — master realm ควรสงวนไว้สำหรับบริหาร Keycloak เองเท่านั้น การใส่ client ของแอปจริงปนกับ admin account ทำให้ blast radius ของช่องโหว่ใหญ่เกินจำเป็น
 - **ลืมตรวจสอบ realm selector ก่อนสร้าง resource** — เผลอสร้าง user, client หรือ role ผิด realm เป็นเรื่องที่เกิดบ่อยมาก โดยเฉพาะเมื่อสลับไปมาระหว่างหลาย realm ในวันเดียว
 
-> 💡 Real World Example
+> 💡 ตัวอย่างจากของจริง
 >
 > **ทีม platform ที่จัดการหลายแอป** — มักสร้าง realm แยกต่างหากสำหรับแต่ละ business unit หรือแต่ละ environment (dev/staging/prod) แล้วใช้ Keycloak Terraform provider provision client และ role แบบ reproducible แทนการคลิกผ่าน admin console ทุกครั้ง
 >

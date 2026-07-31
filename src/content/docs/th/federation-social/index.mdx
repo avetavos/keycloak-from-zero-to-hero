@@ -25,7 +25,7 @@ import ProgressTracker from '../../../../components/ProgressTracker.tsx';
 
 ### User federation
 
-**User federation** หมายความว่า Keycloak เชื่อมต่อกับ external user store (โดยทั่วไปคือ LDAP หรือ Active Directory) และอ่านข้อมูลผู้ใช้จากที่นั่น Keycloak ไม่จำเป็นต้องคัดลอกผู้ใช้เข้า database ของตัวเองโดยค่าเริ่มต้น — มันค้นหาจาก external store เมื่อต้องการ ผู้ใช้สามารถ login ด้วย credentials ที่มีอยู่เดิม (รหัสผ่าน LDAP)
+**User federation** หมายความว่า Keycloak เชื่อมต่อกับ external user store (โดยทั่วไปคือ LDAP หรือ Active Directory) และอ่านข้อมูลผู้ใช้จากที่นั่น Keycloak ไม่จำเป็นต้องคัดลอกผู้ใช้เข้า database ของตัวเองโดยค่าเริ่มต้น — แต่จะค้นหาจาก external store เมื่อต้องการ ผู้ใช้สามารถ login ด้วย credentials ที่มีอยู่เดิม (รหัสผ่าน LDAP)
 
 ใช้ user federation เมื่อ:
 

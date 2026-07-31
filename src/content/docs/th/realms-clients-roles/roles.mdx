@@ -21,7 +21,7 @@ Keycloak มี role อยู่สองแบบ:
 
 ## Realm role
 
-realm role มีผลทั่วทั้ง realm มันเหมาะกับสิทธิ์แบบหยาบ (coarse-grained) ที่ใช้ทั้งแอปพลิเคชัน เช่น `admin`, `support-agent` หรือ `billing-viewer` ที่อาจเกี่ยวข้องกับแอปพลิเคชันมากกว่าหนึ่งตัว
+realm role มีผลทั่วทั้ง realm เหมาะกับสิทธิ์แบบหยาบ (coarse-grained) ที่ใช้ทั้งแอปพลิเคชัน เช่น `admin`, `support-agent` หรือ `billing-viewer` ที่อาจเกี่ยวข้องกับแอปพลิเคชันมากกว่าหนึ่งตัว
 
 ### การสร้าง realm role
 
@@ -36,7 +36,7 @@ realm role มีผลทั่วทั้ง realm มันเหมาะ�
 
 ## Client role
 
-client role ถูกกำหนดบน client เฉพาะตัวและมีความหมายเฉพาะกับ client นั้นเท่านั้น มันเหมาะกับสิทธิ์แบบละเอียด (fine-grained) ที่เจาะจงกับแอปพลิเคชัน เช่น `orders:read`, `orders:write` หรือ `reports:export`
+client role ถูกกำหนดบน client เฉพาะตัวและมีความหมายเฉพาะกับ client นั้นเท่านั้น เหมาะกับสิทธิ์แบบละเอียด (fine-grained) ที่เจาะจงกับแอปพลิเคชัน เช่น `orders:read`, `orders:write` หรือ `reports:export`
 
 ### การสร้าง client role
 
@@ -49,7 +49,7 @@ client role ถูกกำหนดบน client เฉพาะตัวแล
 
 ## Composite role
 
-**composite role** คือ role ที่ให้สิทธิ์ทุก role ที่มันบรรจุอยู่โดยอัตโนมัติ แทนที่จะกำหนด role ห้าตัวแยกกันให้พนักงานใหม่ทุกคน คุณสร้าง composite role หนึ่งตัว (`employee`) ที่รวมทั้งหมดเข้าด้วยกัน แล้วกำหนดเพียงตัวเดียว
+**composite role** คือ role ที่ให้สิทธิ์ทุก role ที่บรรจุอยู่โดยอัตโนมัติ แทนที่จะกำหนด role ห้าตัวแยกกันให้พนักงานใหม่ทุกคน คุณสร้าง composite role หนึ่งตัว (`employee`) ที่รวมทั้งหมดเข้าด้วยกัน แล้วกำหนดเพียงตัวเดียว
 
 ### การสร้าง composite role
 
@@ -75,7 +75,7 @@ role จะมีผลทันทีสำหรับ login session ใหม
 
 ## role ปรากฏใน token อย่างไร
 
-หลังจาก user ยืนยันตัวตน access token ของพวกเขา (ซึ่งเป็น JWT) จะมี role อยู่ใน claim มาตรฐานสองตัว:
+หลังจาก user ยืนยันตัวตน access token ของพวกเขา (ที่เป็น JWT) จะมี role อยู่ใน claim มาตรฐานสองตัว:
 
 - `realm_access.roles` — array ของ realm-level role ทั้งหมดที่กำหนดให้ user
 - `resource_access.{client-id}.roles` — array ของ client role สำหรับ client เฉพาะตัวนั้น
@@ -138,13 +138,13 @@ if (realmRoles.includes('app-admin')) {
 | `manage-account` | `account` client | ให้ user จัดการบัญชีของตัวเองได้ |
 | `view-profile` | `account` client | ให้ user ดูโปรไฟล์ของตัวเองได้ |
 
-คุณไม่จำเป็นต้องกำหนด `uma_authorization` หรือ `offline_access` ให้ user ด้วยตนเอง; พวกมันถูกให้สิทธิ์โดยค่าเริ่มต้นผ่าน composite role ชื่อ `default-roles-{realm}`
+คุณไม่จำเป็นต้องกำหนด `uma_authorization` หรือ `offline_access` ให้ user ด้วยตนเอง; role เหล่านี้ถูกให้สิทธิ์โดยค่าเริ่มต้นผ่าน composite role ชื่อ `default-roles-{realm}`
 
 <Callout title="ใช้ composite role เพื่อรวมสิทธิ์เข้าด้วยกัน">
 แทนที่จะกำหนด role แยกกันหลายตัวให้แต่ละ user ให้สร้าง composite role ที่รวมสิทธิ์สำหรับ persona หนึ่ง ๆ ไว้ (เช่น `editor`, `viewer`, `admin`) การกำหนด composite role เพียงตัวเดียวจัดการและตรวจสอบได้ง่ายกว่าการกำหนด role แยกกันสิบตัวต่อ user
 </Callout>
 
-## Trade-offs
+## ข้อแลกเปลี่ยน
 
 | ตัวเลือก | Benefit | Cost |
 |---|---|---|
@@ -152,15 +152,15 @@ if (realmRoles.includes('app-admin')) {
 | Client role | จำกัดขอบเขตอยู่ที่ client เดียว เหมาะกับสิทธิ์แบบละเอียดที่เจาะจงกับแอปพลิเคชัน (เช่น `orders:write`) | ต้องกำหนดซ้ำในทุก client ที่มีสิทธิ์คล้ายกัน จัดการยากขึ้นเมื่อมีหลาย client |
 | Group + role vs กำหนด role ตรงให้ user | มอบหมาย role ให้คนจำนวนมากพร้อมกันผ่าน group เดียว จัดการง่ายเมื่อมีคนเข้า-ออกทีมบ่อย | ต้องออกแบบโครงสร้าง group ล่วงหน้าให้ดี ถ้าโครงสร้างผิดจะแก้ทีหลังยาก |
 
-## Common Mistakes
+## ข้อผิดพลาดที่พบบ่อย
 
 - **กำหนด role ให้ user ทีละคนแทนที่จะใช้ group** — เมื่อมีพนักงานเข้าใหม่หรือเปลี่ยนตำแหน่งบ่อย การไล่กำหนด role ทีละคนทำให้เกิดความผิดพลาดและ role ตกหล่นได้ง่าย ควรผูก role เข้ากับ group แล้วกำหนด user เข้า group แทน
 - **ใช้ client role ทั้งหมดโดยไม่มี realm role เลย แม้สิทธิ์นั้นใช้ร่วมกันหลายแอป** — ทำให้ต้องกำหนด role ซ้ำ ๆ ในทุก client เมื่อจริง ๆ ควรยกสิทธิ์ที่ใช้ร่วมกันขึ้นไปเป็น realm role
 - **ลืมว่า role ใหม่จะไม่มีผลกับ session เดิมทันที** — ทีมมักเข้าใจผิดว่าการกำหนด role ใหม่จะมีผลทันที ทั้งที่ user ต้อง login ใหม่หรือรอ token refresh ก่อน ทำให้เข้าใจผิดว่าการตั้งค่า "ไม่ทำงาน"
 
-> 💡 Real World Example
+> 💡 ตัวอย่างจากของจริง
 >
-> **GitHub Organizations** — ใช้แนวคิดคล้าย realm role กับ team-scoped permission โดยสิทธิ์ระดับ organization (เช่น owner, member) ใช้ได้ทั่วทุก repository ในขณะที่สิทธิ์ต่อ repository ทำหน้าที่คล้าย client role ที่จำกัดขอบเขตแคบลง
+> **GitHub Organizations** — ใช้แนวคิดคล้าย realm role กับ team-scoped permission โดยสิทธิ์ระดับ organization (เช่น owner, member) ใช้ได้ทั่วทุก repository ส่วนสิทธิ์ระดับ repository ทำหน้าที่คล้าย client role ที่จำกัดขอบเขตแคบลง
 >
 > **Enterprise onboarding ผ่าน group** — องค์กรขนาดใหญ่จำนวนมากผูก composite role เข้ากับ group ตามแผนก (เช่น `engineering`, `sales`) เมื่อพนักงานใหม่เข้าทีม HR system เพียงเพิ่ม user เข้า group ที่ถูกต้อง role ทั้งหมดของแผนกนั้นก็ถูกกำหนดให้อัตโนมัติผ่าน Keycloak
 
@@ -190,13 +190,13 @@ export const quizRoles = [
     options: [
       'role ที่กำหนดให้ได้เฉพาะกับ admin user เท่านั้น',
       'role ที่ถูกกำหนดทั้งใน realm และใน client พร้อมกัน',
-      'role ที่ให้สิทธิ์ทุก role ที่มันบรรจุอยู่โดยอัตโนมัติ',
+      'role ที่ให้สิทธิ์ทุก role ที่บรรจุอยู่โดยอัตโนมัติ',
       'role ที่สร้างขึ้นจากการรวมสอง realm เข้าด้วยกัน',
     ],
     answer: 2,
   },
   {
-    q: 'หากคุณกำหนด role ใหม่ให้ user มันจะมีผลกับ session ที่มีอยู่เดิมเมื่อใด?',
+    q: 'หากคุณกำหนด role ใหม่ให้ user จะมีผลกับ session ที่มีอยู่เดิมเมื่อใด?',
     options: [
       'ทันที — token ที่มีอยู่เดิมจะถูกอัปเดตแบบเรียลไทม์',
       'หลังจาก user ยืนยันตัวตนใหม่หรือ token ของพวกเขาถูก refresh',

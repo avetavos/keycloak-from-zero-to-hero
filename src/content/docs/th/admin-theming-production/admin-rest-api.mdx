@@ -74,7 +74,7 @@ Admin endpoint ทั่วไป:
 
 ## kcadm.sh เป็นทางเลือก
 
-Keycloak มาพร้อม CLI tool ชื่อ `kcadm.sh` (ภายใน container ที่ `/opt/keycloak/bin/kcadm.sh`) มันห่อ Admin REST API ด้วย syntax ที่เป็นมิตรยิ่งขึ้น:
+Keycloak มาพร้อม CLI tool ชื่อ `kcadm.sh` (ภายใน container ที่ `/opt/keycloak/bin/kcadm.sh`) โดยห่อ Admin REST API ไว้ด้วย syntax ที่เป็นมิตรกว่า:
 
 ```bash
 # Authenticate once
@@ -93,7 +93,7 @@ Keycloak มาพร้อม CLI tool ชื่อ `kcadm.sh` (ภายใน
 สร้าง service-account client เฉพาะทางที่มีเฉพาะ admin role ที่จำเป็นจริงๆ — อย่าทำงานอัตโนมัติด้วย master admin username และ password นี่จะจำกัดความเสียหายหาก credentials หลุดออกไป และยังช่วยให้คุณ rotate client secret ได้อิสระ
 </Callout>
 
-## Trade-offs
+## ข้อแลกเปลี่ยน
 
 | ตัวเลือก | Benefit | Cost |
 |---|---|---|
@@ -101,13 +101,13 @@ Keycloak มาพร้อม CLI tool ชื่อ `kcadm.sh` (ภายใน
 | Service account เฉพาะทาง (confidential client) | จำกัดสิทธิ์ให้เหลือเฉพาะ `realm-management` role ที่จำเป็น rotate secret ได้อิสระต่อ pipeline | ต้องสร้างและดูแล client เพิ่มอีกตัว ต้องกำหนด role ให้ถูกต้องล่วงหน้า |
 | `kcadm.sh` CLI | syntax สั้นกว่า raw curl, cache token ให้อัตโนมัติต่อ session | ใช้ได้เฉพาะเมื่อเข้าถึง shell ของ container/host ได้ ไม่เหมาะกับ automation ที่รันนอก environment ของ Keycloak |
 
-## Common Mistakes
+## ข้อผิดพลาดที่พบบ่อย
 
 - **ทำงานอัตโนมัติทั้งหมดด้วย master admin username/password** — เพิ่มความเสียหายเป็นวงกว้างหาก credentials รั่วไหล และ rotate ยากเพราะ credentials นี้ผูกกับทุก script ควรสร้าง service account เฉพาะทางแทน
 - **กำหนด role ให้ service account กว้างเกินความจำเป็น** — เผื่อไว้ล่วงหน้าด้วยการให้ `realm-management` ทุก role ทั้งที่ script ต้องใช้แค่ `manage-users` เพียงอย่างเดียว เพิ่มความเสี่ยงหาก client secret หลุด
 - **ลืมว่า admin token มีอายุสั้นมาก** — เก็บ token ไว้ในตัวแปรแล้วใช้ซ้ำข้าม script run โดยไม่ขอใหม่ ทำให้ automation ล้มเหลวกลางทางด้วย 401 เมื่อ token หมดอายุ (ปกติ ~60 วินาที)
 
-> 💡 Real World Example
+> 💡 ตัวอย่างจากของจริง
 >
 > **CI/CD pipeline สำหรับ config-as-code** — ทีม platform จำนวนมากใช้ service account client เพื่อ import/export realm configuration เป็นส่วนหนึ่งของ deployment pipeline แทนที่จะให้ engineer คลิกผ่าน admin console ด้วยมือ
 >
@@ -147,10 +147,10 @@ export const quizAdminApi = [
   {
     q: 'ทำไม kcadm.sh บางครั้งถึงง่ายกว่า raw curl สำหรับ admin script?',
     options: [
-      'มันสื่อสารกับ database โดยตรง',
-      'มัน cache admin token ไว้ในเครื่อง ทำให้ authenticate เพียงครั้งเดียวต่อ session',
-      'มันข้าม realm isolation',
-      'มันไม่ต้องใช้ Keycloak server ที่กำลังทำงานอยู่',
+      'สื่อสารกับ database โดยตรง',
+      'cache admin token ไว้ในเครื่อง ทำให้ authenticate เพียงครั้งเดียวต่อ session',
+      'ข้าม realm isolation',
+      'ไม่ต้องใช้ Keycloak server ที่กำลังทำงานอยู่',
     ],
     answer: 1,
   },

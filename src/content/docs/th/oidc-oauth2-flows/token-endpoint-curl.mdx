@@ -12,7 +12,7 @@ import ProgressTracker from '../../../../components/ProgressTracker.tsx';
 
 ## Direct Access Grant คืออะไร
 
-Direct Access Grant (หรือ password grant) ช่วยให้ client แลก username และ password ของผู้ใช้เป็น token โดยตรงที่ token endpoint โดยไม่ต้องผ่านการ redirect ของเบราว์เซอร์
+Direct Access Grant (หรือ password grant) ช่วยให้ client แลก username และ password ของผู้ใช้เป็น token โดยตรงที่ token endpoint โดยไม่ต้องผ่านการ redirect ของ browser
 
 เนื่องจาก credential ของผู้ใช้ถูกส่งตรงไปยัง client ก่อนแล้วค่อยส่งต่อไปยัง Keycloak grant นี้จึงเหมาะสำหรับ testing script, CLI tool และสภาพแวดล้อมการพัฒนาเท่านั้น — ไม่ใช่แอปที่ใช้งานจริง
 
@@ -20,7 +20,7 @@ Direct Access Grant (หรือ password grant) ช่วยให้ client �
 
 ใช้ Direct Access Grant สำหรับ:
 
-- Test script ที่ต้องการ token โดยไม่มีเบราว์เซอร์
+- Test script ที่ต้องการ token โดยไม่มี browser
 - CLI tool ที่ authenticate ด้วย credential ของผู้ใช้ชั่วคราว
 - การทดสอบ API ในสภาพแวดล้อม development
 
@@ -68,24 +68,24 @@ export const jwtDecodeCode = `echo \${ACCESS_TOKEN} | cut -d. -f2 | base64 -d | 
 <CopyCode client:visible code={jwtDecodeCode} label="Copy JWT decode" />
 
 <Callout title="Password grant ใช้สำหรับการทดสอบเท่านั้น">
-Direct Access Grant เหมาะสำหรับ testing script และ CLI tool แต่อย่าใช้ในแอปจริง เพราะเปิดเผย credential ของผู้ใช้ให้กับ client ใช้ Authorization Code + PKCE สำหรับแอปเบราว์เซอร์และมือถือ
+Direct Access Grant เหมาะสำหรับ testing script และ CLI tool แต่อย่าใช้ในแอปจริง เพราะเปิดเผย credential ของผู้ใช้ให้กับ client ใช้ Authorization Code + PKCE สำหรับแอป browser และมือถือ
 </Callout>
 
-## Trade-offs
+## ข้อแลกเปลี่ยน
 
 | ตัวเลือก | Benefit | Cost |
 |---|---|---|
 | ทดสอบด้วย curl ตรง ๆ ที่ token endpoint | เห็น request/response ดิบ ๆ ชัดเจน เข้าใจ protocol จริง ๆ ไม่มี abstraction บัง | ต้องจัดการ token lifecycle เอง (refresh, expiry, storage) และเสี่ยง credential หลุดถ้าไม่ระวัง |
 | ใช้ OIDC client library (เช่น `openid-client`, Keycloak adapter) | Library จัดการ token refresh, validation, และ security best practice ให้อัตโนมัติ | เพิ่ม dependency และมี abstraction ที่ต้องเรียนรู้ ไม่เห็น raw protocol ตรง ๆ เหมือน curl |
 
-## Common Mistakes
+## ข้อผิดพลาดที่พบบ่อย
 
 - **พิมพ์ password หรือ client secret ตรง ๆ ใน curl command** — คำสั่งที่พิมพ์ในเทอร์มินัลจะถูกบันทึกลง shell history (`.bash_history`, `.zsh_history`) แบบ plaintext ควรใช้ environment variable หรือไฟล์ `.env` ที่ไม่ commit เข้า git แทนการพิมพ์ credential ตรง ๆ
 - **แปะ access token ลงใน log หรือแชร์ใน chat เพื่อ debug** — access token และ refresh token คือของมีค่าเทียบเท่า password ใครก็ตามที่มี token ก่อน expire สามารถเรียก API แทนผู้ใช้ได้เลย ไม่ควร log token แบบเต็ม ควร mask หรือ log แค่บางส่วน
 - **ใช้ Direct Access Grant (password grant) กับแอป production จริง** — grant นี้เหมาะสำหรับ testing script และ CLI tool เท่านั้น เพราะต้องส่ง username/password ตรงให้ client ก่อน ถ้าใช้ในแอปจริงเท่ากับเปิดเผย credential ผู้ใช้ให้กับ client โดยไม่จำเป็น
 - **ไม่ปิด `HISTCONTROL` หรือลืมลบ history หลังทดสอบด้วย curl** — เมื่อ debug เสร็จแล้วลืมล้าง credential ที่หลุดไปอยู่ใน shell history ทำให้ secret ค้างอยู่ในเครื่องระยะยาวโดยไม่รู้ตัว
 
-> 💡 Real World Example
+> 💡 ตัวอย่างจากของจริง
 >
 > **Postman หรือ Insomnia ใน dev workflow** — ทีม dev มักใช้เครื่องมือเหล่านี้แทน curl ตรง ๆ เพื่อเก็บ credential ใน encrypted vault แทนที่จะพิมพ์ผ่าน command line ที่เสี่ยงหลุดไปอยู่ใน shell history
 >

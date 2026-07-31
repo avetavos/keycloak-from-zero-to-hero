@@ -51,10 +51,10 @@ export const inspectTokenCode = `jwt_payload=\$(echo "YOUR_ACCESS_TOKEN" | cut -
 <CopyCode client:visible code={inspectTokenCode} label="Copy curl" />
 
 <Callout title="Access token อายุสั้น + refresh token = best practice">
-ตั้งค่า access token ให้มีอายุสั้น (1–5 นาที) และพึ่ง refresh token เพื่อรักษา session หาก access token ถูกดักจับหรือหลุดออกไป มันจะหมดอายุก่อนที่ผู้โจมตีจะใช้ประโยชน์ได้มาก
+ตั้งค่า access token ให้มีอายุสั้น (1–5 นาที) และพึ่ง refresh token เพื่อรักษา session หาก access token ถูกดักจับหรือหลุดออกไป จะหมดอายุก่อนที่ผู้โจมตีจะใช้ประโยชน์ได้มาก
 </Callout>
 
-## Trade-offs
+## ข้อแลกเปลี่ยน
 
 | ตัวเลือก | Benefit | Cost |
 |---|---|---|
@@ -63,14 +63,14 @@ export const inspectTokenCode = `jwt_payload=\$(echo "YOUR_ACCESS_TOKEN" | cut -
 | Refresh token / SSO session idle สั้น | บังคับให้ session ตายไวเมื่อผู้ใช้ไม่ได้ใช้งาน ลดความเสี่ยงจาก refresh token ที่หลุดไปพร้อมเครื่องที่ถูกทิ้งไว้ | ผู้ใช้ต้อง login ใหม่บ่อยขึ้นถ้าห่างจากแอปไปนาน กระทบ UX โดยเฉพาะแอปที่เปิดค้างไว้เป็นพักๆ |
 | Offline token (refresh token ที่รอดจากการ restart server) | เหมาะกับ background job หรือ mobile app ที่ต้องทำงานต่อเนื่องโดยไม่มี user คอย login ซ้ำ | มีอายุยาวมากโดยธรรมชาติ ถ้าหลุดหรือไม่ถูก revoke ตอนเลิกใช้งาน ผู้โจมตีเข้าถึงได้เป็นระยะเวลานาน |
 
-## Common Mistakes
+## ข้อผิดพลาดที่พบบ่อย
 
 - **ตั้ง access token lifespan ไว้ 1 ชั่วโมงขึ้นไป "เพื่อความสะดวก"** — ยิ่ง lifespan ยาว ยิ่งขยาย window ที่ token ที่หลุดไปใช้งานได้ เพราะ access token แบบ JWT revoke กลางคันไม่ได้ ควรตั้งให้สั้น (นาทีหลักหน่วยถึงสิบ) แล้วพึ่ง refresh token แทน
 - **เก็บ access token หรือ refresh token ไว้ใน localStorage** — JavaScript ใดๆ ที่รันบนหน้าเว็บอ่าน localStorage ได้ทั้งหมด หากแอปมีช่องโหว่ XSS แม้จุดเดียว ผู้โจมตีขโมย token ไปใช้ต่อได้ทันที ควรเก็บใน memory หรือ httpOnly cookie แทน
 - **ใส่ข้อมูลที่เปลี่ยนแปลงบ่อยหรือ sensitive ลงใน token claim แล้วคาดหวังให้เป็น real-time** (เช่น role ปัจจุบัน, ยอดเงิน, สถานะ subscription) — claim คือ snapshot ณ เวลาที่ token ถูกออกเท่านั้น ค่าจะไม่อัปเดตจนกว่าจะมีการ refresh token ใหม่ ทำให้ระบบที่เชื่อ claim เหล่านี้ตรงๆ อาจใช้ข้อมูลเก่าโดยไม่รู้ตัว
 - **ไม่ตั้ง SSO Session Max ให้เหมาะสม** — ปล่อยให้ session ต่ออายุได้เรื่อยๆ ผ่านการ refresh แบบไม่มีเพดานเวลาสูงสุด ทำให้ session ที่ควรตายไปนานแล้วยังใช้งานได้อยู่
 
-> 💡 Real World Example
+> 💡 ตัวอย่างจากของจริง
 >
 > **แอปธนาคาร (banking apps)** — มักตั้ง access token lifespan สั้นมากประมาณ 5 นาทีสำหรับแอปที่ต้องการความปลอดภัยสูง เพื่อจำกัดความเสียหายให้เหลือน้อยที่สุดหาก token หลุดออกไประหว่างทำธุรกรรม
 >

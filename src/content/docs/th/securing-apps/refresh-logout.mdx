@@ -59,7 +59,7 @@ keycloak.logout({ redirectUri: 'https://app.example.com/' });`;
 
 <CopyCode client:visible code={logoutCode} label="Copy logout snippet" />
 
-ภายใต้ hood นี้จะ redirect เบราว์เซอร์ไปที่:
+ภายใต้ hood นี้จะ redirect browser ไปที่:
 
 ```
 /realms/{realm}/protocol/openid-connect/logout
@@ -77,10 +77,10 @@ Keycloak จะล้าง SSO session cookie, ทำเครื่องห�
 | `keycloak.logout()` | ใช่ | ใช่ |
 
 <Callout title="กดไปที่ end-session endpoint — การ logout เฉพาะในแอปไม่เพียงพอ">
-การล้าง state ในแอปของคุณเพียงอย่างเดียวจะลบ token ออกจากหน่วยความจำเท่านั้น SSO session cookie ของ Keycloak ในเบราว์เซอร์ยังคงมีผล จนกว่าจะเรียก keycloak.logout() ผู้ใช้ยังคง login อยู่ทั่วโลกและสามารถกลับเข้าแอปของคุณ (หรือแอปอื่น ๆ ใน realm) โดยไม่ต้องใส่รหัสผ่าน
+การล้าง state ในแอปของคุณเพียงอย่างเดียวจะลบ token ออกจากหน่วยความจำเท่านั้น SSO session cookie ของ Keycloak ใน browser ยังคงมีผล จนกว่าจะเรียก keycloak.logout() ผู้ใช้ยังคง login อยู่ทั่วโลกและสามารถกลับเข้าแอปของคุณ (หรือแอปอื่น ๆ ใน realm) โดยไม่ต้องใส่รหัสผ่าน
 </Callout>
 
-## Trade-offs
+## ข้อแลกเปลี่ยน
 
 | ตัวเลือก | Benefit | Cost |
 |---|---|---|
@@ -88,13 +88,13 @@ Keycloak จะล้าง SSO session cookie, ทำเครื่องห�
 | บังคับ re-login ทันทีเมื่อ access token หมดอายุ | Implementation ง่ายกว่า ไม่ต้องจัดการ refresh flow ที่ซับซ้อน | UX แย่ลงมาก เพราะผู้ใช้ต้องกรอกรหัสผ่านซ้ำบ่อย ทั้งที่ SSO session จริง ๆ ยังไม่หมดอายุ |
 | ตั้งค่า SSO Session Idle/Max ให้สั้น | ลด window ความเสี่ยงหาก token หรือ session หลุด | ผู้ใช้ต้อง authenticate ใหม่บ่อยขึ้น กระทบ UX โดยเฉพาะแอปที่ใช้งานต่อเนื่องนาน ๆ |
 
-## Common Mistakes
+## ข้อผิดพลาดที่พบบ่อย
 
 - **ไม่ handle กรณี updateToken() reject** — ถ้า refresh token หมดอายุหรือถูกเพิกถอนแล้วแอปไม่ catch error ผู้ใช้จะเห็น API request ล้มเหลวเรื่อย ๆ โดยไม่รู้สาเหตุ ต้อง catch แล้วเรียก keycloak.login() เพื่อ redirect กลับไป authenticate ใหม่เสมอ
 - **Logout แค่ clear local state โดยไม่เรียก end-session endpoint** — ลบ token ออกจากหน่วยความจำอย่างเดียวไม่ได้ล้าง SSO session cookie ของ Keycloak ทำให้ผู้ใช้ "logout" จากแอปแต่ยัง login อยู่ทั่ว realm
 - **Retry refresh แบบไม่มีที่สิ้นสุดเมื่อ network ล้มเหลวชั่วคราว** — การไม่แยกระหว่าง network error กับ refresh token ที่หมดอายุจริง อาจทำให้แอป loop เรียก updateToken() รัว ๆ โดยไม่เคย fallback ไปหน้า login เลย
 
-> 💡 Real World Example
+> 💡 ตัวอย่างจากของจริง
 >
 > **keycloak-js updateToken pattern** — แอป production จำนวนมากเรียก updateToken(minValidity) แบบ silent ก่อนทุก API call ตามที่บทเรียนนี้แสดง และ catch การ reject เพื่อ redirect เข้า login เมื่อ refresh token หมดอายุจริง แทนที่จะปล่อยให้ request ล้มเหลวแบบเงียบ ๆ
 >
@@ -124,8 +124,8 @@ export const quizRefreshLogout = [
   {
     q: 'เหตุใดการล้าง state ของแอปในเครื่องเพียงอย่างเดียวจึงไม่เพียงพอสำหรับการ logout?',
     options: [
-      'เพราะ keycloak-js ไม่สามารถล้าง token cache ภายในของมันได้',
-      'เพราะ SSO session cookie ของ Keycloak ในเบราว์เซอร์ยังคงมีผลจนกว่าจะเรียก end-session endpoint',
+      'เพราะ keycloak-js ไม่สามารถล้าง token cache ภายในของตัวเองได้',
+      'เพราะ SSO session cookie ของ Keycloak ใน browser ยังคงมีผลจนกว่าจะเรียก end-session endpoint',
       'เพราะ backend ยังคงถือ access token อยู่',
       'เพราะ refresh token ถูกจัดเก็บใน localStorage โดยค่าเริ่มต้น',
     ],

@@ -21,7 +21,7 @@ import ProgressTracker from '../../../../components/ProgressTracker.tsx';
 - mobile app ที่ให้ user จัดการบัญชีของตัวเอง
 - backend microservice ที่เรียก service อื่นโดยใช้ token แบบ machine-to-machine
 
-client ทุกตัวอยู่ภายใน realm หนึ่งเดียวเท่านั้น หากคุณมีแอปพลิเคชันที่ต่างกันสองตัว ให้ลงทะเบียน client สองตัว — แม้ว่าพวกมันจะใช้ user ร่วมกันก็ตาม
+client ทุกตัวอยู่ภายใน realm หนึ่งเดียวเท่านั้น หากคุณมีแอปพลิเคชันที่ต่างกันสองตัว ให้ลงทะเบียน client สองตัว — แม้ว่าทั้งสองจะใช้ user ร่วมกันก็ตาม
 
 ## การสร้าง client
 
@@ -56,13 +56,13 @@ client ทุกตัวอยู่ภายใน realm หนึ่งเด
 - **Type** — OpenID Connect หรือ SAML
 - **Description** — บันทึกของคุณ (ไม่บังคับ)
 
-คลิกที่ client ID ใดก็ได้เพื่อเปิดการตั้งค่าและแท็บต่าง ๆ ของมัน (Settings, Credentials, Roles, Client scopes, Advanced ฯลฯ)
+คลิกที่ client ID ใดก็ได้เพื่อเปิดการตั้งค่าและแท็บต่าง ๆ ของตัวเอง (Settings, Credentials, Roles, Client scopes, Advanced ฯลฯ)
 
 ## การตั้งค่าสำคัญหลังจากสร้าง
 
 ### Valid redirect URIs
 
-หลังจาก user ยืนยันตัวตน Keycloak จะ redirect พวกเขากลับไปยัง URI ตัวใดตัวหนึ่งในรายการนี้ หาก redirect URI ในคำขอไม่ตรงกับรายการใดเลย Keycloak จะปฏิเสธคำขอด้วย error นี่คือการควบคุมด้านความปลอดภัยที่สำคัญ: มันป้องกันการโจมตีแบบ authorisation-code interception ที่ผู้โจมตีหลอก Keycloak ให้ redirect code ไปยังเว็บไซต์ที่พวกเขาควบคุมอยู่
+หลังจาก user ยืนยันตัวตน Keycloak จะ redirect พวกเขากลับไปยัง URI ตัวใดตัวหนึ่งในรายการนี้ หาก redirect URI ในคำขอไม่ตรงกับรายการใดเลย Keycloak จะปฏิเสธคำขอด้วย error นี่คือการควบคุมด้านความปลอดภัยที่สำคัญ: ช่วยป้องกันการโจมตีแบบ authorisation-code interception ที่ผู้โจมตีหลอก Keycloak ให้ redirect code ไปยังเว็บไซต์ที่พวกเขาควบคุมอยู่
 
 ให้ redirect URI เจาะจงมากที่สุดเท่าที่จะทำได้ ในระหว่างพัฒนา `http://localhost:3000/*` ถือว่ายอมรับได้ แต่ใน production ให้ระบุเฉพาะ callback path ที่แน่นอนเท่านั้น:
 
@@ -78,7 +78,7 @@ https://app.example.com/auth/callback
 
 ### curl เพื่อตรวจสอบ OIDC discovery document ของ client คุณ
 
-ทุก realm จะเปิดเผย OpenID Connect discovery document คุณสามารถใช้มันเพื่อตรวจสอบ issuer, token endpoint และ JWKS URI ของ client คุณได้:
+ทุก realm จะเปิดเผย OpenID Connect discovery document คุณใช้ document นี้ตรวจสอบ issuer, token endpoint และ JWKS URI ของ client คุณได้:
 
 export const discoveryCode = `curl https://localhost:8080/realms/my-app/.well-known/openid-configuration | jq .`;
 
@@ -90,7 +90,7 @@ export const discoveryCode = `curl https://localhost:8080/realms/my-app/.well-kn
 เฉพาะ URI ที่อยู่ในรายการ Valid redirect URIs เท่านั้นที่สามารถรับ token หลัง login ได้ wildcard อย่าง `*` จะรับ redirect ใด ๆ ก็ได้ — รวมถึง server ของผู้โจมตีด้วย ให้ redirect URI เจาะจงมากที่สุดเท่าที่จะทำได้ โดยเฉพาะใน production
 </Callout>
 
-## Trade-offs
+## ข้อแลกเปลี่ยน
 
 | ตัวเลือก | Benefit | Cost |
 |---|---|---|
@@ -98,13 +98,13 @@ export const discoveryCode = `curl https://localhost:8080/realms/my-app/.well-kn
 | Valid redirect URI แบบเจาะจง (exact match) | ป้องกัน authorization-code interception attack ได้แน่นหนา ควบคุมชัดเจนว่า Keycloak ส่ง token กลับไปที่ไหนได้บ้าง | ต้องอัปเดตรายการทุกครั้งที่เพิ่ม environment หรือ path ใหม่ เพิ่ม maintenance overhead |
 | Web origins ตั้งเป็น `+` (นำมาจาก redirect URIs) | ตั้งค่าครั้งเดียว ไม่ต้อง sync สอง list แยกกัน | หากรายการ redirect URIs กว้างเกินไป Web origins ก็จะกว้างตามไปด้วย |
 
-## Common Mistakes
+## ข้อผิดพลาดที่พบบ่อย
 
 - **ใช้ wildcard `*` ทั้งหมดใน Valid redirect URIs บน production client** — เปิดช่องให้ Keycloak redirect ไปยังโดเมนใดก็ได้ที่ตรง pattern รวมถึงโดเมนของผู้โจมตี ควรระบุ callback path ที่แน่นอนเท่านั้นใน production
 - **ลงทะเบียน SPA เป็น confidential client แล้วฝัง client secret ไว้ใน frontend bundle** — secret ที่ฝังอยู่ใน code ฝั่ง client ถือว่าเปิดเผยต่อสาธารณะเสมอ เพราะใครก็เปิด devtools ดูได้ ควรใช้ public client ร่วมกับ PKCE แทน
 - **ไม่ตั้งค่า Web origins ให้ตรงกับ origin จริงของ frontend** — ทำให้ CORS preflight ล้มเหลวเวลาเรียก token endpoint ตรง ๆ จาก browser หรือถ้าตั้งกว้างเกินไปก็เปิดช่องโหว่โดยไม่จำเป็น
 
-> 💡 Real World Example
+> 💡 ตัวอย่างจากของจริง
 >
 > **Google Cloud Console** — ลงทะเบียน OAuth client แยกกันสำหรับแต่ละ environment (dev, staging, production) พร้อม redirect URI ที่เจาะจงต่อ environment นั้น ๆ เพื่อไม่ให้ authorization code หรือ token รั่วไหลข้าม environment
 >
@@ -124,10 +124,10 @@ export const quizClients = [
   {
     q: 'ทำไม Valid redirect URIs จึงเป็นการควบคุมด้านความปลอดภัย?',
     options: [
-      'มันเข้ารหัส authorization code',
-      'มันจำกัดว่า Keycloak จะ redirect ไปยัง URI ใดได้บ้างหลัง login เพื่อป้องกันการโจมตีแบบ code interception',
-      'มันกำหนดว่า user ใดสามารถ log in เข้า client ได้',
-      'มันควบคุมอายุของ token',
+      'เข้ารหัส authorization code',
+      'จำกัดว่า Keycloak จะ redirect ไปยัง URI ใดได้บ้างหลัง login เพื่อป้องกันการโจมตีแบบ code interception',
+      'กำหนดว่า user ใดสามารถ log in เข้า client ได้',
+      'ควบคุมอายุของ token',
     ],
     answer: 1,
   },
