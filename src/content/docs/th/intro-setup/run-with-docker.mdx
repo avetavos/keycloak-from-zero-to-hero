@@ -23,7 +23,7 @@ import ProgressTracker from '../../../../components/ProgressTracker.tsx';
 2. `-p 8080:8080` — map port 8080 บน host ไปยัง port 8080 ใน container ทำให้ `http://localhost:8080` เชื่อมต่อถึง Keycloak ได้
 3. `-e KC_BOOTSTRAP_ADMIN_USERNAME=admin` — กำหนด admin username เริ่มต้น environment variable นี้ใช้เฉพาะตอน boot ครั้งแรกที่ยังไม่มี admin account
 4. `-e KC_BOOTSTRAP_ADMIN_PASSWORD=admin` — กำหนด admin password เริ่มต้น ควรเปลี่ยนในทุก environment จริง อย่าปล่อยเป็น `admin` นอกจาก local dev
-5. `quay.io/keycloak/keycloak:latest` — official Keycloak image จาก Red Hat Quay registry ควร pin version เฉพาะเจาะจง (เช่น `26.0`) ใน CI หรือ staging
+5. `quay.io/keycloak/keycloak:latest` — official Keycloak image จาก Red Hat Quay registry ควร pin version เฉพาะเจาะจง (เช่น `26.7`) ใน CI หรือ staging
 6. `start-dev` — เริ่ม Keycloak ใน development mode พร้อม embedded H2 in-memory database และเปิด HTTP โดยไม่ต้องใช้ TLS certificate
 
 export const dockerRunCode = `docker run --name keycloak -p 8080:8080 \\\n  -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \\\n  -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin \\\n  quay.io/keycloak/keycloak:latest start-dev`;

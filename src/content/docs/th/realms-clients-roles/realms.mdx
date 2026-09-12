@@ -1,6 +1,6 @@
 ---
 title: Realms
-description: 'ทำความเข้าใจ realm ในฐานะขอบเขตการแยก (isolation boundary) บทบาทของ master realm และวิธีสร้างกับตั้งค่า realm ของคุณเอง'
+description: 'ทำความเข้าใจ realm ในฐานะขอบเขตการแยก (isolation boundary) บทบาทของ master realm วิธีสร้างกับตั้งค่า realm ของคุณเอง และเมื่อไรที่ Organizations ดีกว่าการทำ realm ต่อ tenant'
 sidebar:
   order: 2
 ---
@@ -31,6 +31,28 @@ master realm สามารถสร้างและจัดการ realm 
 6. คลิก **Create**
 
 Keycloak จะสร้าง realm แล้วสลับ context ของ console ของคุณเข้าไปใน realm นั้น การตั้งค่าทั้งหมดหลังจากนี้ (client, role, user) จะอยู่ใน realm ใหม่นี้
+
+## Organizations: multi-tenancy โดยไม่ต้องสร้าง realm เต็มไปหมด
+
+วิธีที่นึกออกง่ายที่สุดเวลารองรับลูกค้าหลายราย คือทำ realm ละหนึ่งลูกค้า วิธีนี้ใช้ได้ แต่ scale ได้ไม่ดี เพราะทุก realm ต้องมี client, role, mapper และ theme ของตัวเอง และผู้ใช้ที่อยู่สองลูกค้าก็จะกลายเป็นสอง account
+
+Keycloak 26 เพิ่ม **Organizations** มาเป็นคำตอบระดับ first-class organization คือกลุ่มของผู้ใช้ที่อยู่ *ภายใน* realm เดียวกัน ทุกคนจึงใช้ client และ role ของ realm ร่วมกันได้ แต่ยังแยกกันตาม tenant ฟีเจอร์ `organization:v1` เป็น supported feature และเปิดอยู่แล้วโดยค่าเริ่มต้น คุณเปิดใช้ต่อ realm ได้ที่ **Realm settings → General → Organizations**
+
+สิ่งที่ organization ให้คุณ:
+
+- **Member** — เพิ่มผู้ใช้ที่มีอยู่ใน realm หรือเชิญคนใหม่ผ่าน email สมาชิกจะถูกจัดการโดย organization เองหรือ federate มาจากที่อื่นก็ได้
+- **identity provider ที่ผูกไว้** — tenant หนึ่งสามารถใช้ IdP ของตัวเองได้ พนักงานของเขาจึง login ด้วยระบบขององค์กรตัวเอง ขณะที่คนอื่นยังใช้ของคุณ
+- **domain matching** — map email domain เข้ากับ organization ผู้ใช้ใหม่จะถูกจัดเข้า tenant ที่ถูกต้องโดยอัตโนมัติ
+
+เลือกระหว่างสองโมเดลนี้ได้ตามตาราง:
+
+| | realm ต่อ tenant | Organizations |
+|---|---|---|
+| การแยกส่วน | แยกขาด: user, client, role, key คนละชุด | ใช้ realm ร่วมกัน แยกสมาชิกด้วย organization |
+| การตั้งค่าซ้ำซ้อน | ต้องทำ client และ role ซ้ำทุก tenant | ตั้งค่า client และ role ครั้งเดียว |
+| ผู้ใช้ที่อยู่สอง tenant | สอง account แยกกัน | account เดียว เป็นสมาชิกสองที่ |
+| login provider ต่อ tenant | ได้ | ได้ ผ่าน IdP ที่ผูกไว้ |
+| เหมาะกับ | การแยกข้อมูลตามกฎหมายหรือข้อบังคับที่เข้มงวด | SaaS ที่มีลูกค้าหลายรายบนผลิตภัณฑ์เดียว |
 
 ## พาทัวร์การตั้งค่า realm
 
@@ -99,6 +121,16 @@ http://localhost:8080/realms/{realm-name}/protocol/openid-connect/certs
 > **องค์กรขนาดใหญ่ที่มีหลายทีม** — บริษัทที่มีทั้งระบบ internal tool และ customer-facing product มักแยก realm ตามกลุ่มผู้ใช้ เช่น realm `staff` สำหรับพนักงาน กับ realm `customers` สำหรับลูกค้า เพื่อไม่ให้ policy ด้าน password หรือ MFA ของฝั่งหนึ่งไปกระทบอีกฝั่ง
 
 export const quizRealms = [
+  {
+    q: 'คุณทำ SaaS ที่มีลูกค้าหลายรายซึ่งใช้ client และ role ชุดเดียวกัน Keycloak 26 แนะนำโมเดลไหน?',
+    options: [
+      'ทำ realm ละหนึ่งลูกค้า เพื่อให้แยกขาดจากกัน',
+      'ใช้ Organizations ภายใน realm เดียว จะได้ตั้งค่า client และ role ครั้งเดียว',
+      'ใช้ realm เดียวโดยมี group ต่อหนึ่งลูกค้าและไม่ต้องมีโครงสร้างอื่น',
+      'แยก Keycloak server ต่อหนึ่งลูกค้า',
+    ],
+    answer: 1,
+  },
   {
     q: 'master realm ใน Keycloak มีจุดประสงค์อะไร?',
     options: [

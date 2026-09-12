@@ -87,9 +87,9 @@ app.get('/profile', checkJwt, (req, res) => {
 });
 ```
 
-## Keycloak adapter รุ่นเก่าที่ถูก deprecated
+## Keycloak adapter รุ่นเก่าที่ถูกลบออกแล้ว
 
-Keycloak เคยมี adapter เฉพาะสำหรับแต่ละ framework: `keycloak-connect` สำหรับ Node, Keycloak Spring Boot adapter และอื่น ๆ adapter เหล่านี้ **ถูก deprecated** ตั้งแต่ Keycloak 19 และอาจถูกลบออกในที่สุด project ใหม่ควรใช้:
+Keycloak เคยมี adapter เฉพาะสำหรับแต่ละ framework: `keycloak-connect` สำหรับ Node, Keycloak Spring Boot adapter และอื่น ๆ adapter ส่วนใหญ่ **ถูกลบออกไปแล้วใน Keycloak 25** (Jetty adapter ถูกลบก่อนหน้านั้นใน 24) บน server รุ่นปัจจุบันจึงไม่มีให้ใช้อีกแล้ว ให้ใช้ OIDC/OAuth2 มาตรฐานที่ framework ของคุณมีอยู่แทน:
 
 | Framework | ไลบรารีที่แนะนำ |
 |---|---|
@@ -99,7 +99,7 @@ Keycloak เคยมี adapter เฉพาะสำหรับแต่ล�
 | Backend อื่น ๆ | JWT library ใดก็ได้ที่รองรับ JWKS |
 
 <Callout title="ใช้ OIDC/OAuth2 มาตรฐานแทน adapter รุ่นเก่า">
-Keycloak adapter เฉพาะ framework รุ่นเก่า (keycloak-connect, Keycloak Spring adapter) ถูก deprecated แล้ว จะไม่ได้รับฟีเจอร์ใหม่และอาจถูกลบออก backend ของคุณต้องการเพียงการตรวจสอบ JWT เท่านั้น — ไลบรารีใดก็ได้ที่ตรวจสอบ token ที่ลงนามด้วย JWKS ได้ก็ทำงานได้ การใช้ OAuth2 resource server support มาตรฐานใน framework ทำให้โค้ดของคุณ portable ข้าม identity provider ต่าง ๆ
+Keycloak adapter เฉพาะ framework รุ่นเก่า (keycloak-connect, Keycloak Spring adapter) ถูกลบออกไปแล้วใน Keycloak 25 และไม่ได้รับการดูแลอีกต่อไป backend ของคุณต้องการเพียงการตรวจสอบ JWT เท่านั้น — ไลบรารีใดก็ได้ที่ตรวจสอบ token ที่ลงนามด้วย JWKS ได้ก็ทำงานได้ การใช้ OAuth2 resource server support มาตรฐานใน framework ทำให้โค้ดของคุณ portable ข้าม identity provider ต่าง ๆ
 </Callout>
 
 ## ข้อแลกเปลี่ยน

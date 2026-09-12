@@ -38,6 +38,23 @@ Keycloak สามารถ delegate authentication ไปยัง identity pro
 
 ทุก operation ที่ทำได้ใน admin console ก็สามารถทำได้ผ่าน REST API เช่นกัน คุณสามารถ automate การตั้งค่า realm, การลงทะเบียน client และการสร้างผู้ใช้ได้ด้วย API หรือ Keycloak Terraform provider
 
+## อะไรเปลี่ยนไปบ้างในเวอร์ชันล่าสุด
+
+Keycloak เปลี่ยนแปลงเยอะมากระหว่างเวอร์ชัน 22 ถึง 26 ทำให้ tutorial เก่าหลายอันใช้ไม่ได้แล้ว คอร์สนี้อ้างอิง **Keycloak 26.x** (26.7 ณ เวลาที่เขียน) ด้านล่างคือสิ่งที่มักทำให้สับสนที่สุดถ้าคุณเคยอ่านคู่มือรุ่นเก่ามาก่อน
+
+| สิ่งที่เปลี่ยน | เริ่มใน | ผลกับคุณ |
+|---|---|---|
+| เหลือแค่ Quarkus distribution | 17 (WildFly ถูกเลิกใช้ปี 2022) | ไม่มี `standalone.xml` แล้ว การตั้งค่าใช้ CLI option และ environment variable `KC_*` |
+| account console ใหม่เป็นค่าเริ่มต้น | 24 | theme ของ account console v1 และ v2 ถูกลบใน 22 และ 25 |
+| Java adapter ส่วนใหญ่ถูกลบ | 25 | ให้ใช้ OIDC/OAuth2 มาตรฐานที่ framework ของคุณมีอยู่แทน |
+| persistent user session เป็นค่าเริ่มต้น | 25 | session ถูกเก็บใน database จึงไม่หายเมื่อ restart |
+| Organizations | 26 | โมเดล multi-tenancy ในระดับ first-class ภายใน realm เดียว |
+| Hostname v2 | 26 | `--hostname` รับ base URL เต็มรูปแบบได้ และ option hostname แบบเดิมถูกลบไปแล้ว |
+| เปลี่ยนชื่อตัวแปร bootstrap admin | 26 | `KEYCLOAK_ADMIN` และ `KEYCLOAK_ADMIN_PASSWORD` กลายเป็น `KC_BOOTSTRAP_ADMIN_USERNAME` และ `KC_BOOTSTRAP_ADMIN_PASSWORD` |
+| login theme ใหม่เป็นค่าเริ่มต้น | 26 | theme `keycloak.v2` มาแทน theme เดิม |
+
+ถ้าบทความไหนบอกให้แก้ไฟล์ XML, ให้โหลด adapter `keycloak-connect` หรือให้ตั้ง `KEYCLOAK_ADMIN` แปลว่าบทความนั้นเก่ากว่า server ที่คุณกำลังรันอยู่
+
 ## ตำแหน่งของ Keycloak ในสถาปัตยกรรม
 
 Keycloak อยู่ระหว่างผู้ใช้กับแอปพลิเคชันของคุณ ผู้ใช้ authenticate ครั้งเดียวกับ Keycloak และรับ signed token มา แอปของคุณ validate token เหล่านั้นในเครื่องโดยไม่ต้องเรียก Keycloak ทุก request

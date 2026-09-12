@@ -87,9 +87,9 @@ app.get('/profile', checkJwt, (req, res) => {
 });
 ```
 
-## The deprecated Keycloak adapters
+## The removed Keycloak adapters
 
-Keycloak used to ship per-framework adapters: `keycloak-connect` for Node, a Keycloak Spring Boot adapter, and others. These adapters are **deprecated** as of Keycloak 19 and will eventually be removed. New projects should use:
+Keycloak used to ship per-framework adapters: `keycloak-connect` for Node, a Keycloak Spring Boot adapter, and others. Most of them were **removed in Keycloak 25** (the Jetty adapter went a release earlier, in 24), so on a current server they are simply not an option. Use your framework's standard OIDC/OAuth2 support instead:
 
 | Framework | Recommended library |
 |---|---|
@@ -99,7 +99,7 @@ Keycloak used to ship per-framework adapters: `keycloak-connect` for Node, a Key
 | Any other backend | Any JWT library that supports JWKS |
 
 <Callout title="Prefer standard OIDC/OAuth2 support over legacy adapters">
-The old per-framework Keycloak adapters (keycloak-connect, the Keycloak Spring adapter) are deprecated. They will not receive new features and may be dropped. Your backend only needs to validate a JWT — any library that can verify a JWKS-signed token works. Using the standard OAuth2 resource server support in your framework keeps your code portable across identity providers.
+The old per-framework Keycloak adapters (keycloak-connect, the Keycloak Spring adapter) were removed in Keycloak 25 and are no longer maintained. Your backend only needs to validate a JWT — any library that can verify a JWKS-signed token works. Using the standard OAuth2 resource server support in your framework keeps your code portable across identity providers.
 </Callout>
 
 export const quizFrameworkAdapters = [

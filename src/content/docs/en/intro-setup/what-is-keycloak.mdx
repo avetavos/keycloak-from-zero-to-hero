@@ -38,6 +38,23 @@ If your organisation already has users in LDAP or Active Directory, Keycloak can
 
 Every operation available in the admin console is also available via the REST API. You can automate realm setup, client registration, and user creation using the API or the Keycloak Terraform provider.
 
+## What changed in recent versions
+
+Keycloak moved fast between versions 22 and 26, and a lot of older tutorials are now wrong. This course targets **Keycloak 26.x** (26.7 at the time of writing). These are the changes most likely to trip you up if you have read an older guide.
+
+| Change | Landed in | What it means for you |
+|---|---|---|
+| Quarkus distribution only | 17 (WildFly retired in 2022) | There is no `standalone.xml`. Configuration is CLI options and `KC_*` environment variables. |
+| New account console is the default | 24 | The v1 and v2 account console themes were removed in 22 and 25. |
+| Most Java adapters removed | 25 | Use your framework's standard OIDC/OAuth2 support instead. |
+| Persistent user sessions by default | 25 | Sessions are stored in the database, so they survive a restart. |
+| Organizations | 26 | A first-class multi-tenancy model inside one realm. |
+| Hostname v2 | 26 | `--hostname` accepts a full base URL, and the old hostname options are gone. |
+| Bootstrap admin variables renamed | 26 | `KEYCLOAK_ADMIN` and `KEYCLOAK_ADMIN_PASSWORD` became `KC_BOOTSTRAP_ADMIN_USERNAME` and `KC_BOOTSTRAP_ADMIN_PASSWORD`. |
+| New default login theme | 26 | The `keycloak.v2` login theme replaced the old one. |
+
+If a blog post tells you to edit an XML file, download a `keycloak-connect` adapter, or set `KEYCLOAK_ADMIN`, it predates the server you are running.
+
 ## Where Keycloak sits in your architecture
 
 Keycloak sits between your users and your applications. Users authenticate once with Keycloak and receive signed tokens. Your apps validate those tokens locally — without calling Keycloak on every request.

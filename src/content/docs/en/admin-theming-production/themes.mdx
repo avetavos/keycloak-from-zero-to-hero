@@ -68,8 +68,8 @@ For the Quarkus-based Keycloak distribution, copy your theme directory into the 
 ```bash
 docker run -p 8080:8080 \
   -v "$(pwd)/themes/my-brand:/opt/keycloak/themes/my-brand" \
-  -e KEYCLOAK_ADMIN=admin \
-  -e KEYCLOAK_ADMIN_PASSWORD=admin \
+  -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \
+  -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin \
   quay.io/keycloak/keycloak:latest \
   start-dev
 ```

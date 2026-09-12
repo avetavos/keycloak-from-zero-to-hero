@@ -1,6 +1,6 @@
 ---
 title: Production Checklist
-description: 'Harden Keycloak for production: run start with an optimised build, wire in an external database, set a fixed hostname, terminate HTTPS correctly, and use realm export/import for config-as-code.'
+description: 'Harden Keycloak for production: run start with an optimised build, wire in an external database, set a hostname v2 base URL, terminate HTTPS correctly, keep sessions across restarts, and use realm export/import for config-as-code.'
 sidebar:
   order: 5
 ---
@@ -34,10 +34,17 @@ KC_DB_PASSWORD=<secret>
 Keycloak embeds its own hostname into token issuers, OIDC discovery documents, and redirect validation. If the hostname is wrong, tokens are rejected by clients. Set it explicitly:
 
 ```
-KC_HOSTNAME=auth.example.com
+KC_HOSTNAME=https://auth.example.com
 ```
 
-For local testing behind a reverse proxy, you may also need `KC_HOSTNAME_STRICT=false`, but never use that flag in production.
+Keycloak 26 replaced the old hostname options with **hostname v2**. The headline difference is that `KC_HOSTNAME` now accepts a full base URL, including scheme, port, and context path — `https://auth.example.com:8443/auth` is valid. Passing a bare hostname still works, in which case the scheme and port are resolved from the request.
+
+Two related options are worth knowing:
+
+- `KC_HOSTNAME_ADMIN` — serve the admin console on a different URL, so you can keep it off the public one.
+- `KC_HOSTNAME_STRICT=false` — let Keycloak resolve the hostname from request headers. Useful for local testing behind a proxy, never in production.
+
+If you find `KC_HOSTNAME_URL`, `KC_HOSTNAME_PORT`, or `KC_HOSTNAME_PATH` in an older guide, those are hostname v1 and were removed in 26.
 
 ### 3. HTTPS and reverse proxy
 
@@ -63,6 +70,18 @@ kc.sh build --db=postgres
 kc.sh start --optimized
 ```
 
+## Sessions survive restarts
+
+Since Keycloak 25, **persistent user sessions** are the default: sessions are written to the database and loaded into the cache on demand. Restart a node — or the whole cluster — and users stay logged in. This is a behaviour change worth knowing if you remember older versions, where a restart logged everybody out.
+
+You can turn it off for a cache-only deployment:
+
+```
+KC_FEATURES_DISABLED=persistent-user-sessions
+```
+
+Do not do that casually. Volatile sessions lose every session when the last node restarts, and they cannot be combined with the `multi-site` feature.
+
 ## A production docker run
 
 Here is a minimal `docker run` that combines all four must-haves:
@@ -75,8 +94,8 @@ export const prodRunCode = `docker run -d --name keycloak \\
   -e KC_DB_PASSWORD=\${DB_PASSWORD} \\
   -e KC_HOSTNAME=auth.example.com \\
   -e KC_PROXY_HEADERS=xforwarded \\
-  -e KEYCLOAK_ADMIN=admin \\
-  -e KEYCLOAK_ADMIN_PASSWORD=\${ADMIN_PASSWORD} \\
+  -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \\
+  -e KC_BOOTSTRAP_ADMIN_PASSWORD=\${ADMIN_PASSWORD} \\
   quay.io/keycloak/keycloak:latest \\
   start --optimized`;
 
@@ -107,6 +126,16 @@ External database, fixed hostname, HTTPS, and an optimised build — `start-dev`
 </Callout>
 
 export const quizProduction = [
+  {
+    q: 'What happens to user sessions when you restart Keycloak 26 with default settings?',
+    options: [
+      'Every user is logged out, because sessions live only in memory',
+      'Sessions survive, because persistent user sessions are the default',
+      'Sessions survive only if you enable the multi-site feature',
+      'Sessions are rebuilt from the access tokens clients send',
+    ],
+    answer: 1,
+  },
   {
     q: 'What database does start-dev use by default?',
     options: [

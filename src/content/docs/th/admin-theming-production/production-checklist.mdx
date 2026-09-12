@@ -1,6 +1,6 @@
 ---
 title: Production Checklist
-description: 'Harden Keycloak สำหรับ production: รัน start ด้วย optimised build, เชื่อมต่อ external database, ตั้งค่า hostname ที่กำหนด, terminate HTTPS ให้ถูกต้อง และใช้ realm export/import สำหรับ config-as-code'
+description: 'Harden Keycloak สำหรับ production: รัน start ด้วย optimised build, เชื่อมต่อ external database, ตั้ง base URL แบบ hostname v2, terminate HTTPS ให้ถูกต้อง, ให้ session อยู่รอดข้าม restart และใช้ realm export/import สำหรับ config-as-code'
 sidebar:
   order: 5
 ---
@@ -34,10 +34,17 @@ KC_DB_PASSWORD=<secret>
 Keycloak ฝัง hostname ของตัวเองใน token issuer, OIDC discovery document และการตรวจสอบ redirect หาก hostname ไม่ถูกต้อง token จะถูกปฏิเสธโดย client ตั้งค่าอย่างชัดเจน:
 
 ```
-KC_HOSTNAME=auth.example.com
+KC_HOSTNAME=https://auth.example.com
 ```
 
-สำหรับการทดสอบในเครื่องหลัง reverse proxy คุณอาจต้องใช้ `KC_HOSTNAME_STRICT=false` ด้วย แต่อย่าใช้ flag นี้ใน production
+Keycloak 26 เปลี่ยน option เรื่อง hostname มาเป็น **hostname v2** ความต่างที่สำคัญคือ `KC_HOSTNAME` รับ base URL เต็มรูปแบบได้แล้ว ทั้ง scheme, port และ context path เช่น `https://auth.example.com:8443/auth` ก็ใช้ได้ ถ้าใส่แค่ hostname เปล่า ๆ ก็ยังทำงานได้ โดย scheme และ port จะถูก resolve จาก request
+
+อีกสอง option ที่ควรรู้:
+
+- `KC_HOSTNAME_ADMIN` — ให้ admin console อยู่คนละ URL เพื่อไม่ต้องเปิด console ไว้บน URL สาธารณะ
+- `KC_HOSTNAME_STRICT=false` — ให้ Keycloak resolve hostname จาก request header เหมาะกับการทดสอบในเครื่องหลัง proxy แต่ห้ามใช้ใน production
+
+ถ้าเจอ `KC_HOSTNAME_URL`, `KC_HOSTNAME_PORT` หรือ `KC_HOSTNAME_PATH` ในคู่มือเก่า นั่นคือ hostname v1 ซึ่งถูกลบไปแล้วใน 26
 
 ### 3. HTTPS และ reverse proxy
 
@@ -63,6 +70,18 @@ kc.sh build --db=postgres
 kc.sh start --optimized
 ```
 
+## session ไม่หายเมื่อ restart
+
+ตั้งแต่ Keycloak 25 **persistent user session** เป็นค่าเริ่มต้น: session ถูกเขียนลง database และโหลดเข้า cache เมื่อจำเป็น restart node หรือทั้ง cluster ผู้ใช้ก็ยัง login อยู่ นี่เป็นพฤติกรรมที่เปลี่ยนไปจากรุ่นเก่าที่ restart ทีเดียวผู้ใช้หลุดหมด
+
+ถ้าต้องการปิดเพื่อใช้แบบ cache อย่างเดียว:
+
+```
+KC_FEATURES_DISABLED=persistent-user-sessions
+```
+
+อย่าปิดโดยไม่จำเป็น session แบบ volatile จะหายทั้งหมดเมื่อ node สุดท้าย restart และใช้ร่วมกับฟีเจอร์ `multi-site` ไม่ได้
+
 ## Production docker run
 
 นี่คือ `docker run` ขั้นต่ำที่รวมสี่สิ่งที่ต้องมีทั้งหมด:
@@ -75,8 +94,8 @@ export const prodRunCode = `docker run -d --name keycloak \\
   -e KC_DB_PASSWORD=\${DB_PASSWORD} \\
   -e KC_HOSTNAME=auth.example.com \\
   -e KC_PROXY_HEADERS=xforwarded \\
-  -e KEYCLOAK_ADMIN=admin \\
-  -e KEYCLOAK_ADMIN_PASSWORD=\${ADMIN_PASSWORD} \\
+  -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \\
+  -e KC_BOOTSTRAP_ADMIN_PASSWORD=\${ADMIN_PASSWORD} \\
   quay.io/keycloak/keycloak:latest \\
   start --optimized`;
 
@@ -127,6 +146,16 @@ External database, fixed hostname, HTTPS และ optimised build — `start-de
 > **High-availability clustering** — องค์กรที่ต้องการ uptime สูงรัน Keycloak หลาย instance หลัง load balancer โดยแชร์ external database ตัวเดียวกัน ทำให้ instance ใดตายไปหนึ่งตัว session ของผู้ใช้ก็ยังไม่หลุด
 
 export const quizProduction = [
+  {
+    q: 'เมื่อ restart Keycloak 26 ด้วยค่าเริ่มต้น session ของผู้ใช้จะเป็นอย่างไร?',
+    options: [
+      'ผู้ใช้หลุดทุกคน เพราะ session อยู่แค่ในหน่วยความจำ',
+      'session ยังอยู่ เพราะ persistent user session เป็นค่าเริ่มต้น',
+      'session ยังอยู่ก็ต่อเมื่อเปิดฟีเจอร์ multi-site',
+      'session ถูกสร้างใหม่จาก access token ที่ client ส่งมา',
+    ],
+    answer: 1,
+  },
   {
     q: 'start-dev ใช้ database ใดเป็นค่าเริ่มต้น?',
     options: [

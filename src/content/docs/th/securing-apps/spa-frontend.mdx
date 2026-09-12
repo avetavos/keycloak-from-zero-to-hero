@@ -89,7 +89,7 @@ keycloak.tokenParsed?.resource_access?.['my-app-frontend']?.roles // client role
 ```
 
 <Callout title="กำหนดค่า client เป็น Public พร้อม PKCE">
-ใน Keycloak admin console ต้องตั้งค่า Client authentication เป็น Off (public client) และถ้าใช้ Keycloak 21+ PKCE จะถูกบังคับใช้โดย keycloak-js adapter โดยอัตโนมัติเมื่อส่ง pkceMethod: 'S256' keycloak-js เก็บ token ไว้ในหน่วยความจำ ไม่ใช่ใน localStorage และจัดการ silent refresh ให้คุณเองโดยอัตโนมัติ อย่าเก็บ token ใน localStorage หรือ sessionStorage ด้วยตัวเองเด็ดขาด
+ใน Keycloak admin console ต้องตั้งค่า Client authentication เป็น Off (public client) และ PKCE จะถูกใช้โดย keycloak-js โดยอัตโนมัติเมื่อส่ง pkceMethod: 'S256' keycloak-js เก็บ token ไว้ในหน่วยความจำ ไม่ใช่ใน localStorage และจัดการ silent refresh ให้คุณเองโดยอัตโนมัติ อย่าเก็บ token ใน localStorage หรือ sessionStorage ด้วยตัวเองเด็ดขาด
 </Callout>
 
 ## ข้อแลกเปลี่ยน

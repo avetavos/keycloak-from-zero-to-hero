@@ -23,7 +23,7 @@ Here is what each part of the `docker run` command does:
 2. `-p 8080:8080` — maps port 8080 on the host to port 8080 inside the container, so `http://localhost:8080` reaches Keycloak.
 3. `-e KC_BOOTSTRAP_ADMIN_USERNAME=admin` — sets the initial admin username. This environment variable is only used on the very first boot when no admin account exists yet.
 4. `-e KC_BOOTSTRAP_ADMIN_PASSWORD=admin` — sets the initial admin password. Change this in any real environment — never leave it as `admin` outside of local dev.
-5. `quay.io/keycloak/keycloak:latest` — the official Keycloak image from the Red Hat Quay registry. Pin to a specific version (e.g. `26.0`) in CI or staging.
+5. `quay.io/keycloak/keycloak:latest` — the official Keycloak image from the Red Hat Quay registry. Pin to a specific version (e.g. `26.7`) in CI or staging.
 6. `start-dev` — starts Keycloak in development mode with an embedded H2 in-memory database and HTTP enabled. No TLS certificate is required.
 
 export const dockerRunCode = `docker run --name keycloak -p 8080:8080 \\\n  -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \\\n  -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin \\\n  quay.io/keycloak/keycloak:latest start-dev`;

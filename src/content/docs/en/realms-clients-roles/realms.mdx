@@ -1,6 +1,6 @@
 ---
 title: Realms
-description: 'Understand the realm as an isolation boundary, the role of the master realm, and how to create and configure your own realm.'
+description: 'Understand the realm as an isolation boundary, the role of the master realm, how to create and configure your own realm, and when Organizations beat a realm per tenant.'
 sidebar:
   order: 2
 ---
@@ -31,6 +31,28 @@ The master realm can create and manage other realms, but it should never be used
 6. Click **Create**.
 
 Keycloak creates the realm and switches your console context into it. All subsequent configuration (clients, roles, users) will belong to this new realm.
+
+## Organizations: multi-tenancy without realm sprawl
+
+The obvious way to serve many customers is one realm per customer. It works, but it scales badly: every realm needs its own clients, roles, mappers, and themes, and a user who belongs to two customers becomes two accounts.
+
+Keycloak 26 added **Organizations** as a first-class answer. An organization is a group of users *inside* a realm, so all of them share the realm's clients and roles while still being separated by tenant. The `organization:v1` feature is supported and on by default; you switch it on per realm from **Realm settings → General → Organizations**.
+
+What an organization gives you:
+
+- **Members** — existing realm users you add, or people you invite by email. Members can be managed by the organization or federated in from elsewhere.
+- **A linked identity provider** — a tenant can bring its own IdP, so their staff sign in with their own corporate login while everyone else uses yours.
+- **Domain matching** — map an email domain to an organization and new users land in the right tenant automatically.
+
+Choose between the two models like this:
+
+| | Realm per tenant | Organizations |
+|---|---|---|
+| Isolation | Total: separate users, clients, roles, keys | Shared realm, members separated by organization |
+| Config duplication | Every client and role repeated per tenant | Configure clients and roles once |
+| A user in two tenants | Two separate accounts | One account, two memberships |
+| Per-tenant login provider | Yes | Yes, via a linked IdP |
+| Good for | Hard regulatory or data separation | SaaS with many customers on one product |
 
 ## A tour of realm settings
 
@@ -80,6 +102,16 @@ Never register your applications or store application users in the master realm.
 </Callout>
 
 export const quizRealms = [
+  {
+    q: 'You run a SaaS product for many customers who all use the same clients and roles. Which model does Keycloak 26 recommend?',
+    options: [
+      'One realm per customer, so each is fully isolated',
+      'Organizations inside one realm, so clients and roles are configured once',
+      'One realm with a group per customer and no other structure',
+      'A separate Keycloak server per customer',
+    ],
+    answer: 1,
+  },
   {
     q: 'What is the purpose of the master realm in Keycloak?',
     options: [

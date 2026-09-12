@@ -87,7 +87,7 @@ keycloak.tokenParsed?.resource_access?.['my-app-frontend']?.roles // client role
 ```
 
 <Callout title="Configure the client as Public with PKCE">
-In the Keycloak admin console, the client must have Client authentication set to Off (public client) and, if you are on Keycloak 21+, PKCE is enforced by the keycloak-js adapter automatically when you pass pkceMethod: 'S256'. keycloak-js stores tokens in memory — not in localStorage — and handles silent refresh for you. Do not store tokens in localStorage or sessionStorage yourself.
+In the Keycloak admin console, the client must have Client authentication set to Off (public client) and PKCE is applied by keycloak-js automatically when you pass pkceMethod: 'S256'. keycloak-js stores tokens in memory — not in localStorage — and handles silent refresh for you. Do not store tokens in localStorage or sessionStorage yourself.
 </Callout>
 
 export const quizSpaFrontend = [
