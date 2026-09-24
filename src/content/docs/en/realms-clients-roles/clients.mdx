@@ -90,6 +90,26 @@ Replace `my-app` with your realm name. The `jq .` part pretty-prints the JSON re
 Only URIs listed in Valid redirect URIs can receive tokens after login. A wildcard like `*` accepts any redirect — including an attacker's server. Keep redirect URIs as specific as possible, especially in production.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Client type: OpenID Connect | The modern standard, compatible with most libraries and SDKs — easier to set up and debug | No extra benefit for a legacy system tied specifically to SAML assertions |
+| An exact-match Valid redirect URI | Strongly prevents authorization-code interception, giving you clear control over exactly where Keycloak can send tokens back | Must be updated every time you add an environment or a new path, adding maintenance overhead |
+| Web origins set to `+` (derived from redirect URIs) | Configure once, with no need to keep two lists in sync | If the redirect URI list is too broad, Web origins becomes just as broad |
+
+## Common mistakes
+
+- **Using a wildcard `*` in Valid redirect URIs on a production client** — this lets Keycloak redirect to any domain matching the pattern, including an attacker's domain. Specify exact callback paths only in production.
+- **Registering an SPA as a confidential client and embedding the client secret in the frontend bundle** — a secret embedded in client-side code is always effectively public, since anyone can open devtools. Use a public client with PKCE instead.
+- **Not setting Web origins to match the frontend's real origin** — this breaks CORS preflight when calling the token endpoint directly from the browser, or, if set too broadly, opens an unnecessary security gap.
+
+> Real-world example
+>
+> **Google Cloud Console** — registers a separate OAuth client per environment (dev, staging, production), each with a redirect URI specific to that environment, so an authorization code or token can never leak across environments.
+>
+> **Stripe Connect** — uses a confidential client with a client secret kept only on the server side, to register a platform application that connects to a large number of user accounts, with no secret ever reaching the end user's browser.
+
 export const quizClients = [
   {
     q: 'What is a Keycloak client?',

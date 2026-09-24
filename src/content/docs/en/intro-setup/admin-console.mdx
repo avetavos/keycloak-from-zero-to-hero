@@ -53,6 +53,25 @@ The sidebar gives you access to every resource in the current realm:
 Always switch to YOUR realm (top-left selector) before creating clients, users, or roles — it is easy to accidentally work in master. Objects created in master are not visible in your application's realm.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Manage via the admin console (manual) | Immediate feedback, good for learning and one-off setup, no code required | Hard to repeat, no version-controlled audit trail, more prone to human error as the team grows |
+| Manage via REST API / Terraform provider | Configuration as code, reviewable through a pull request, fast to reproduce a new environment | Requires writing and maintaining scripts/Terraform state, with a steeper initial learning curve |
+
+## Common mistakes
+
+- **Not changing the default admin credentials (`admin`/`admin`)** — this default is meant only for bootstrap. Change the password or create a new admin user and disable the default one before going live.
+- **Creating real application clients in the master realm** — master should be reserved for administering Keycloak itself; mixing in real application clients unnecessarily widens the blast radius around the admin account.
+- **Forgetting to check the realm selector before creating a resource** — accidentally creating a user, client, or role in the wrong realm is very common, especially when switching between several realms in one day.
+
+> Real-world example
+>
+> **A platform team managing many apps** — commonly creates a separate realm per business unit or per environment (dev/staging/prod), then uses the Keycloak Terraform provider to provision clients and roles reproducibly instead of clicking through the admin console every time.
+>
+> **An organisation that has been through a security audit** — often enforces a policy that the master realm's admin account must have MFA enabled and restricts access to the platform/security team only, with no general developer holding admin rights in the master realm.
+
 export const quizConsole = [
   {
     q: 'Where do you find the realm selector in the admin console?',

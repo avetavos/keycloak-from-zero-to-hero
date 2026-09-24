@@ -12,9 +12,11 @@ import ProgressTracker from '../../../../components/ProgressTracker.tsx';
 
 ## The Direct Access Grant (password grant)
 
-The Direct Access Grant — also called the **password grant** — lets you exchange a username and password directly for tokens at the token endpoint, bypassing the browser redirect flow entirely.
+The Direct Access Grant — also called the **password grant** — lets you exchange a username and password directly for tokens at the token endpoint, bypassing the browser redirect flow entirely. Because the user's credentials pass through the client before reaching Keycloak, this grant is suitable only for test scripts, CLI tools, and development environments — never a real user-facing app.
 
-This makes it convenient for:
+## When to use it
+
+Use the Direct Access Grant for:
 
 - Testing your Keycloak configuration from a terminal
 - CLI tools and shell scripts that need a token to call an API
@@ -63,6 +65,14 @@ Key fields:
 - `id_token` — a JWT that proves who the user is (OIDC only).
 - `token_type` — always `Bearer` for Keycloak.
 
+## Using the access token with an API
+
+Send the access token to an API with a Bearer Authorization header:
+
+```
+Authorization: Bearer <access_token>
+```
+
 ## Decoding the JWT
 
 The access token is a Base64url-encoded JWT. You can decode the payload to inspect its claims.
@@ -76,6 +86,26 @@ On some systems use `base64 --decode` instead of `base64 -d`. Set the `ACCESS_TO
 <Callout title="Password grant is for testing only">
 The Direct Access Grant (password grant) is handy for testing scripts and CLI tools — but avoid it in real user-facing apps. It exposes the user's credentials to the client application. Use Authorization Code + PKCE for browser and mobile apps.
 </Callout>
+
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Test directly against the token endpoint with curl | See the raw request/response clearly, with no abstraction hiding the real protocol | You must manage the token lifecycle yourself (refresh, expiry, storage), and risk leaking credentials if you're not careful |
+| Use an OIDC client library (e.g. `openid-client`, a Keycloak adapter) | The library automatically handles token refresh, validation, and security best practice | Adds a dependency and an abstraction to learn, and you don't see the raw protocol the way curl shows it |
+
+## Common mistakes
+
+- **Typing a password or client secret directly into a curl command** — commands typed in a terminal get recorded in shell history (`.bash_history`, `.zsh_history`) in plaintext. Use an environment variable or an `.env` file excluded from git instead of typing credentials directly.
+- **Pasting an access token into a log or sharing it in chat to debug something** — an access token or refresh token is as valuable as a password; anyone holding it before it expires can call the API as that user. Never log a token in full — mask it or log only a fragment.
+- **Using the Direct Access Grant (password grant) in a real production app** — this grant is meant only for test scripts and CLI tools, because it requires sending the username/password directly to the client. Using it in a real app needlessly exposes the user's credentials to the client.
+- **Not clearing `HISTCONTROL` or forgetting to clear history after testing with curl** — forgetting to clean up leaked credentials in shell history after debugging leaves the secret sitting on your machine indefinitely.
+
+> Real-world example
+>
+> **Postman or Insomnia in a dev workflow** — dev teams often use these tools instead of raw curl to keep credentials in an encrypted vault, rather than typing them on a command line that risks ending up in shell history.
+>
+> **`kubectl` and other CLI tools that speak OIDC** — use the same underlying principle as a curl call to the token endpoint, but wrap it in a library that handles token caching, refresh, and secure storage automatically, unlike a raw curl script that has to do every step by hand.
 
 export const quizTokenEndpoint = [
   {

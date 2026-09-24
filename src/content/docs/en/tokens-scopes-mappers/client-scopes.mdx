@@ -71,6 +71,26 @@ The `%20` characters are URL-encoded spaces. Each scope name is space-separated 
 Optional client scopes keep access tokens small — Keycloak only includes their claims when the client explicitly requests them. Request only the scopes your application actually needs for the current operation.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Default scope | Every client automatically gets the same set of claims with no extra setup, reducing the chance of a missed assignment | The token is always bigger, even for a client that never uses that claim |
+| Optional scope | A smaller token, because it only carries the claims a client actually requested via the `scope` parameter | The client must remember to request the scope on every authorization request, or it won't get the claim it needs |
+| Split scopes per API (e.g. `orders:read`, `billing:write`) instead of one combined scope | Fine-grained, least-privilege control per client and per use case | More scopes and mappers to maintain, adding overhead |
+
+## Common mistakes
+
+- **Making every custom scope a default scope** — this bloats the token with claims most clients never use. Make it optional and let the clients that actually need it request it.
+- **Forgetting to request a scope in the authorization request and then wondering why the claim is missing** — assigning an optional scope to a client alone doesn't make the claim appear in the token; it must also be listed in the request's `scope` parameter.
+- **Using one scope for several APIs with different permission levels** — this gives every client that has the scope the same level of access. Split scopes according to each API's risk level.
+
+> Real-world example
+>
+> **A multi-tenant SaaS platform** — splits optional scopes by module, such as `billing`, `reports`, and `admin`, so each integration or third-party app's token carries only the claims it needs for the module it requested.
+>
+> **An enterprise-grade API gateway** — uses a default `roles` scope so every client always gets basic realm/client role claims, while a more sensitive scope such as financial data stays optional and is only granted to approved clients.
+
 export const quizClientScopes = [
   {
     q: 'What is a client scope?',

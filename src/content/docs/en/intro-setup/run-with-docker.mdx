@@ -59,6 +59,25 @@ Because `start-dev` uses an in-memory H2 database, all realms, clients, and user
 `start-dev` disables important production checks and uses an in-memory database. All data is lost when the container stops. Never use `start-dev` in production — use `start` with an external database instead.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| `start-dev` in a Docker container | Up and running with one command, no database setup needed — good for experimenting and learning | Data is lost every time the container is removed, there's no TLS, and it's not fit for a real workload, even staging |
+| `start` with an external database (production mode) | Data persists across restarts/redeploys, supports TLS and a fixed hostname, and scales across multiple instances | Requires setting up a database, TLS certificate, and reverse proxy before it can be used |
+
+## Common mistakes
+
+- **Running `start-dev` and forgetting to switch to `start` before going to production** — `start-dev` disables several security checks and uses an in-memory database; forgetting to switch modes means production data disappears the moment the container restarts.
+- **Not changing `KC_BOOTSTRAP_ADMIN_USERNAME`/`KC_BOOTSTRAP_ADMIN_PASSWORD` from the default** — leaving `admin`/`admin` in place, even in a container exposed to another network, is a very common security gap.
+- **Not pinning the image version** — using `quay.io/keycloak/keycloak:latest` in CI or staging causes behaviour to change unexpectedly whenever a new version is released. Always pin to a specific version.
+
+> Real-world example
+>
+> **Platform engineering teams inside an organisation** — commonly use `docker run start-dev` or `docker-compose` only on a developer's local machine for integration testing, then deploy the real Keycloak through a Helm chart on Kubernetes with an external PostgreSQL database.
+>
+> **Red Hat build of Keycloak (RH-SSO)** — the image used in this lesson is the community build; organisations that need an SLA-backed support contract use the Red Hat build of Keycloak container image instead, but the `start`/`start-dev` commands and environment variables work the same way.
+
 export const quizDocker = [
   {
     q: 'What does the -p 8080:8080 flag do in the docker run command?',

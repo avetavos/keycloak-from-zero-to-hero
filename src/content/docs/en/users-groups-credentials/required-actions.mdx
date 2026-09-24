@@ -83,6 +83,26 @@ Replace `my-app` with your realm name, `TOKEN` with a valid admin access token, 
 Required actions let you enforce steps — verify email, set up 2FA — before a user can finish logging in. Use them to harden security without writing custom code.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Combine a default group with required actions for automated onboarding | New users are placed in the right group and forced through identity verification/credential setup automatically, with no admin clicking through it | The whole flow must be designed carefully — a missing required action or a wrong default group gives new users a broken experience or the wrong permissions from day one |
+| Assign a required action to an individual user through the admin console | Good for a special case, e.g. suspecting an account was compromised and wanting to force an Update Password just for that user | Doesn't scale to a large number of users — use the Admin REST API or a default action instead |
+| Enable self-registration with no required action attached | Signing up is instantly usable, reducing onboarding friction | Significant security risk — e.g. no email verification, which can let fake accounts or the wrong person's email into the system |
+
+## Common mistakes
+
+- **Enabling self-registration but skipping enforced email verification** — this lets anyone register with an email that isn't theirs. Always attach the `VERIFY_EMAIL` required action to self-registration.
+- **Forgetting that required actions run in order before a token is issued** — configuring several actions together without testing the real flow can leave a user stuck partway through with no obvious cause.
+- **Using a required action as a substitute for a password or OTP policy** — a required action like Update Password or Configure OTP only "forces the step," it doesn't enforce a strict rule such as minimum password length or the OTP algorithm. Set the related policy alongside it.
+
+> Real-world example
+>
+> **Automated enterprise employee onboarding** — an HR system creates the user through the Admin REST API with the correct default group for their role and immediately sets the `VERIFY_EMAIL` and `UPDATE_PASSWORD` required actions, so the new employee lands in the right team and is forced to verify their email and set their own password automatically, with no IT ticket needed.
+>
+> **A SaaS platform with 2FA compliance requirements** — enforces the `CONFIGURE_TOTP` required action for every user's first login, to guarantee no account can reach the system without a second factor set up from day one.
+
 export const quizRequiredActions = [
   {
     q: 'What is a required action in Keycloak?',

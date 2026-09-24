@@ -97,6 +97,26 @@ After the sync, go to **Users** in the left sidebar. You should see your LDAP us
 The edit mode `READ_ONLY` prevents Keycloak from modifying your LDAP directory. This is the safe default for corporate Active Directory deployments where the HR system or IT team owns the directory. Only switch to `WRITABLE` if your organisation has explicitly approved Keycloak as a write-capable client of the directory.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| `READ_ONLY` | Safest — Keycloak can never write back to LDAP, so there's no risk of breaking the organisation's directory. Ideal for a corporate AD owned by IT | Users cannot change their password or profile through Keycloak; they must do it in the source system (e.g. AD) |
+| `WRITABLE` | Users can change their password or attributes directly through Keycloak — convenient for self-service | Keycloak can write to the production directory — a misconfiguration or a compromised service account can affect real LDAP/AD data organisation-wide |
+| `UNSYNCED` | Stores attribute changes locally (in Keycloak's own database) without touching LDAP at all — flexible for extra attributes LDAP doesn't have | Data in Keycloak and LDAP can diverge over time, because local overrides never sync back to the source of truth |
+
+## Common mistakes
+
+- **Importing all users from a large directory unpaged** — for a directory with tens or hundreds of thousands of users, an unpaged sync can crash the LDAP server or Keycloak itself from memory pressure or timeouts. Set a batch size and use paged search if the LDAP server supports it.
+- **Setting edit mode to `WRITABLE` without sign-off from whoever owns the directory** — Keycloak instantly becomes a client that can write to production AD/LDAP, risking employee data damage if a mapping is wrong. Always start with `READ_ONLY` and move up only if truly necessary.
+- **Not configuring connection pooling or a scheduled sync in production** — querying LDAP directly on every login (import off) with no connection pooling puts unnecessary load on the LDAP server when many users log in at once.
+
+> Real-world example
+>
+> **An organisation bridging Keycloak with an existing Active Directory** — employees keep logging in with the same AD password they already use for Windows and email, with no new password to remember and no separate Keycloak account. IT keeps controlling password policy through AD as before.
+>
+> **A company with OpenLDAP as its central employee directory** — uses `READ_ONLY` LDAP federation so every internal tool behind Keycloak sees the same set of users, without syncing data back and forth between multiple systems.
+
 export const quizLdap = [
   {
     q: 'What LDAP attribute should you use as the username for Active Directory?',

@@ -125,6 +125,26 @@ Keycloak's state lives entirely in the external database. Back up the database u
 External database, fixed hostname, HTTPS, and an optimised build — `start-dev` has none of them. Switching from `start-dev` to `start --optimized` without these four in place will break your deployment.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Edge TLS termination (reverse proxy) | Manages the certificate in one place (Nginx/Traefik/ALB) and supports easy rolling cert renewal | `KC_PROXY_HEADERS` must be configured correctly, or Keycloak sees the wrong protocol/host and redirects break |
+| TLS passthrough (Keycloak handles it directly) | No extra proxy dependency — simpler for a minimal deployment | You manage the certificate lifecycle yourself, on every Keycloak instance |
+| Optimised build (`kc.sh build` ahead of time) | Cuts startup time from ~30 seconds to ~3 seconds — good for containers that scale up and down often | Adds a separate build step to CI/CD, and the image must be rebuilt every time a provider config changes |
+
+## Common mistakes
+
+- **Running `start-dev` in production** — it still uses the embedded H2 database, a self-signed certificate, and relaxed hostname checks, so data is lost on every container restart and several security gaps open at once.
+- **Exposing `/metrics` or `/health` publicly with no access restriction** — these endpoints reveal internal details about the system and should only be reachable from your internal network or monitoring system.
+- **Not setting `KC_HOSTNAME` to match the real domain** — this makes the token issuer and OIDC discovery document not match what clients expect, so clients reject tokens even though Keycloak itself is working fine.
+
+> Real-world example
+>
+> **A platform team's standard production checklist** — most infrastructure teams wire external PostgreSQL, a fixed hostname via DNS, TLS via a reverse proxy, and multi-node clustering together into a single deployment template, then use realm export/import to reproduce the same configuration in every environment.
+>
+> **High-availability clustering** — organisations that need high uptime run several Keycloak instances behind a load balancer, sharing one external database, so that losing any single instance doesn't log users out.
+
 export const quizProduction = [
   {
     q: 'What happens to user sessions when you restart Keycloak 26 with default settings?',

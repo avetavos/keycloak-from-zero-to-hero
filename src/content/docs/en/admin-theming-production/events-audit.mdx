@@ -79,6 +79,26 @@ For custom integrations (e.g., sending events to a webhook or a message queue), 
 Enable login and admin events before you go live — they are your audit trail. Enabling them after an incident means you have already lost the data you need to investigate. Set a sensible expiration (7–30 days) to keep storage under control.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Store admin events with "Include representation" | Captures the full before/after JSON payload of every change — ideal for audits that need to know exactly what changed | Significantly increases storage use, especially in realms where admins change configuration often |
+| Short expiration (7 days) | Keeps storage bounded with no manual archiving | If an incident needs investigating further back than 7 days, the data may already be gone |
+| Long expiration, or export outside the system | Supports compliance/audit requirements that need a long history (e.g. SOC2) | Increases storage cost and requires a separate archive/export mechanism |
+
+## Common mistakes
+
+- **Not enabling events until something goes wrong** — events are disabled by default, and many teams only turn them on after an incident, leaving no data to investigate. Enable them before going live.
+- **Never setting an expiration** — letting events accumulate indefinitely in the database makes the table grow until it affects Keycloak's own performance. Set an expiration that matches your audit needs.
+- **Enabling "Include representation" on every realm without considering storage cost** — this stores the full JSON payload of every change in every realm, including realms that don't need that level of detail, adding unnecessary storage overhead.
+
+> Real-world example
+>
+> **SOC2 / compliance audits** — organisations that need to pass SOC2 or a similar compliance standard commonly configure admin events to store the full representation, then periodically export them to a SIEM or external log aggregator to prove every identity-related change is recorded.
+>
+> **Security incident response** — security teams use login events to investigate which accounts were targeted by credential stuffing, filtering by the `LOGIN_ERROR` event type and time window through the Admin REST API instead of paging through the console screen by screen.
+
 export const quizEvents = [
   {
     q: 'What is the difference between login events and admin events in Keycloak?',

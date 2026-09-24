@@ -101,6 +101,25 @@ http://localhost:8080/realms/{realm-name}/protocol/openid-connect/certs
 Never register your applications or store application users in the master realm. The master realm is reserved for Keycloak administration. Create a dedicated realm for every project or product.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| One realm per app (realm-per-app) | Completely separates each app's users, sessions, and token policy, limiting the blast radius if one app has a security issue | You must maintain multiple realms — theme, SMTP, and identity provider settings must be repeated per realm, adding operational overhead |
+| Shared realm (several apps in one realm) | Simpler to set up and maintain; one user can access several apps via SSO immediately | Weaker isolation — a misconfiguration or role mistake in one app can affect another app in the same scope |
+
+## Common mistakes
+
+- **Registering real applications in the master realm** — master should be reserved for administering Keycloak itself. Create a separate realm for every project or product so application users aren't mixed in with super-user administration.
+- **Forgetting to set token lifespans appropriate to each app's risk** — using the same defaults for every realm, even though some realms (e.g. banking) should have a shorter access-token lifespan than a lower-risk realm.
+- **Not rotating the signing key periodically in production** — leaving the same key in use for the system's whole lifetime increases risk if the private key ever leaks unnoticed.
+
+> Real-world example
+>
+> **A multi-tenant SaaS platform** — many SaaS platforms use a realm-per-customer pattern, creating a separate realm for each customer so their users, roles, and sessions are completely isolated from each other, while supporting custom branding and a per-tenant identity provider.
+>
+> **A large organisation with multiple teams** — a company running both internal tools and a customer-facing product commonly separates realms by user population, e.g. a `staff` realm for employees and a `customers` realm for customers, so password or MFA policy on one side never affects the other.
+
 export const quizRealms = [
   {
     q: 'You run a SaaS product for many customers who all use the same clients and roles. Which model does Keycloak 26 recommend?',

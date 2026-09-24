@@ -91,6 +91,26 @@ curl -s -H "Authorization: Bearer ${TOKEN}" \
 Set **Email verified** on the user when you create the account, or assign the `verify-email` required action — unverified users can be a security gap. If a user's email is unverified, an attacker who gained access to the email address could receive password-reset links intended for a different account.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Admin creates every user manually (manual onboarding) | Fine-grained control — admin sets attributes, email-verified status, and required actions from day one | Doesn't scale as the number of users grows; costs admin time per account |
+| Enable self-registration | Reduces admin workload and makes onboarding much faster | The default group and required actions must be designed carefully, or new accounts end up with the wrong permissions or an unverified email |
+| Attach custom attributes directly on the user | Flexible — store app-specific metadata with no data-model change | If it isn't mapped to a client scope via a mapper, the attribute never appears in the token; mapping needs upkeep |
+
+## Common mistakes
+
+- **Creating users one at a time with no group/permission plan** — this scatters role assignment across accounts. Plan groups and default groups from the start instead of fixing it later.
+- **Turning on Email verified without confirming the account is a real user** — if an admin creates an account on someone's behalf and skips verification unnecessarily, it opens the door to fake accounts or the wrong person's email getting in.
+- **Forgetting that a user is scoped to a single realm** — trying to look up or reference a user across realms directly won't find them; use federation if you need to share identity across realms.
+
+> Real-world example
+>
+> **A B2B SaaS company** — uses the Admin REST API to automatically create a user every time a new tenant is provisioned, setting attributes such as `tenantId` and `plan` at creation time so the backend can enforce tenant-based permissions immediately with no manual admin step.
+>
+> **A large enterprise** — enables self-registration restricted to the company's internal email domain, then enforces the `verify-email` required action to make sure every account reaching the system is a genuine employee before it can access any internal application.
+
 export const quizUsers = [
   {
     q: 'Which field is required when creating a user in Keycloak?',

@@ -144,6 +144,26 @@ You do not need to assign `uma_authorization` or `offline_access` to users manua
 Instead of assigning many individual roles to each user, create a composite role that bundles the permissions for a persona (e.g., `editor`, `viewer`, `admin`). Assigning one composite role is easier to manage and audit than assigning ten individual roles per user.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Realm role | Usable across every client in the realm — good for coarse-grained permissions shared across apps | Cannot be scoped to a single client; you need a client role if you need finer granularity |
+| Client role | Scoped to one client only — good for fine-grained, app-specific permissions (e.g. `orders:write`) | Must be redefined in every client that needs a similar permission, harder to manage across many clients |
+| Group + role vs. assigning roles directly to users | Assigns a role to many people at once through a single group — easy to manage as people join and leave a team | The group structure must be designed well up front; a wrong structure is hard to fix later |
+
+## Common mistakes
+
+- **Assigning roles to users one by one instead of using a group** — when employees join or change position often, assigning roles individually is error-prone and roles get missed. Attach roles to a group and put users in the group instead.
+- **Using only client roles with no realm role at all, even for a permission shared across apps** — this forces you to redefine the same role repeatedly in every client, when a shared permission should be promoted to a realm role.
+- **Forgetting that a new role has no effect on an existing session immediately** — teams often assume a newly assigned role takes effect right away, when in fact the user must log in again or wait for a token refresh first, which can look like the configuration "isn't working."
+
+> Real-world example
+>
+> **GitHub Organizations** — uses a concept similar to a realm role with team-scoped permissions: organization-level permissions (e.g. owner, member) apply across every repository, while repository-level permissions act like a client role that narrows the scope.
+>
+> **Enterprise onboarding through groups** — many large organisations attach composite roles to a group per department (e.g. `engineering`, `sales`); when a new employee joins a team, HR only needs to add the user to the correct group and every role for that department is assigned automatically through Keycloak.
+
 export const quizRoles = [
   {
     q: 'What is the difference between a realm role and a client role?',

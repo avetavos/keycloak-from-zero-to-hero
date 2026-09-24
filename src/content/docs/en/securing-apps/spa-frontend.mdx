@@ -90,6 +90,26 @@ keycloak.tokenParsed?.resource_access?.['my-app-frontend']?.roles // client role
 In the Keycloak admin console, the client must have Client authentication set to Off (public client) and PKCE is applied by keycloak-js automatically when you pass pkceMethod: 'S256'. keycloak-js stores tokens in memory — not in localStorage — and handles silent refresh for you. Do not store tokens in localStorage or sessionStorage yourself.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Keep tokens in memory | Safer — other JavaScript, including a script injected via XSS, has a much harder time reaching it, and the token disappears when the tab closes | The token is lost on every page refresh; you must trigger a new silent SSO check via an iframe or redirect |
+| Keep tokens in localStorage | The user stays logged in even after a page refresh, and it's simpler because you don't have to manage silent refresh yourself | Opens the door to token theft via XSS, because any script running on the page can read localStorage |
+| Use keycloak-js (the official adapter) | Handles the PKCE flow, silent refresh, and token storage automatically, reducing the chance of writing security code incorrectly yourself | Ties you directly to Keycloak — migrating to a different identity provider means writing a new integration |
+
+## Common mistakes
+
+- **Storing tokens in localStorage** — the single most common SPA mistake, because localStorage is reachable from every line of JavaScript running on the page. If any third-party script or compromised dependency has an XSS vulnerability, the attacker gets the token immediately. Let keycloak-js keep tokens in memory by default instead.
+- **Trusting client-side "logged in" state without verifying at the backend** — checking that `keycloak.authenticated` is true on the frontend only tells the UI what to show; it is not proof the request is valid. The backend must verify the JWT signature on every endpoint.
+- **Not calling `updateToken` before every API call** — storing the token in a variable and reusing it without checking whether it's close to expiring causes requests to fail mid-flight with a 401, when a silent refresh ahead of time would have avoided it.
+
+> Real-world example
+>
+> **The official keycloak-js pattern** — Keycloak itself recommends keeping the token only in memory (a JavaScript variable), never localStorage or sessionStorage. On page refresh, the adapter does a silent SSO check through a hidden iframe to get a new token without the user noticing.
+>
+> **The Auth0 SPA SDK** — uses the same approach: in-memory storage plus refresh-token rotation instead of localStorage, which has become the standard best practice for browser-based OIDC client libraries across the industry.
+
 export const quizSpaFrontend = [
   {
     q: 'What does the pkceMethod: "S256" option do when passed to keycloak.init()?',

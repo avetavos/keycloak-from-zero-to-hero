@@ -18,17 +18,70 @@ Keycloak ออก token สามประเภทในขั้นตอน 
 
 ใช้อนุญาต API call — เป็น JWT อายุสั้นที่ API ของคุณตรวจสอบในทุก request Bearer token นี้คือสิ่งที่คุณส่งไปใน `Authorization` header เมื่อเรียก backend service
 
+คุณสมบัติสำคัญ:
+
+- อายุสั้นโดยค่าเริ่มต้น (5 นาทีใน Keycloak)
+- บรรจุ claim เกี่ยวกับผู้ใช้และสิทธิ์ที่ได้รับ (role, scope)
+- มีไว้สำหรับ API ของคุณ — ไม่ใช่สำหรับตัว client application เอง
+- ควร validate ทุก request ด้วย public key ของ realm (ผ่าน JWKS)
+
 ## ID Token
 
 บอก client ว่าผู้ใช้คือใคร — ใช้ได้เฉพาะใน client เท่านั้น เช่น เพื่อแสดงชื่อผู้ใช้ใน UI ห้ามส่ง ID token ไปยัง backend API เด็ดขาด
+
+คุณสมบัติสำคัญ:
+
+- บรรจุ identity claim: `sub`, `name`, `email`, `preferred_username` และอื่นๆ
+- มีไว้สำหรับ client application เท่านั้น — **ห้ามส่งไปยัง API ของคุณ**
+- ไม่ควรใช้เพื่อตัดสินใจเรื่อง authorization
 
 ## Refresh Token
 
 อายุยาวกว่า access token — ใช้ขอ access token ใหม่โดยไม่ต้อง login ซ้ำ ส่งได้เฉพาะไปยัง Keycloak token endpoint เท่านั้น
 
+คุณสมบัติสำคัญ:
+
+- ส่งได้เฉพาะไปยัง Keycloak token endpoint (`/protocol/openid-connect/token`)
+- ไม่ส่งไปยัง API ของคุณเด็ดขาด
+- ถูกยกเลิกเมื่อผู้ใช้ logout หรือเมื่อ SSO session หมดอายุ
+- ถ้าขอ scope `offline_access` Keycloak จะออก offline refresh token ที่มีอายุอยู่ได้นานกว่า session ปกติ
+
 ## ตัวอย่าง Decoded JWT
 
 ด้านล่างนี้คือ access token ที่ถูก decode แล้ว แสดง header, payload และ claim ต่างๆ ที่ Keycloak ใส่ไว้:
+
+```json
+{
+  "header": {
+    "alg": "RS256",
+    "typ": "JWT",
+    "kid": "abc123"
+  },
+  "payload": {
+    "exp": 1719878400,
+    "iat": 1719874800,
+    "jti": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "iss": "https://auth.example.com/realms/my-app",
+    "aud": "account",
+    "sub": "user-uuid-here",
+    "typ": "Bearer",
+    "azp": "my-app-frontend",
+    "scope": "openid profile email roles",
+    "realm_access": {
+      "roles": ["offline_access", "uma_authorization", "user"]
+    },
+    "resource_access": {
+      "my-app-frontend": {
+        "roles": ["app-user"]
+      }
+    },
+    "email_verified": true,
+    "name": "Alice Example",
+    "preferred_username": "alice",
+    "email": "alice@example.com"
+  }
+}
+```
 
 export const decodedAccessTokenCode = `{
   "header": {
@@ -61,7 +114,7 @@ export const decodedAccessTokenCode = `{
   }
 }`;
 
-<CopyCode client:visible code={decodedAccessTokenCode} label="Copy curl" />
+<CopyCode client:visible code={decodedAccessTokenCode} label="Copy decoded token" />
 
 ## Claim สำคัญใน Access Token
 

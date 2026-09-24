@@ -107,6 +107,26 @@ When you enable **Client authentication** on a client and also check **Service a
 Browser and mobile apps are public clients — they cannot store a secret, so they must use PKCE to protect the authorization code exchange. Server-side applications are confidential clients and authenticate with a client secret that never leaves the server.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Public client + PKCE | No secret to leak — good for SPAs/mobile apps where you don't control the client-side code | Keycloak can only authenticate the user, not the client itself; you rely on PKCE to prevent code interception |
+| Confidential client + client secret | Authenticates both the client and the user — good for a backend that can store the secret safely | Needs secure secret storage and a rotation mechanism; if the secret leaks, every request using that client is affected |
+| Bearer-only (legacy) vs. having the API server verify the JWT itself | No special client registration needed, reducing setup surface | Modern Keycloak recommends the API server verify the JWT via JWKS directly instead — bearer-only is mostly deprecated |
+
+## Common mistakes
+
+- **Configuring an SPA as a confidential client** — an SPA has nowhere safe to store a secret, so it leaks immediately through browser devtools or the network tab. Always use a public client with PKCE instead.
+- **Manually disabling PKCE on a public client** — modern Keycloak enforces PKCE by default, but setting the Code Challenge Method back to none reopens the door to authorization-code interception attacks.
+- **Reusing the same client secret across multiple environments** — if the secret leaks in one environment (e.g. staging), every environment sharing that secret is affected. Always use a separate, rotated secret per environment.
+
+> Real-world example
+>
+> **Native and smart-TV apps in general** — commonly use a public client with PKCE, because their binaries can be decompiled or inspected, so there is nowhere safe enough to hold a client secret.
+>
+> **The backend-for-frontend (BFF) pattern** — many teams use a server-side confidential client to exchange the token instead of the SPA doing it directly, then hand the result back through their own cookie — shrinking the attack surface for tokens in the browser even further.
+
 export const quizClientTypes = [
   {
     q: 'Which type of application should use a public client?',

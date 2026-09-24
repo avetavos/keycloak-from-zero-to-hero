@@ -86,6 +86,26 @@ Keycloakify gives you full React component control over every login page while s
 Customise the login theme to match your brand — it is the one Keycloak page your users actually see. Even a simple logo swap and colour change dramatically improves the perceived quality of your product.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Custom theme that extends the `keycloak` parent | Overrides only the files you need to change, and automatically benefits from the parent theme's fixes and new features | You must re-check every Keycloak upgrade to confirm your overridden templates are still compatible with the new parent version |
+| Keycloakify (React-based theming) | Full UI control using React components your frontend team already knows | Adds a build step that packages the theme as a JAR, and you need to learn Keycloak's internal protocol integration points |
+| Editing the built-in `keycloak` theme directly | Fast to see results because there's no new theme structure to create | A Keycloak upgrade overwrites all built-in files, silently wiping out your changes |
+
+## Common mistakes
+
+- **Editing the built-in `keycloak` theme in place** — a Keycloak upgrade overwrites every built-in file, silently discarding the customisation. Always create a separate custom theme that extends the parent instead.
+- **Only testing the login theme type** — customising the login page but forgetting that the `account`, `email`, and `admin` theme types deserve branding attention too, especially email templates, which users see just as often as the login page.
+- **Deploying a custom theme and not restarting or clearing the cache in dev** — Keycloak caches theme resources in production mode, so changes won't appear until you restart or disable theme caching during development.
+
+> Real-world example
+>
+> **Keycloakify in production** — many frontend teams use Keycloakify to compile the same React components used in their main app into Keycloak's login pages, giving users one continuous brand experience from login through to the app itself.
+>
+> **Enterprise white-labelling** — companies running a multi-tenant platform commonly create a separate custom theme per realm so each customer sees a login page with their own logo and colours, even though the same Keycloak instance runs behind the scenes.
+
 export const quizThemes = [
   {
     q: 'Which Keycloak theme type controls the login and registration pages?',

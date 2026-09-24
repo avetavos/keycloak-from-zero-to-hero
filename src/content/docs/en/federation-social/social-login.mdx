@@ -78,6 +78,25 @@ The **alias** you set in Step 3 appears in the broker endpoint URI and also cont
 The redirect URI Keycloak exposes for brokering is fixed: `<keycloak-host>/realms/<realm>/broker/<alias>/endpoint`. You must register this URI exactly with the external provider. Any mismatch — wrong host, wrong realm name, wrong alias, extra trailing slash — will cause the social login to fail with an OAuth2 redirect URI error.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Identity brokering as a central hub (Keycloak manages all social login) | Manages credentials, redirect URIs, and token exchange in one place; adding a new provider needs no application change | You must maintain each IdP's configuration in Keycloak, and every app depends on Keycloak as a single point of failure |
+| Each app embeds its own social-login SDK (e.g. the Google Sign-In SDK directly in each app) | Finer control over the login button's UX, with no dependency on Keycloak | The team must maintain the OAuth client and SDK separately in every app; changing provider means changing many places |
+
+## Common mistakes
+
+- **Using the same Google OAuth client across dev/staging/prod** — create a separate OAuth client per environment, because redirect URIs differ, and if the same client leaks in a less-secure environment (e.g. dev) it affects prod too.
+- **Forgetting to set the redirect URI to match exactly what Keycloak exposes** — even an extra trailing slash makes social login fail with a redirect URI mismatch; copy the pattern from the setup step directly.
+- **Not checking the first-login flow before enabling social login for real** — if account linking isn't configured correctly, a user who already has an account may unknowingly end up with a duplicate.
+
+> Real-world example
+>
+> **An app with a "Log in with Google" or "Log in with GitHub" button** — this is identity brokering running in production right now: the app never sees the Google or GitHub credential at all, it only receives the token Keycloak issues after brokering completes.
+>
+> **A startup that grew from one app to many** — each app originally embedded its own Google SDK; after moving to Keycloak as a central broker, adding a new provider (e.g. Sign in with Apple) is a one-time change in Keycloak, and every app gets it immediately with no redeploy.
+
 export const quizSocialLogin = [
   {
     q: 'What does Keycloak act as when a user clicks "Log in with Google"?',

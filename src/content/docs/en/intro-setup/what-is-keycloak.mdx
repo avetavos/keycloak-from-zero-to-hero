@@ -69,6 +69,25 @@ export const archFlow = `flowchart TD
 Keycloak speaks OIDC/OAuth2 and SAML — any compliant app can integrate without custom auth code.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Self-host Keycloak | Full control over data residency, no per-monthly-active-user fee, and every part is customisable, including themes and SPIs | You operate the infrastructure yourself (patching, scaling, backup, HA) and need a team that understands Keycloak internals |
+| Managed IdP (Auth0, AWS Cognito) | Fast to get started, no server to run, and comes with vendor SLA and support | Cost grows with user count (MAU pricing), customisation is more limited, and user data lives outside your own infrastructure |
+
+## Common mistakes
+
+- **Treating Keycloak as "install it and you're done"** — Keycloak needs ongoing care: version upgrades, performance monitoring, and security patching, just like any other production service.
+- **Choosing self-hosting without evaluating the ops cost** — teams with no experience running a stateful service often underestimate the infrastructure and on-call cost compared to paying for a managed IdP.
+- **Confusing Keycloak with application-level authorization** — Keycloak only handles authentication and token issuance; the complex authorization logic specific to each application still has to be implemented by that application.
+
+> Real-world example
+>
+> **Red Hat build of Keycloak (RH-SSO)** — Red Hat itself distributes Keycloak with commercial support under the name "Red Hat build of Keycloak" (formerly "RH-SSO"), for organisations that want an SLA and a certified build without losing open-source flexibility.
+>
+> **Large enterprises** — companies with dozens of internal applications commonly self-host Keycloak to consolidate login into a single SSO, reducing password-reset helpdesk load and letting the security team control authentication policy from one place.
+
 export const quizWhatIs = [
   {
     q: 'What does SSO mean in the context of Keycloak?',

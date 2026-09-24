@@ -46,6 +46,27 @@ export const authCodeCurlCode = `curl -X POST https://\${KC_URL}/realms/\${REALM
 Public clients (SPAs and mobile apps) cannot keep a client secret secure. Authorization Code + PKCE is the safe alternative — the code_verifier is known only to the initiating app, so even if the code is intercepted it cannot be exchanged for tokens. Never use the Implicit flow — it is deprecated.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Authorization Code + PKCE | The token never passes through the browser URL — safe for public clients, and the current standard for SPAs and mobile apps | Requires an extra round-trip to the token endpoint and handling `code_verifier`/`code_challenge` in your code |
+| Implicit flow (deprecated) | Historically simpler to set up, with no separate token endpoint call | The token ends up in the URL fragment, risking exposure via browser history, referrer headers, and logs — removed from OAuth 2.1 |
+| Client Credentials | Good for machine-to-machine, with no user involved | Unusable if the flow needs a real user, because there is no user context |
+
+## Common mistakes
+
+- **Using the Implicit flow in a new project from 2024 onward** — the Implicit flow is deprecated because the access token comes back through the URL fragment, which can leak via browser history or referrer headers. Every new project should use Authorization Code + PKCE instead, for both SPAs and mobile apps.
+- **Skipping the `state` parameter** — `state` prevents CSRF by having the app generate a random value before redirecting, then checking that the same value comes back on callback. Skipping it lets an attacker trick a user into logging in under the attacker's own session.
+- **Putting a client secret in an SPA or mobile app** — a public client cannot store a secret securely, because client-side code can always be inspected. This is exactly why PKCE exists — it replaces the secret with a `code_verifier` generated fresh every time.
+- **Not validating `code_challenge_method`** — only `S256` should be accepted; never allow a fallback to `plain`, which defeats the purpose of PKCE entirely.
+
+> Real-world example
+>
+> **The "Log in with Google/GitHub" button** — a live, production example of Authorization Code + PKCE in use today; nearly every web and mobile app uses this exact pattern.
+>
+> **Mobile banking apps** — also use Authorization Code + PKCE for native login screens, because a mobile app counts as a public client that cannot securely hold a client secret, so it relies on PKCE to prevent the authorization code from being intercepted during the redirect.
+
 export const quizAuthCodePkce = [
   {
     q: 'Why is PKCE needed for public clients?',

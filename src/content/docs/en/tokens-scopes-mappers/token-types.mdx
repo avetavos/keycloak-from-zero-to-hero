@@ -136,6 +136,26 @@ export const decodedAccessTokenCode = `{
 Send the ACCESS token to your API as the Bearer token in the Authorization header. Use the ID token only in the client to display user info — never forward it to a backend service.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Request an ID token alongside the access token (`scope=openid`) | The client knows the user's identity immediately, with no extra call to the userinfo endpoint | A larger response, and one more token type to handle correctly — it must never be sent to the backend |
+| Use the refresh token to obtain new access tokens | The user never has to log in again, even though the access token itself expires quickly | The refresh token must be stored securely, since it is longer-lived and more privileged than the access token |
+| A public client (SPA) uses PKCE instead of a client secret | No secret embedded in frontend code that anyone can inspect | Relies on a strictly configured redirect URI to prevent the authorization code from being stolen during the redirect |
+
+## Common mistakes
+
+- **Sending the ID token to a backend API** — the ID token is meant for the client to read and display user info, not for an API to validate. Always send the access token as the Bearer token instead.
+- **Storing a token (especially the refresh token) in localStorage** — any JavaScript running on the page can read localStorage, so a single XSS vulnerability hands the token straight to an attacker. Keep it in memory or an httpOnly cookie instead.
+- **Using the access token as a long-lived session identifier** — an access token expires and changes value on its own schedule; don't tie logic that needs to persist to the raw token value. Tie it to the `sub` claim or a server-side session instead.
+
+> Real-world example
+>
+> **The Auth0 SPA SDK / Google Identity Services** — keep access and refresh tokens only in the JavaScript runtime's memory (never localStorage), and restore the session on page reload through silent refresh or refresh-token rotation.
+>
+> **Mobile banking apps** — clearly separate ID-token use (showing the user's name/profile picture in the app only) from every call to the core banking API, which attaches only the access token via the `Authorization: Bearer` header.
+
 export const quizTokenTypes = [
   {
     q: 'Which token does your REST API validate?',

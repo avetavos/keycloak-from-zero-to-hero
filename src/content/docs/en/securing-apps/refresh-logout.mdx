@@ -80,6 +80,26 @@ Keycloak clears the SSO session cookie, marks the refresh token as revoked, and 
 Clearing your app's local state only removes tokens from memory. The Keycloak SSO session cookie in the browser remains valid. Until you call keycloak.logout(), the user is still globally logged in and can re-enter your app (or any other app in the realm) without a password prompt.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Silent refresh via `updateToken()` | The user is never interrupted; the session continues as long as the refresh token hasn't expired | Requires complete error handling, because a silent refresh failure can leave the app looking logged in while every API call fails |
+| Force a re-login immediately when the access token expires | Simpler to implement, no complex refresh flow to manage | Much worse UX — users must re-enter their password often, even though the SSO session itself hasn't actually expired |
+| Set a short SSO Session Idle/Max | Reduces the risk window if a token or session leaks | Users must authenticate again more often, hurting UX especially for apps used continuously for long periods |
+
+## Common mistakes
+
+- **Not handling the case where `updateToken()` rejects** — if the refresh token has expired or been revoked and the app doesn't catch the error, the user keeps seeing failed API requests with no obvious cause. Always catch it and call `keycloak.login()` to redirect back to authentication.
+- **Logging out by only clearing local state, without calling the end-session endpoint** — removing tokens from memory alone doesn't clear Keycloak's SSO session cookie, so the user is "logged out" of your app but still logged in realm-wide.
+- **Retrying refresh indefinitely on a transient network failure** — not distinguishing a network error from a genuinely expired refresh token can make the app loop calling `updateToken()` repeatedly without ever falling back to the login page.
+
+> Real-world example
+>
+> **The keycloak-js `updateToken` pattern** — many production apps call `updateToken(minValidity)` silently before every API call, exactly as this lesson shows, and catch the rejection to redirect to login only when the refresh token has genuinely expired, instead of letting requests fail silently.
+>
+> **Google Workspace / Gmail on the web** — uses the same idea: a long-lived session that refreshes automatically in the background, but with an absolute session timeout (similar to Keycloak's SSO session max) that forces re-authentication periodically even while silent refresh keeps "succeeding."
+
 export const quizRefreshLogout = [
   {
     q: 'What does keycloak.updateToken(60) do?',

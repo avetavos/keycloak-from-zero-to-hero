@@ -123,7 +123,7 @@ curl นี้สาธิต grant แบบ **client credentials** — flow �
 
 > 💡 ตัวอย่างจากของจริง
 >
-> **Netflix และแอปมือถือ/smart TV ทั่วไป** — ใช้ public client ร่วมกับ PKCE เพราะ binary ของแอปเหล่านี้สามารถถูก decompile หรือตรวจสอบได้ ไม่มีที่ใดปลอดภัยพอสำหรับ client secret
+> **แอปมือถือและแอปบน smart TV ทั่วไป** — ใช้ public client ร่วมกับ PKCE เพราะ binary ของแอปเหล่านี้สามารถถูก decompile หรือตรวจสอบได้ ไม่มีที่ใดปลอดภัยพอสำหรับ client secret
 >
 > **Backend-for-frontend (BFF) pattern** — หลายทีมใช้ confidential client ฝั่ง server เพื่อแลก token แทน SPA โดยตรง แล้วส่งผลลัพธ์กลับผ่าน cookie ของตัวเอง ลดพื้นที่การโจมตีของ token ใน browser ลงไปอีกขั้น
 

@@ -44,6 +44,25 @@ export const discoveryCode = `curl https://\${KC_URL}/realms/\${REALM}/.well-kno
 Never hardcode endpoint URLs. Every endpoint your app needs is in the discovery document. When Keycloak upgrades or moves, your app picks up the new URLs automatically if it fetches the discovery doc at startup.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Use the OIDC discovery document | The app fetches its configuration automatically, with no endpoint URLs hardcoded | Adds a network call at startup, and it must be cached properly so it isn't refetched on every request |
+| Hardcode the endpoint URLs yourself | Faster to get started, no dependency on the discovery document | When Keycloak moves the realm or changes its URL, every place you hardcoded it needs a code change |
+
+## Common mistakes
+
+- **Confusing OAuth2 with OIDC** — OAuth2 is an authorization framework (grants access to a resource), while OIDC is an identity layer built on top of OAuth2 (tells you who the user is). You must request `scope=openid` to get an `id_token` back.
+- **Not verifying `issuer` in the discovery document** — before trusting any endpoint, verify that `issuer` matches the expected Keycloak realm, or you risk being tricked by a forged discovery document.
+- **Caching the discovery document forever and never refreshing it** — if Keycloak rotates keys or moves an endpoint, an app that cached the old value permanently breaks with no warning. Set a TTL or refresh it periodically.
+
+> Real-world example
+>
+> **The "Log in with Google" or "Log in with GitHub" button** — behind it is full OIDC: the app fetches Google's/GitHub's discovery document first to learn the authorization and token endpoints, then starts the flow.
+>
+> **Auth0 and Okta** — commercial identity providers that use the same discovery-document pattern as Keycloak, so an app can switch provider with almost no code change, because they all speak the same OIDC language.
+
 export const quizOidcBasics = [
   {
     q: 'Where does Keycloak publish the OIDC discovery document?',

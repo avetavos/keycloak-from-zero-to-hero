@@ -76,6 +76,26 @@ In the identity provider settings you can set:
 The first broker login flow decides whether a brokered user is linked to an existing account or a new one is created — tune it carefully. Automatically linking on email match is convenient but requires trusting the external IdP's email verification. A misconfigured flow can lead to account takeover if an attacker controls an IdP that returns a victim's email address.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Centralised identity brokering (Keycloak as one hub for every external IdP) | Manages trust relationships, first-login flow, and mapper policy from a single place — easy to review and audit | Every external IdP must onboard through Keycloak — if Keycloak goes down, login through every provider breaks at once |
+| Sync mode `LEGACY` (sync only on first login) | Reduces load on the external IdP because it isn't queried again on every login — good for data that rarely changes | Local attributes can go stale if the external IdP updates data such as role or department |
+| Sync mode `FORCE` (sync on every login) | User data always matches the external IdP — good when the external IdP is the source of truth | Adds a round-trip to the external IdP on every login, slowing it down slightly and adding a dependency on the IdP at authentication time |
+
+## Common mistakes
+
+- **Not mapping `email_verified` from the external IdP** — left unmapped, Keycloak may treat the email as unverified even though the external IdP already verified it, breaking flows that require a verified email such as password reset. Set up a mapper, or enable "Trust email" deliberately.
+- **Enabling "Trust email" without checking that the external IdP actually verifies email** — if the external provider lets users set their own email without verification, trusting it opens the door to account takeover via a spoofed email.
+- **Configuring the first-login flow to auto-link accounts without an extra verification step** — users should confirm with a password or OTP before an existing account is linked, not just an email match.
+
+> Real-world example
+>
+> **Organisations bridging Keycloak with Okta or Azure AD** — use OIDC identity brokering so employees can log in to internal apps with their existing corporate SSO account, without a separate Keycloak account.
+>
+> **A SaaS platform offering SAML SSO to enterprise customers** — each customer connects Keycloak to their own ADFS or IdP via SAML brokering, so their employees can log in to the platform with their own company credentials immediately.
+
 export const quizBrokering = [
   {
     q: 'Which of these is NOT a valid identity brokering source in Keycloak?',

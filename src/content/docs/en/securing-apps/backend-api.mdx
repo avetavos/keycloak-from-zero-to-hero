@@ -97,6 +97,26 @@ function hasRole(user: Record<string, unknown>, role: string): boolean {
 A token that merely exists is not a valid token. An attacker can craft a JWT with any claims they like; only the cryptographic signature proves it came from Keycloak. Equally, a valid signature is not enough — you must also confirm the token was issued for your realm (iss) and intended for your API (aud), and that it has not expired.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Verify the JWT on every request (stateless validation) | No need to query a session store every time — scales easily because the backend holds no state | Verifying the cryptographic signature on every request adds a small CPU cost per request |
+| Cache the JWKS in memory (e.g. jose's `createRemoteJWKSet`) | Fewer calls to Keycloak's JWKS endpoint, lowering latency | If Keycloak rotates a key suddenly before the cache expires, there may be a short window where verification fails until the library fetches the new key |
+| Use a standard JWT-verification library (e.g. jose) | A community-vetted library that fully supports JWKS, key rotation, and the OIDC standard | Still requires writing your own middleware to wire it into your framework — it isn't a Keycloak-specific adapter |
+
+## Common mistakes
+
+- **Not checking the `aud`/`iss` claims on every request** — checking only the signature isn't enough, because a correctly signed token from a different realm or client also passes signature verification. Always check that `iss` matches your realm and `aud` matches your backend's client ID.
+- **Trusting an attached token without verifying its signature against the JWKS** — decoding a JWT and reading its claims directly without verifying the signature lets an attacker forge any payload they want. Always use a library such as jose or jjwt to verify against the JWKS public key.
+- **Not handling key rotation** — hardcoding the public key in code instead of fetching it dynamically from the JWKS endpoint means that once Keycloak rotates its key, the backend fails to verify new tokens until you deploy new code.
+
+> Real-world example
+>
+> **Spring Security's `oauth2ResourceServer`** — a standard example of backend-side JWT-validation middleware: set just the issuer-uri and it fetches the JWKS, and checks signature, `iss`, `aud`, and `exp` automatically with no validation logic to write.
+>
+> **jose + `createRemoteJWKSet`** — used in this lesson's Node/Express example, the same pattern many backend teams use in production because it caches the JWKS automatically and supports key rotation without a service restart.
+
 export const quizBackendApi = [
   {
     q: 'What does the iss (issuer) claim in a Keycloak JWT contain?',

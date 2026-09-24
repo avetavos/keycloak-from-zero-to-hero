@@ -89,6 +89,26 @@ Replace `TOKEN` with a valid admin access token and `GROUP_ID` with the UUID of 
 Assign roles to groups, then put users in groups — far easier to manage than assigning roles to individual users. When a user's responsibilities change, move them between groups instead of hunting down every role assignment on their account.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Assign permissions through a group (map roles to the group, then add users to it) | Update the role mapping once and it affects every member; moving a user between teams is just moving them between groups | The group structure must be designed well up front — getting it wrong means refactoring later |
+| Assign roles directly to each user, one by one | Good for a personal exception you don't want to affect the rest of the group | Doesn't scale — when a team's permissions change, you have to fix every account individually, and it's easy to miss one |
+| Use a default group that new users join automatically | No manual onboarding step; new users get baseline roles immediately | If the default group is wrong or too broad, new users get more permission than intended |
+
+## Common mistakes
+
+- **Assigning roles to users one at a time instead of through a group** — this becomes unmanageable as the team grows. Map roles to a group and let users inherit them through membership instead.
+- **Forgetting that a subgroup doesn't automatically inherit its parent group's roles** — if you expect subgroup members to also get the parent's permissions, you need to map the role again or add the user to the parent directly.
+- **Not reviewing default groups before enabling self-registration** — if it's misconfigured or too broad, self-registered users end up with roles they shouldn't have, or none at all.
+
+> Real-world example
+>
+> **A company onboarding new employees** — sets the default group to `all-employees`, so every user who self-registers within the company's email domain is automatically placed in it with a baseline role such as `view-directory`, with no manual click from HR or IT.
+>
+> **An engineering team split into subgroups** — uses a structure like `engineering` → `backend`, `frontend` to map specialised roles (e.g. `deploy-backend`) only to the relevant subgroup; when someone changes teams, moving their subgroup membership is all it takes, with no role reassignment needed.
+
 export const quizGroups = [
   {
     q: 'What is the key difference between a group and a role in Keycloak?',

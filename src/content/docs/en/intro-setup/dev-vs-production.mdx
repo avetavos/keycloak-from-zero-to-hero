@@ -1,6 +1,6 @@
 ---
 title: 'Dev vs Production Mode'
-description: 'Understand the difference between start-dev and start, configure KC_DB, KC_HOSTNAME, and KC_PROXY, and see a minimal production-mode command.'
+description: 'Understand the difference between start-dev and start, configure KC_DB, KC_HOSTNAME, and KC_PROXY_HEADERS, and see a minimal production-mode command.'
 sidebar:
   order: 5
 ---
@@ -59,6 +59,25 @@ ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start"]
 <Callout title="Never run start-dev in production">
 Production needs an external database, a fixed hostname, and HTTPS — never run `start-dev` in production. It uses an in-memory database, skips hostname checks, and disables security features. Your data will be lost on every container restart.
 </Callout>
+
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| `start-dev` (development mode) | Fast setup — no TLS certificate, hostname, or external database needed. Good for learning and local development | No TLS, skips hostname checks, uses an in-memory H2 database that loses data on every restart — cannot be used in production |
+| `start` (production mode) | Forces TLS/hostname/database to be configured correctly before it will actually start, preventing an accidentally insecure deployment | Requires an external database, a certificate, and reverse proxy configuration up front — setup takes longer |
+
+## Common mistakes
+
+- **Running `start-dev` in production because setup is easier** — teams in a hurry to deploy often forget to switch to `start`, leaving the system without TLS and with data in an in-memory database that disappears on every container restart.
+- **Forgetting to set `KC_HOSTNAME` to match the real domain** — a mismatched hostname makes the issued tokens carry the wrong issuer URL, so any app that validates tokens strictly rejects all of them.
+- **Enabling `KC_HTTP_ENABLED=true` with no real reverse proxy doing TLS termination** — this setting should only be used when a proxy such as Nginx or a load balancer is already handling TLS, never left on for a bare public endpoint.
+
+> Real-world example
+>
+> **An organisation consolidating SSO** — companies with dozens of internal apps commonly move all of them onto a single Keycloak instance in production mode, with external PostgreSQL and TLS through a load balancer, so employees log in once for every system.
+>
+> **Red Hat build of Keycloak (RH-SSO)** — Red Hat's supported build enforces the same principle: production-mode configuration (database, hostname, TLS) is required before a real deployment, to stop customers from accidentally running an insecure setup.
 
 export const quizDevProd = [
   {

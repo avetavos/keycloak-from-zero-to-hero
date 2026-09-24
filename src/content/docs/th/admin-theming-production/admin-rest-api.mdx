@@ -111,7 +111,7 @@ Keycloak มาพร้อม CLI tool ชื่อ `kcadm.sh` (ภายใน
 >
 > **CI/CD pipeline สำหรับ config-as-code** — ทีม platform จำนวนมากใช้ service account client เพื่อ import/export realm configuration เป็นส่วนหนึ่งของ deployment pipeline แทนที่จะให้ engineer คลิกผ่าน admin console ด้วยมือ
 >
-> **Terraform Keycloak provider** — เครื่องมือ infrastructure-as-code อย่าง `mrparkers/keycloak` provider เรียก Admin REST API เบื้องหลังด้วย service account credentials เพื่อสร้างและจัดการ realm, client และ role แบบ declarative
+> **Terraform Keycloak provider** — provider ที่ดูแลโดย community อย่าง `keycloak/keycloak` (github.com/keycloak/terraform-provider-keycloak ซึ่งสืบทอดจาก `mrparkers/terraform-provider-keycloak` ที่เลิกดูแลแล้ว) เรียก Admin REST API เบื้องหลังด้วย service account credentials เพื่อสร้างและจัดการ realm, client และ role แบบ declarative
 
 export const quizAdminApi = [
   {

@@ -86,6 +86,25 @@ After saving mappers and logging in as a brokered user, you can verify the resul
 Without IdP mappers, brokered users arrive with only the minimal standard claims (email, first name, last name). Use mappers to copy the external provider's claims — groups, department, custom attributes — onto the Keycloak user at login. Use FORCE sync mode for any mapper whose value may change between logins.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Map many claims (import every attribute the external IdP sends) | A complete user profile that covers future use cases without revisiting the mapper | Increases attack surface and stores more PII than needed, adding privacy/compliance overhead |
+| Map only what you actually use (minimal mapping) | Lower privacy risk — only the data the application really needs is stored, and it's easier to review | Adding an attribute later means going back to add a mapper, and users may need to log in again for it to sync |
+
+## Common mistakes
+
+- **Not mapping `email_verified` or another verification-status claim** — Keycloak then has no way to know whether the user's email was verified by the external IdP, affecting flows such as account recovery that depend on a verified email.
+- **Forgetting to set Sync mode to `FORCE` for claims that change often** — such as group membership or role. With `LEGACY` (the default), the value is applied only on first login, so a user's permissions can go stale even after the external IdP updates them.
+- **Using a hardcoded role mapper with the wrong scope** — assigning a role too broadly to every user from one IdP, without differentiating by the actual claim (use a role importer instead when permissions should depend on data from the external token).
+
+> Real-world example
+>
+> **An organisation brokering with Azure AD that wants to sync employee department/group** — uses an attribute importer and a role importer so users who log in via Azure AD automatically get the Keycloak role matching their Azure AD group, with no admin assigning permissions one person at a time.
+>
+> **A platform brokering with Google Workspace** — uses a hardcoded attribute mapper to set `org` for everyone who logs in through the company's Google Workspace, separating internal users from general social-login users signing in with a personal Google account.
+
 export const quizIdpMappers = [
   {
     q: 'What does an attribute importer mapper do?',

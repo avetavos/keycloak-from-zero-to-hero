@@ -93,6 +93,26 @@ Keycloak ships with a CLI tool called `kcadm.sh` (inside the container at `/opt/
 Create a dedicated service-account client with only the admin roles it actually needs — do not automate with the master admin username and password. This limits blast radius if the credentials are ever leaked, and lets you rotate the client secret independently.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| `admin-cli` + master admin password | Works immediately with no extra setup — fine for a one-off experiment or debugging | Ties every automation script to a single super-user credential; a leak affects the whole system, and rotating it is hard |
+| Dedicated service account (confidential client) | Scoped to only the `realm-management` roles it needs; the secret can be rotated independently per pipeline | Requires creating and maintaining an extra client, and the roles must be assigned correctly up front |
+| `kcadm.sh` CLI | Shorter syntax than raw curl, and caches the token automatically for the session | Only works when you have shell access to the container/host — not suited to automation that runs outside the Keycloak environment |
+
+## Common mistakes
+
+- **Automating everything with the master admin username/password** — widens the blast radius if the credential leaks, and is hard to rotate because every script depends on it. Create a dedicated service account instead.
+- **Granting a service account broader roles than it needs** — assigning every `realm-management` role "just in case" when the script only needs `manage-users` increases the risk if the client secret leaks.
+- **Forgetting that admin tokens are very short-lived** — caching the token in a variable and reusing it across script runs without requesting a new one causes automation to fail mid-run with a 401 once the token expires (about 60 seconds by default).
+
+> Real-world example
+>
+> **CI/CD pipelines for config-as-code** — many platform teams use a service-account client to import/export realm configuration as part of a deployment pipeline, instead of an engineer clicking through the admin console by hand.
+>
+> **The Keycloak Terraform provider** — the community-maintained `keycloak/keycloak` provider (github.com/keycloak/terraform-provider-keycloak, the successor to the now-archived `mrparkers/terraform-provider-keycloak`) calls the Admin REST API behind the scenes with service-account credentials to create and manage realms, clients, and roles declaratively.
+
 export const quizAdminApi = [
   {
     q: 'What HTTP header do you use to authenticate Admin REST API calls?',

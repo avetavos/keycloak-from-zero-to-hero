@@ -83,6 +83,28 @@ Replace `YOUR_ACCESS_TOKEN` with an actual token. The `exp` minus `iat` value sh
 Keep access tokens short-lived (1–5 minutes) and rely on refresh tokens to maintain sessions. A short access token limits the damage window if it is intercepted or leaked — it expires before an attacker can make significant use of it.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Short-lived access token (1–5 minutes) | Limits the window a stolen token can be used in — it expires quickly before an attacker gets much value from it | Requires refreshing more often, adding round-trips to the token endpoint and load on Keycloak |
+| Long-lived access token (30–60+ minutes) | Fewer client-side refreshes, lowering client latency and load on the token endpoint | If it leaks, an attacker can use it for much longer, because a stateless JWT access token cannot be revoked mid-flight — it has to expire on its own |
+| Short refresh token / SSO session idle timeout | Forces a session to die quickly when the user is inactive, reducing risk from a refresh token that leaks with an abandoned device | Users must log in again more often after being away, hurting UX for apps used in short bursts |
+| Offline token (a refresh token that survives a server restart) | Good for background jobs or mobile apps that need to keep working with no user around to log in again | Naturally long-lived; if it leaks or isn't revoked when no longer needed, an attacker can use it for a long time |
+
+## Common mistakes
+
+- **Setting the access token lifespan to an hour or more "for convenience"** — the longer the lifespan, the wider the window a leaked token can be used in, because a JWT access token can't be revoked mid-flight. Keep it short (single-digit to low double-digit minutes) and rely on the refresh token instead.
+- **Storing an access or refresh token in localStorage** — any JavaScript running on the page can read localStorage; a single XSS gap lets an attacker steal and reuse the token immediately. Use memory or an httpOnly cookie instead.
+- **Putting frequently changing or sensitive data into a token claim and expecting it to be real-time** (e.g. current role, balance, subscription status) — a claim is only a snapshot from when the token was issued and won't update until the token is refreshed, so a system that trusts these claims directly can silently act on stale data.
+- **Not setting a reasonable SSO Session Max** — letting a session renew indefinitely through refreshes with no hard ceiling keeps a session alive long after it should have died.
+
+> Real-world example
+>
+> **Banking apps** — commonly set the access-token lifespan very short, around 5 minutes, for applications that need high security, to limit the damage if a token leaks mid-transaction.
+>
+> **Per-device session revocation, as used by major streaming platforms** — pairs a short-lived access token with revoking the refresh token for one specific device when a user chooses "sign out this device," cutting off a session on one TV or phone almost immediately without affecting sessions on other devices.
+
 export const quizTokenLifespans = [
   {
     q: 'Where do you configure the default access token lifespan for a realm?',

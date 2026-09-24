@@ -86,6 +86,26 @@ export const audMapperCode = `{
 Add an audience mapper so your API can verify the token's `aud` claim contains its own client ID. Without it, any valid Keycloak token — even one issued to a different application — could be accepted by your API.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| A "fat" token (many mappers and claims) | The backend can read claims straight from a single token, with no extra API call for user data | The token is bigger, affecting header size, and there's more data at risk if the token leaks |
+| A "thin" token (only the claims that are truly needed) | Smaller and safer, since less data is exposed if it leaks, and mappers are easier to maintain | The backend may need an extra query to get data that isn't embedded in the token |
+| Hardcoded claim mapper | Predictable value, good for debugging and for a fixed setting such as an audience | Inflexible — cannot vary per user, and must be edited whenever the value needs to change |
+
+## Common mistakes
+
+- **Putting mutable or frequently changing data in a claim** (e.g. current role, account balance, subscription status) — a claim is a snapshot taken when the token was issued, not live data. If the real value changes, an old token keeps showing the stale value until it's refreshed.
+- **Adding a mapper for every user attribute "just in case"** — this bloats the token unnecessarily. Add mappers only for claims that have a real consumer.
+- **Forgetting to enable "Add to access token," or enabling it in the wrong place** (e.g. only for userinfo) — the mapper exists but the claim never appears in the actual access token, wasting debugging time.
+
+> Real-world example
+>
+> **An e-commerce platform** — uses a group-membership mapper to put a customer's tier (gold/silver) into the token so the frontend can adjust the UI immediately, while keeping the access-token lifespan short so an old tier doesn't linger too long after an upgrade or downgrade.
+>
+> **Enterprise internal tools** — choose a thin token with just `sub` and a basic role, then have the backend call a separate profile service when it needs more, to make sure the data shown is always current rather than a snapshot from login time.
+
 export const quizProtocolMappers = [
   {
     q: 'What does a protocol mapper do?',

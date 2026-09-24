@@ -74,7 +74,7 @@ export const inspectTokenCode = `jwt_payload=\$(echo "YOUR_ACCESS_TOKEN" | cut -
 >
 > **แอปธนาคาร (banking apps)** — มักตั้ง access token lifespan สั้นมากประมาณ 5 นาทีสำหรับแอปที่ต้องการความปลอดภัยสูง เพื่อจำกัดความเสียหายให้เหลือน้อยที่สุดหาก token หลุดออกไประหว่างทำธุรกรรม
 >
-> **Netflix-style device revocation** — ใช้ access token อายุสั้นร่วมกับการ revoke refresh token เฉพาะ device เมื่อผู้ใช้กด "sign out this device" ทำให้ session บนทีวีหรือมือถือเครื่องหนึ่งถูกตัดออกได้เกือบทันที โดยไม่กระทบ session บนอุปกรณ์อื่นเลย
+> **การ revoke session รายอุปกรณ์ตามแบบที่แพลตฟอร์ม streaming รายใหญ่ใช้** — ใช้ access token อายุสั้นร่วมกับการ revoke refresh token เฉพาะ device เมื่อผู้ใช้กด "sign out this device" ทำให้ session บนทีวีหรือมือถือเครื่องหนึ่งถูกตัดออกได้เกือบทันที โดยไม่กระทบ session บนอุปกรณ์อื่นเลย
 
 export const quizTokenLifespans = [
   {

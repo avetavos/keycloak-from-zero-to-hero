@@ -102,6 +102,25 @@ Keycloak used to ship per-framework adapters: `keycloak-connect` for Node, a Key
 The old per-framework Keycloak adapters (keycloak-connect, the Keycloak Spring adapter) were removed in Keycloak 25 and are no longer maintained. Your backend only needs to validate a JWT — any library that can verify a JWKS-signed token works. Using the standard OAuth2 resource server support in your framework keeps your code portable across identity providers.
 </Callout>
 
+## Trade-offs
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Use an official Keycloak adapter (e.g. older keycloak-js, keycloak-connect) | Fast setup, with an API tailored specifically to Keycloak's own use cases | Tightly coupled to Keycloak — the backend adapters such as keycloak-connect are deprecated, and switching identity provider later is hard |
+| Implement standard OIDC resource-server middleware yourself (jose, express-oauth2-jwt-bearer, Spring Security's `oauth2ResourceServer`) | Portable across any identity provider that supports OIDC/JWKS, and maintained by a broader community | You need to understand the OIDC spec yourself (issuer, audience, JWKS) instead of relying on a vendor-specific abstraction |
+
+## Common mistakes
+
+- **Trusting client-side auth state instead of verifying at the backend** — checking that the frontend has a token, or that the UI shows "logged in," is not authentication the backend can rely on. Every protected endpoint must go through middleware that actually verifies the JWT, not just trust a header the frontend claims proves the user is logged in.
+- **Still using a deprecated Keycloak adapter** — keycloak-connect and the older Keycloak Spring Boot adapter no longer receive new features. New projects should move to their framework's standard OAuth2/OIDC resource server support instead.
+- **Mixing authentication and authorization responsibility into one middleware** — checking that a token is valid (authentication) and checking whether the user may access a resource (authorization) should be separate layers. Combining them into one place makes testing and debugging much harder when roles/policy change.
+
+> Real-world example
+>
+> **Spring Security's `oauth2ResourceServer`** — a production-grade example of using standard middleware instead of a Keycloak-specific adapter; setting just the issuer-uri makes it work with any OIDC-compliant identity provider, not only Keycloak.
+>
+> **express-oauth2-jwt-bearer (from Auth0)** — built by Auth0, but it can verify Keycloak-issued JWTs just as well, because it follows the OIDC/JWKS standard — a good reminder that solid resource-server middleware shouldn't be tied to any one vendor.
+
 export const quizFrameworkAdapters = [
   {
     q: 'What does the Spring Security issuer-uri property tell Spring Boot?',
