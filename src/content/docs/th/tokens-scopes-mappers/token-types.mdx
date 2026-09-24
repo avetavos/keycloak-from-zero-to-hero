@@ -16,7 +16,11 @@ Keycloak ออก token สามประเภทในขั้นตอน 
 
 ## Access Token
 
-ใช้อนุญาต API call — เป็น JWT อายุสั้นที่ API ของคุณตรวจสอบในทุก request Bearer token นี้คือสิ่งที่คุณส่งไปใน `Authorization` header เมื่อเรียก backend service
+ใช้อนุญาต API call — เป็น JWT อายุสั้นที่ API ของคุณตรวจสอบในทุก request Bearer token นี้คือสิ่งที่คุณส่งไปใน `Authorization` header เมื่อเรียก backend service:
+
+```http
+Authorization: Bearer <access_token>
+```
 
 คุณสมบัติสำคัญ:
 

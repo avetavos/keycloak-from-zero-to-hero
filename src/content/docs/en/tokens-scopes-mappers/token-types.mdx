@@ -18,7 +18,7 @@ Keycloak issues three kinds of tokens during an OIDC flow. Each has a distinct a
 
 The access token authorises API calls. It is a short-lived JWT that your backend APIs validate on every request. When a client makes an API call, it attaches the access token as a Bearer token in the `Authorization` header:
 
-```
+```http
 Authorization: Bearer <access_token>
 ```
 
